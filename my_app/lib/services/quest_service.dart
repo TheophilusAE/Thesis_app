@@ -1,54 +1,55 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/reading_quest.dart';
+import 'bible_service.dart';
 
 class QuestService {
   static const String _progressKey = 'reading_quest_progress';
+  static const String _targetKey = 'reading_daily_target';
 
   Future<List<ReadingQuest>> getYearlyReadingPlan() async {
-    // This is a simplified version. In a real app, you'd load from a JSON file or API
-    return _generateSamplePlan();
+    final target = await getDailyReadingTarget();
+    return _generateYearPlan(target);
   }
 
-  List<ReadingQuest> _generateSamplePlan() {
-    // Sample 10-day reading plan (expand to 365 days in production)
-    return [
-      ReadingQuest(
-        day: 1,
-        readings: [
-          ReadingPlan(book: 'Kejadian', startChapter: 1, endChapter: 3),
-          ReadingPlan(book: 'Matius', startChapter: 1, endChapter: 1),
-        ],
-      ),
-      ReadingQuest(
-        day: 2,
-        readings: [
-          ReadingPlan(book: 'Kejadian', startChapter: 4, endChapter: 6),
-          ReadingPlan(book: 'Matius', startChapter: 2, endChapter: 2),
-        ],
-      ),
-      ReadingQuest(
-        day: 3,
-        readings: [
-          ReadingPlan(book: 'Kejadian', startChapter: 7, endChapter: 9),
-          ReadingPlan(book: 'Matius', startChapter: 3, endChapter: 3),
-        ],
-      ),
-      ReadingQuest(
-        day: 4,
-        readings: [
-          ReadingPlan(book: 'Kejadian', startChapter: 10, endChapter: 12),
-          ReadingPlan(book: 'Matius', startChapter: 4, endChapter: 4),
-        ],
-      ),
-      ReadingQuest(
-        day: 5,
-        readings: [
-          ReadingPlan(book: 'Kejadian', startChapter: 13, endChapter: 15),
-          ReadingPlan(book: 'Matius', startChapter: 5, endChapter: 5),
-        ],
-      ),
-    ];
+  List<ReadingQuest> _generateYearPlan(int dailyTarget) {
+    final books = BibleService().getBibleBooks();
+    final quests = <ReadingQuest>[];
+
+    var bookIndex = 0;
+    var chapter = 1;
+
+    for (int day = 1; day <= 365; day++) {
+      final readings = <ReadingPlan>[];
+      var chaptersLeft = dailyTarget;
+
+      while (chaptersLeft > 0) {
+        final currentBook = books[bookIndex];
+        final available = currentBook.chapters - chapter + 1;
+        final take = available >= chaptersLeft ? chaptersLeft : available;
+        final endChapter = chapter + take - 1;
+
+        readings.add(
+          ReadingPlan(
+            book: currentBook.name,
+            startChapter: chapter,
+            endChapter: endChapter,
+          ),
+        );
+
+        chaptersLeft -= take;
+        if (endChapter >= currentBook.chapters) {
+          bookIndex = (bookIndex + 1) % books.length;
+          chapter = 1;
+        } else {
+          chapter = endChapter + 1;
+        }
+      }
+
+      quests.add(ReadingQuest(day: day, readings: readings));
+    }
+
+    return quests;
   }
 
   Future<void> markDayCompleted(int day) async {
@@ -90,5 +91,15 @@ class QuestService {
     }
     
     return streak;
+  }
+
+  Future<int> getDailyReadingTarget() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_targetKey) ?? 4;
+  }
+
+  Future<void> updateDailyReadingTarget(int target) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_targetKey, target.clamp(1, 10));
   }
 }

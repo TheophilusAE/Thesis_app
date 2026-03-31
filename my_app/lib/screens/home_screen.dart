@@ -10,6 +10,7 @@ import 'qr_scanner_screen.dart';
 import 'quest_screen.dart';
 import 'devotional_screen.dart';
 import 'playlist_screen.dart';
+import 'admin_panel_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -41,22 +42,10 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Beranda',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book),
-            label: 'Alkitab',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.task_alt),
-            label: 'Quest',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profil',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Beranda'),
+          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Alkitab'),
+          BottomNavigationBarItem(icon: Icon(Icons.task_alt), label: 'Quest'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
         ],
       ),
     );
@@ -72,12 +61,43 @@ class HomeTab extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Beranda'),
         actions: [
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              if (!authProvider.isAdmin) {
+                return const SizedBox.shrink();
+              }
+
+              return IconButton(
+                icon: const Icon(Icons.admin_panel_settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminPanelScreen(),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             onPressed: () {
+              final authProvider = Provider.of<AuthProvider>(
+                context,
+                listen: false,
+              );
+              final user = authProvider.currentUser;
+
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const QRScannerScreen()),
+                MaterialPageRoute(
+                  builder: (context) => QRScannerScreen(
+                    memberId: user?.memberCardNumber ?? user?.id ?? 'UNKNOWN',
+                    memberName: user?.name ?? 'Anggota Gereja',
+                    isAdminMode: authProvider.isAdmin,
+                  ),
+                ),
               );
             },
           ),
@@ -91,16 +111,49 @@ class HomeTab extends StatelessWidget {
             // Welcome Card
             Consumer<AuthProvider>(
               builder: (context, authProvider, child) {
-                return Card(
+                return Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF10B981),
+                        const Color(0xFF059669).withValues(alpha: 0.8),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 30,
-                          child: Text(
-                            authProvider.currentUser?.name[0] ?? 'U',
-                            style: const TextStyle(fontSize: 24),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: CircleAvatar(
+                            radius: 28,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.3,
+                            ),
+                            child: Text(
+                              authProvider.currentUser?.name[0].toUpperCase() ??
+                                  'U',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -110,12 +163,21 @@ class HomeTab extends StatelessWidget {
                             children: [
                               Text(
                                 'Selamat Datang,',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                    ),
                               ),
                               Text(
                                 authProvider.currentUser?.name ?? 'User',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
                                       fontWeight: FontWeight.bold,
+                                      color: Colors.white,
                                     ),
                               ),
                             ],
@@ -133,8 +195,9 @@ class HomeTab extends StatelessWidget {
             Text(
               'Fitur Utama',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1F2937),
+              ),
             ),
             const SizedBox(height: 16),
             GridView.count(
@@ -151,7 +214,9 @@ class HomeTab extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const MemberCardScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const MemberCardScreen(),
+                      ),
                     );
                   },
                 ),
@@ -162,7 +227,9 @@ class HomeTab extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const BibleScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const BibleScreen(),
+                      ),
                     );
                   },
                 ),
@@ -173,7 +240,9 @@ class HomeTab extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const QuestScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const QuestScreen(),
+                      ),
                     );
                   },
                 ),
@@ -184,7 +253,9 @@ class HomeTab extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const DevotionalScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const DevotionalScreen(),
+                      ),
                     );
                   },
                 ),
@@ -195,18 +266,32 @@ class HomeTab extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const PlaylistScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const PlaylistScreen(),
+                      ),
                     );
                   },
                 ),
                 _FeatureCard(
                   icon: Icons.qr_code_scanner,
-                  title: 'Scan Event',
+                  title: 'Event/Ibadah',
                   color: Colors.teal,
                   onTap: () {
+                    final authProvider = Provider.of<AuthProvider>(
+                      context,
+                      listen: false,
+                    );
+                    final user = authProvider.currentUser;
+
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const QRScannerScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => QRScannerScreen(
+                          memberId: user?.memberCardNumber ?? user?.id ?? 'UNKNOWN',
+                          memberName: user?.name ?? 'Anggota Gereja',
+                          isAdminMode: authProvider.isAdmin,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -218,8 +303,9 @@ class HomeTab extends StatelessWidget {
             Text(
               'Renungan Hari Ini',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1F2937),
+              ),
             ),
             const SizedBox(height: 16),
             FutureBuilder<Devotional>(
@@ -227,50 +313,139 @@ class HomeTab extends StatelessWidget {
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   final devotional = snapshot.data!;
-                  return Card(
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const DevotionalScreen(),
+                  return Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF7C3AED),
+                          const Color(0xFF5B21B6).withValues(alpha: 0.8),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const DevotionalScreen(),
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      devotional.title,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.bookmark_border,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  devotional.verseReference,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.9,
+                                        ),
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                devotional.content.substring(
+                                      0,
+                                      devotional.content.length > 100
+                                          ? 100
+                                          : devotional.content.length,
+                                    ) +
+                                    '...',
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.95,
+                                      ),
+                                      height: 1.5,
+                                    ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'Baca selengkapnya ',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              devotional.title,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              devotional.verseReference,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.blue,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              devotional.content.substring(
-                                0,
-                                devotional.content.length > 100
-                                    ? 100
-                                    : devotional.content.length,
-                              ) + '...',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Baca selengkapnya →',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                          ],
                         ),
                       ),
                     ),
@@ -286,7 +461,7 @@ class HomeTab extends StatelessWidget {
   }
 }
 
-class _FeatureCard extends StatelessWidget {
+class _FeatureCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final Color color;
@@ -301,32 +476,68 @@ class _FeatureCard extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<_FeatureCard> createState() => _FeatureCardState();
+}
+
+class _FeatureCardState extends State<_FeatureCard> {
+  bool? _isHovered;
+
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 48,
-                color: color,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [widget.color, widget.color.withValues(alpha: 0.7)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.3),
+                blurRadius: _isHovered == true ? 12 : 6,
+                offset: Offset(0, _isHovered == true ? -2 : 4),
               ),
             ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: widget.onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(widget.icon, size: 40, color: Colors.white),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),

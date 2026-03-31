@@ -15,12 +15,7 @@ class BibleProvider with ChangeNotifier {
   String? get error => _error;
 
   BibleProvider() {
-    loadBooks();
-  }
-
-  void loadBooks() {
     _books = _bibleService.getBibleBooks();
-    notifyListeners();
   }
 
   Future<void> loadChapter(String book, int chapter) async {

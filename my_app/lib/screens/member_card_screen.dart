@@ -34,13 +34,13 @@ class MemberCardScreen extends StatelessWidget {
                       end: Alignment.bottomRight,
                       colors: [
                         Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor.withOpacity(0.7),
+                        Theme.of(context).primaryColor.withValues(alpha: 0.7),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -92,7 +92,7 @@ class MemberCardScreen extends StatelessWidget {
                                   Text(
                                     user.memberCardNumber ?? '-',
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
+                                      color: Colors.white.withValues(alpha: 0.9),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -113,6 +113,10 @@ class MemberCardScreen extends StatelessWidget {
                               _buildInfoRow('Email', user.email),
                               const Divider(),
                               _buildInfoRow('Telepon', user.phone),
+                              const Divider(),
+                              _buildInfoRow('Status', user.membershipStatus),
+                              const Divider(),
+                              _buildInfoRow('Jenis', user.membershipType ?? '-'),
                               const Divider(),
                               _buildInfoRow('Anggota Sejak', user.memberSince ?? '-'),
                             ],

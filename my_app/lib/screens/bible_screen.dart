@@ -4,7 +4,7 @@ import '../providers/bible_provider.dart';
 import '../models/bible_verse.dart';
 
 class BibleScreen extends StatefulWidget {
-  const BibleScreen({Key? key}) : super(key: key);
+  const BibleScreen({super.key});
 
   @override
   State<BibleScreen> createState() => _BibleScreenState();
@@ -30,10 +30,7 @@ class _BibleScreenState extends State<BibleScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              showSearch(
-                context: context,
-                delegate: BibleSearchDelegate(),
-              );
+              showSearch(context: context, delegate: BibleSearchDelegate());
             },
           ),
         ],
@@ -45,20 +42,35 @@ class _BibleScreenState extends State<BibleScreen> {
               // Book and Chapter Selector
               Container(
                 padding: const EdgeInsets.all(16),
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF3B82F6).withValues(alpha: 0.08),
+                      const Color(0xFF1E40AF).withValues(alpha: 0.05),
+                    ],
+                  ),
+                ),
                 child: Column(
                   children: [
                     Row(
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<BibleBook>(
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Pilih Kitab',
-                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(
+                                Icons.book,
+                                color: Colors.grey[600],
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               filled: true,
                               fillColor: Colors.white,
                             ),
-                            value: _selectedBook,
+                            initialValue: _selectedBook,
                             items: bibleProvider.books.map((book) {
                               return DropdownMenuItem(
                                 value: book,
@@ -78,25 +90,32 @@ class _BibleScreenState extends State<BibleScreen> {
                         ),
                         const SizedBox(width: 8),
                         SizedBox(
-                          width: 100,
+                          width: 128,
                           child: DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Pasal',
-                              border: OutlineInputBorder(),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               filled: true,
                               fillColor: Colors.white,
                             ),
-                            value: _selectedChapter,
+                            initialValue: _selectedChapter,
                             items: _selectedBook != null
-                                ? List.generate(_selectedBook!.chapters, (i) => i + 1)
-                                    .map((chapter) {
+                                ? List.generate(
+                                    _selectedBook!.chapters,
+                                    (i) => i + 1,
+                                  ).map((chapter) {
                                     return DropdownMenuItem(
                                       value: chapter,
                                       child: Text('$chapter'),
                                     );
                                   }).toList()
                                 : [
-                                    const DropdownMenuItem(value: 1, child: Text('1')),
+                                    const DropdownMenuItem(
+                                      value: 1,
+                                      child: Text('1'),
+                                    ),
                                   ],
                             onChanged: _selectedBook != null
                                 ? (chapter) {
@@ -120,67 +139,155 @@ class _BibleScreenState extends State<BibleScreen> {
               // Verses Display
               Expanded(
                 child: bibleProvider.isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Memuat ayat offline...'),
+                          ],
+                        ),
+                      )
                     : bibleProvider.error != null
-                        ? Center(child: Text('Error: ${bibleProvider.error}'))
-                        : bibleProvider.verses.isEmpty
-                            ? const Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red[300],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Gagal Mengambil Ayat',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red[700],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 32),
+                              child: Text(
+                                bibleProvider.error ?? 'Terjadi kesalahan saat memuat data lokal',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            if (_selectedBook != null)
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  bibleProvider.loadChapter(
+                                    _selectedBook!.name,
+                                    _selectedChapter,
+                                  );
+                                },
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Coba Lagi'),
+                              ),
+                          ],
+                        ),
+                      )
+                    : bibleProvider.verses.isEmpty
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.book,
+                              size: 64,
+                              color: Color(0xFFD1D5DB),
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Pilih kitab untuk memulai',
+                              style: TextStyle(
+                                color: Color(0xFF9CA3AF),
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: bibleProvider.verses.length,
+                        itemBuilder: (context, index) {
+                          final verse = bibleProvider.verses[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: const Color(0xFFE5E7EB),
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(Icons.book, size: 64, color: Colors.grey),
-                                    SizedBox(height: 16),
-                                    Text(
-                                      'Pilih kitab untuk memulai',
-                                      style: TextStyle(color: Colors.grey),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            const Color(0xFF3B82F6),
+                                            const Color(0xFF1E40AF),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '${verse.verse}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        verse.text,
+                                        maxLines: 10,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          height: 1.6,
+                                          color: Color(0xFF1F2937),
+                                          fontFamily: 'Serif',
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.all(16),
-                                itemCount: bibleProvider.verses.length,
-                                itemBuilder: (context, index) {
-                                  final verse = bibleProvider.verses[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .primaryColor
-                                                .withOpacity(0.2),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            '${verse.verse}',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Theme.of(context).primaryColor,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            verse.text,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              height: 1.5,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
                               ),
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           );
@@ -191,6 +298,8 @@ class _BibleScreenState extends State<BibleScreen> {
 }
 
 class BibleSearchDelegate extends SearchDelegate<String> {
+  String _lastSearchedQuery = '';
+
   @override
   List<Widget> buildActions(BuildContext context) {
     return [
@@ -215,8 +324,14 @@ class BibleSearchDelegate extends SearchDelegate<String> {
 
   @override
   Widget buildResults(BuildContext context) {
-    final bibleProvider = Provider.of<BibleProvider>(context, listen: false);
-    bibleProvider.searchVerses(query);
+    if (_lastSearchedQuery != query) {
+      _lastSearchedQuery = query;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          context.read<BibleProvider>().searchVerses(query);
+        }
+      });
+    }
 
     return Consumer<BibleProvider>(
       builder: (context, provider, child) {
@@ -225,7 +340,19 @@ class BibleSearchDelegate extends SearchDelegate<String> {
         }
 
         if (provider.verses.isEmpty) {
-          return const Center(child: Text('Tidak ada ayat ditemukan'));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'Tidak ada ayat ditemukan',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                ),
+              ],
+            ),
+          );
         }
 
         return ListView.builder(
@@ -233,23 +360,66 @@ class BibleSearchDelegate extends SearchDelegate<String> {
           itemCount: provider.verses.length,
           itemBuilder: (context, index) {
             final verse = provider.verses[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${verse.book} ${verse.chapter}:${verse.verse}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
-                    const SizedBox(height: 8),
-                    Text(verse.text),
                   ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF3B82F6),
+                                  const Color(0xFF1E40AF),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${verse.book} ${verse.chapter}:${verse.verse}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        verse.text,
+                        maxLines: 8,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -265,11 +435,20 @@ class BibleSearchDelegate extends SearchDelegate<String> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search, size: 64, color: Colors.grey[400]),
+          Icon(Icons.search, size: 64, color: Colors.grey[300]),
           const SizedBox(height: 16),
           Text(
             'Ketik untuk mencari ayat',
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Contoh: "kasih", "iman", "harapan"',
+            style: TextStyle(color: Colors.grey[500], fontSize: 13),
           ),
         ],
       ),

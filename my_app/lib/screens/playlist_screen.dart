@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/playlist_service.dart';
 import '../models/playlist.dart';
+import '../providers/auth_provider.dart';
 
 class PlaylistScreen extends StatefulWidget {
   const PlaylistScreen({Key? key}) : super(key: key);
@@ -11,15 +13,100 @@ class PlaylistScreen extends StatefulWidget {
 
 class _PlaylistScreenState extends State<PlaylistScreen> {
   final PlaylistService _playlistService = PlaylistService();
+  late Future<Playlist> _todayFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _todayFuture = _playlistService.getTodaysPlaylist();
+  }
+
+  Future<void> _showCreatePlaylistDialog() async {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    final songTitleController = TextEditingController();
+    final artistController = TextEditingController();
+
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Tambah Playlist'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'Judul Playlist'),
+                ),
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(labelText: 'Deskripsi'),
+                ),
+                TextField(
+                  controller: songTitleController,
+                  decoration: const InputDecoration(labelText: 'Lagu Utama'),
+                ),
+                TextField(
+                  controller: artistController,
+                  decoration: const InputDecoration(labelText: 'Artis'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSave != true) {
+      return;
+    }
+
+    await _playlistService.addPlaylist(
+      title: titleController.text.trim(),
+      description: descController.text.trim(),
+      songs: [
+        Song(
+          id: 'song-${DateTime.now().millisecondsSinceEpoch}',
+          title: songTitleController.text.trim(),
+          artist: artistController.text.trim(),
+        ),
+      ],
+    );
+
+    setState(() {
+      _todayFuture = _playlistService.getTodaysPlaylist();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isAdmin = context.watch<AuthProvider>().isAdmin;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Playlist Hari Ini'),
       ),
+      floatingActionButton: isAdmin
+          ? FloatingActionButton.extended(
+              onPressed: _showCreatePlaylistDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Tambah Playlist'),
+            )
+          : null,
       body: FutureBuilder<Playlist>(
-        future: _playlistService.getTodaysPlaylist(),
+        future: _todayFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -49,7 +136,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                       end: Alignment.bottomRight,
                       colors: [
                         Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor.withOpacity(0.7),
+                        Theme.of(context).primaryColor.withValues(alpha: 0.7),
                       ],
                     ),
                   ),
@@ -74,7 +161,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                       Text(
                         playlist.description,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 14,
                         ),
                       ),
@@ -84,13 +171,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                           Icon(
                             Icons.queue_music,
                             size: 20,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             '${playlist.songs.length} lagu',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                         ],
@@ -111,7 +198,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                          backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
                           child: Text(
                             '${index + 1}',
                             style: TextStyle(

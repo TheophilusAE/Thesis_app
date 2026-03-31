@@ -17,6 +17,8 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
+        // Disable incremental compilation to fix cache issues
+        freeCompilerArgs = listOf("-Xno-incremental-compilation")
     }
 
     defaultConfig {

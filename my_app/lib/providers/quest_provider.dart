@@ -9,12 +9,14 @@ class QuestProvider with ChangeNotifier {
   double _progress = 0.0;
   int _streak = 0;
   bool _isLoading = false;
+  int _dailyTarget = 4;
 
   List<ReadingQuest> get readingPlan => _readingPlan;
   List<int> get completedDays => _completedDays;
   double get progress => _progress;
   int get streak => _streak;
   bool get isLoading => _isLoading;
+  int get dailyTarget => _dailyTarget;
 
   Future<void> loadReadingPlan() async {
     _isLoading = true;
@@ -22,6 +24,7 @@ class QuestProvider with ChangeNotifier {
 
     _readingPlan = await _questService.getYearlyReadingPlan();
     _completedDays = await _questService.getCompletedDays();
+    _dailyTarget = await _questService.getDailyReadingTarget();
     
     // Mark completed days in the plan
     for (var quest in _readingPlan) {
@@ -47,5 +50,10 @@ class QuestProvider with ChangeNotifier {
     _streak = await _questService.getCurrentStreak();
 
     notifyListeners();
+  }
+
+  Future<void> updateDailyTarget(int value) async {
+    await _questService.updateDailyReadingTarget(value);
+    await loadReadingPlan();
   }
 }

@@ -7,10 +7,15 @@ class AuthProvider with ChangeNotifier {
   User? _currentUser;
   bool _isLoggedIn = false;
   bool _isLoading = false;
+  String? _lastMessage;
+  List<User> _pendingUsers = [];
 
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _isLoggedIn;
   bool get isLoading => _isLoading;
+  String? get lastMessage => _lastMessage;
+  List<User> get pendingUsers => _pendingUsers;
+  bool get isAdmin => _currentUser?.role == 'admin';
 
   Future<void> checkAuthStatus() async {
     _isLoading = true;
@@ -30,8 +35,14 @@ class AuthProvider with ChangeNotifier {
     required String email,
     required String phone,
     required String password,
+    String role = 'jemaat',
+    String? identityNumber,
+    String? familyGroup,
+    String? membershipType,
+    String? address,
   }) async {
     _isLoading = true;
+    _lastMessage = null;
     notifyListeners();
 
     final user = User(
@@ -39,30 +50,44 @@ class AuthProvider with ChangeNotifier {
       name: name,
       email: email,
       phone: phone,
+      role: role,
+      membershipStatus: role == 'admin' ? 'verified' : 'pending',
+      identityNumber: identityNumber,
+      familyGroup: familyGroup,
+      membershipType: membershipType,
       memberCardNumber: 'MEM${DateTime.now().millisecondsSinceEpoch}',
       memberSince: DateTime.now().toString().substring(0, 10),
+      address: address,
     );
 
-    final success = await _authService.register(user, password);
+    final result = await _authService.register(user, password);
+    _lastMessage = result.message;
 
-    if (success) {
-      _currentUser = user;
-      _isLoggedIn = true;
+    if (result.success) {
+      if (user.role == 'admin') {
+        _currentUser = user;
+        _isLoggedIn = true;
+      } else {
+        _currentUser = null;
+        _isLoggedIn = false;
+      }
     }
 
     _isLoading = false;
     notifyListeners();
 
-    return success;
+    return result.success;
   }
 
   Future<bool> login(String email, String password) async {
     _isLoading = true;
+    _lastMessage = null;
     notifyListeners();
 
-    final success = await _authService.login(email, password);
+    final result = await _authService.login(email, password);
+    _lastMessage = result.message;
 
-    if (success) {
+    if (result.success) {
       _isLoggedIn = true;
       _currentUser = await _authService.getCurrentUser();
     }
@@ -70,7 +95,7 @@ class AuthProvider with ChangeNotifier {
     _isLoading = false;
     notifyListeners();
 
-    return success;
+    return result.success;
   }
 
   Future<void> logout() async {
@@ -87,5 +112,22 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     }
     return success;
+  }
+
+  Future<void> loadPendingUsers() async {
+    _pendingUsers = await _authService.getPendingUsers();
+    notifyListeners();
+  }
+
+  Future<bool> verifyUser({required String userId, required bool approved}) async {
+    final success = await _authService.verifyUser(userId: userId, approved: approved);
+    if (success) {
+      await loadPendingUsers();
+    }
+    return success;
+  }
+
+  Future<List<User>> getAllUsers() {
+    return _authService.getAllUsers();
   }
 }

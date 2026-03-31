@@ -3,6 +3,11 @@ class User {
   final String name;
   final String email;
   final String phone;
+  final String role;
+  final String membershipStatus;
+  final String? identityNumber;
+  final String? familyGroup;
+  final String? membershipType;
   final String? memberCardNumber;
   final String? profileImage;
   final String? address;
@@ -15,6 +20,11 @@ class User {
     required this.name,
     required this.email,
     required this.phone,
+    this.role = 'jemaat',
+    this.membershipStatus = 'pending',
+    this.identityNumber,
+    this.familyGroup,
+    this.membershipType,
     this.memberCardNumber,
     this.profileImage,
     this.address,
@@ -29,6 +39,11 @@ class User {
       'name': name,
       'email': email,
       'phone': phone,
+      'role': role,
+      'membershipStatus': membershipStatus,
+      'identityNumber': identityNumber,
+      'familyGroup': familyGroup,
+      'membershipType': membershipType,
       'memberCardNumber': memberCardNumber,
       'profileImage': profileImage,
       'address': address,
@@ -44,6 +59,11 @@ class User {
       name: json['name'],
       email: json['email'],
       phone: json['phone'],
+      role: json['role'] ?? 'jemaat',
+      membershipStatus: json['membershipStatus'] ?? 'pending',
+      identityNumber: json['identityNumber'],
+      familyGroup: json['familyGroup'],
+      membershipType: json['membershipType'],
       memberCardNumber: json['memberCardNumber'],
       profileImage: json['profileImage'],
       address: json['address'],
@@ -60,6 +80,11 @@ class User {
     String? name,
     String? email,
     String? phone,
+    String? role,
+    String? membershipStatus,
+    String? identityNumber,
+    String? familyGroup,
+    String? membershipType,
     String? memberCardNumber,
     String? profileImage,
     String? address,
@@ -72,6 +97,11 @@ class User {
       name: name ?? this.name,
       email: email ?? this.email,
       phone: phone ?? this.phone,
+      role: role ?? this.role,
+      membershipStatus: membershipStatus ?? this.membershipStatus,
+      identityNumber: identityNumber ?? this.identityNumber,
+      familyGroup: familyGroup ?? this.familyGroup,
+      membershipType: membershipType ?? this.membershipType,
       memberCardNumber: memberCardNumber ?? this.memberCardNumber,
       profileImage: profileImage ?? this.profileImage,
       address: address ?? this.address,

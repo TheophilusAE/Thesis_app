@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<bible>
+  <books>
+    <book name="Kejadian" chapters="50" />
+    <book name="Keluaran" chapters="40" />
+    <book name="Imamat" chapters="27" />
+    <book name="Bilangan" chapters="36" />
+    <book name="Ulangan" chapters="34" />
+    <book name="Yosua" chapters="24" />
+    <book name="Hakim-hakim" chapters="21" />
+    <book name="Rut" chapters="4" />
+    <book name="1 Samuel" chapters="31" />
+    <book name="2 Samuel" chapters="24" />
+    <book name="1 Raja-raja" chapters="22" />
+    <book name="2 Raja-raja" chapters="25" />
+    <book name="1 Tawarikh" chapters="29" />
+    <book name="2 Tawarikh" chapters="36" />
+    <book name="Ezra" chapters="10" />
+    <book name="Nehemia" chapters="13" />
+    <book name="Ester" chapters="10" />
+    <book name="Ayub" chapters="42" />
+    <book name="Mazmur" chapters="150" />
+    <book name="Amsal" chapters="31" />
+    <book name="Pengkhotbah" chapters="12" />
+    <book name="Kidung Agung" chapters="8" />
+    <book name="Yesaya" chapters="66" />
+    <book name="Yeremia" chapters="52" />
+    <book name="Trenyina" chapters="5" />
+    <book name="Yehezkiel" chapters="48" />
+    <book name="Daniel" chapters="12" />
+    <book name="Hosea" chapters="14" />
+    <book name="Yoel" chapters="3" />
+    <book name="Amos" chapters="9" />
+    <book name="Obaja" chapters="1" />
+    <book name="Yunus" chapters="4" />
+    <book name="Mikha" chapters="7" />
+    <book name="Nahum" chapters="3" />
+    <book name="Habakuk" chapters="3" />
+    <book name="Zefanya" chapters="3" />
+    <book name="Hagai" chapters="2" />
+    <book name="Zakaria" chapters="14" />
+    <book name="Maleakhi" chapters="4" />
+    <book name="Matius" chapters="28" />
+    <book name="Markus" chapters="16" />
+    <book name="Lukas" chapters="24" />
+    <book name="Yohanes" chapters="21" />
+    <book name="Kisah Para Rasul" chapters="28" />
+    <book name="Roma" chapters="16" />
+    <book name="1 Korintus" chapters="16" />
+    <book name="2 Korintus" chapters="13" />
+    <book name="Galatia" chapters="6" />
+    <book name="Efesus" chapters="6" />
+    <book name="Filipi" chapters="4" />
+    <book name="Kolose" chapters="4" />
+    <book name="1 Tesalonika" chapters="5" />
+    <book name="2 Tesalonika" chapters="3" />
+    <book name="1 Timotius" chapters="6" />
+    <book name="2 Timotius" chapters="4" />
+    <book name="Titus" chapters="3" />
+    <book name="Filemon" chapters="1" />
+    <book name="Ibrani" chapters="13" />
+    <book name="Yakobus" chapters="5" />
+    <book name="1 Petrus" chapters="5" />
+    <book name="2 Petrus" chapters="3" />
+    <book name="1 Yohanes" chapters="5" />
+    <book name="2 Yohanes" chapters="1" />
+    <book name="3 Yohanes" chapters="1" />
+    <book name="Yudas" chapters="1" />
+    <book name="Wahyu" chapters="22" />
+  </books>
+  <verses>
+    <verse book="Kejadian" chapter="1" number="1">Pada mulanya Allah menciptakan langit dan bumi.</verse>
+    <verse book="Kejadian" chapter="1" number="2">Bumi belum berbentuk dan kosong; gelap gulita menutupi samudera raya, dan Roh Allah melayang-layang di atas permukaan air.</verse>
+    <verse book="Kejadian" chapter="1" number="3">Berfirmanlah Allah: "Jadilah terang." Lalu terang itu jadi.</verse>
+    <verse book="Kejadian" chapter="1" number="4">Allah melihat bahwa terang itu baik, lalu dipisahkan-Nyalah terang itu dari gelap.</verse>
+    <verse book="Kejadian" chapter="1" number="5">Dan Allah menamai terang itu siang, dan gelap itu malam. Jadilah petang dan jadilah pagi, itulah hari pertama.</verse>
+    <verse book="Kejadian" chapter="1" number="6">Berfirmanlah Allah: "Jadilah cakrawala di tengah-tengah air, dan hendaklah ia memisahkan air dari air."</verse>
+    <verse book="Kejadian" chapter="1" number="7">Maka Allah membuat cakrawala itu, dan dipisahkan-Nyalah air yang di bawah cakrawala itu dari air yang di atas cakrawala itu. Dan jadilah demikian.</verse>
+    <verse book="Kejadian" chapter="1" number="8">Allah menamai cakrawala itu langit. Jadilah petang dan jadilah pagi, itulah hari kedua.</verse>
+    <verse book="Kejadian" chapter="1" number="9">Berfirmanlah Allah: "Hendaklah air yang di bawah langit berkumpul pada satu tempat, dan hendaklah yang kering itu terlihat." Dan jadilah demikian.</verse>
+    <verse book="Kejadian" chapter="1" number="10">Allah menamai yang kering itu bumi, dan kumpulan air itu disebutnya laut. Allah melihat bahwa semuanya itu baik.</verse>
+    <verse book="Yohanes" chapter="3" number="16">Karena begitu besar kasih Allah akan dunia ini, sehingga Ia telah mengaruniakan Anak-Nya yang tunggal, supaya setiap orang yang percaya kepada-Nya tidak binasa, melainkan beroleh hidup yang kekal.</verse>
+    <verse book="Mazmur" chapter="23" number="1">Mazmur Daud. TUHAN adalah gembalaku, takkan kekurangan aku.</verse>
+    <verse book="Mazmur" chapter="23" number="2">Ia membaringkan aku di padang yang berumput hijau, Ia membimbing aku ke air yang tenang;</verse>
+    <verse book="Mazmur" chapter="23" number="3">Ia menyegarkan jiwaku. Ia menuntun aku di jalan yang benar oleh karena nama-Nya.</verse>
+    <verse book="Mazmur" chapter="23" number="4">Sekalipun aku berjalan dalam lembah yang gelap, aku tidak takut bahaya apa pun, sebab Engkau bersertamu; gada-Mu dan tongkat-Mu, itulah yang menghibur aku.</verse>
+    <verse book="Mazmur" chapter="23" number="5">Engkau menyediakan hidangan bagiku di hadapan musuh-musuhku; Engkau mengurapi kepalaku dengan minyak; pialaku penuh melimpah.</verse>
+    <verse book="Mazmur" chapter="23" number="6">Hanya kebaikan dan belas kasihan yang akan mengikuti aku selamanya, dan aku akan diam di rumah TUHAN sepanjang hidupku.</verse>
+    <verse book="Matius" chapter="5" number="1">Ketika Yesus melihat banyaknya orang berduyun-duyun, naiklah Ia ke atas bukit. Lalu duduk, dan majdi-Nya mendekati Dia.</verse>
+    <verse book="Matius" chapter="5" number="2">Lalu Ia mulai mengajar mereka sambil bersabda:</verse>
+    <verse book="Matius" chapter="5" number="3">"Berbahagialah orang-orang yang miskin dalam roh, karena kerajaan surga adalah milik mereka.</verse>
+    <verse book="Matius" chapter="5" number="4">Berbahagialah orang-orang yang berdukacita, karena mereka akan dihibur.</verse>
+    <verse book="Amsal" chapter="1" number="1">Pepatah-pepatah Salomo bin Daud, raja Israel:</verse>
+    <verse book="Amsal" chapter="1" number="2">supaya orang memahami pepatah dan peribahasa, perkataan orang bijak dan teka-tekinya;</verse>
+    <verse book="Amsal" chapter="1" number="3">supaya orang menerima nasihat yang bijak, keadilan, kejujuran, dan kejujuran;</verse>
+    <verse book="Amsal" chapter="1" number="4">supaya orang sederhana mendapat kecerdikan, dan orang muda mendapat pengetahuan dan akal budi.</verse>
+    <verse book="Amsal" chapter="3" number="5">Percayakan seluruh hidupmu kepada TUHAN, dan berserahdirilah kepada-Nya; jangan menggantungkan pengertianmu pada kebijaksanaanmu sendiri.</verse>
+    <verse book="Amsal" chapter="3" number="6">Akuilah Dia di semua jalanmu, dan Ia akan meluruskan jalan-jalanmu.</verse>
+    <verse book="1 Petrus" chapter="3" number="15">Tetapi kuduskanlah Kristus sebagai Tuhan di dalam hatimu. Dan selalu siaplah untuk memberi pertanggungjawaban tentang pengharapan yang ada pada-Mu kepada setiap orang yang meminta kepadamu.</verse>
+    <verse book="Filipi" chapter="4" number="6">Janganlah kuatir tentang apa pun juga, tetapi dalam segala hal bermohonlah kepada Allah dengan syukur, supaya kebebasan sejati dari Kristus Yesus menjaga hati dan pikiranmu.</verse>
+    <verse book="Filipi" chapter="4" number="7">Akhirnya, saudara-saudara, semua yang benar, semua yang mulia, semua yang adil, semua yang suci, semua yang elok dan semua yang sedap didengar, semua itu hendaklah kamu pikirkan.</verse>
+    <verse book="Filipi" chapter="4" number="8">Dan jika ada sesuatu yang terpuji, pikirkan semuanya itu.</verse>
+    <verse book="Yohanes" chapter="1" number="1">Pada mulanya adalah Firman; Firman itu bersama-sama dengan Allah dan Firman itu adalah Allah.</verse>
+    <verse book="Yohanes" chapter="1" number="2">Ia pada mulanya bersama-sama dengan Allah.</verse>
+    <verse book="Yohanes" chapter="1" number="3">Segala sesuatu dijadikan oleh Dia dan tanpa Dia tidak ada suatupun yang telah dijadikan.</verse>
+    <verse book="Yohanes" chapter="1" number="4">Dalam Dia ada hidup, dan hidup itu adalah terang manusia.</verse>
+  </verses>
+</bible>

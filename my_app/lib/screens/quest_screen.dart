@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/quest_provider.dart';
 
 class QuestScreen extends StatefulWidget {
-  const QuestScreen({Key? key}) : super(key: key);
+  const QuestScreen({super.key});
 
   @override
   State<QuestScreen> createState() => _QuestScreenState();
@@ -13,17 +14,13 @@ class _QuestScreenState extends State<QuestScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      Provider.of<QuestProvider>(context, listen: false).loadReadingPlan();
-    });
+    Provider.of<QuestProvider>(context, listen: false).loadReadingPlan();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Quest Baca Alkitab Setahun'),
-      ),
+      appBar: AppBar(title: const Text('Quest Baca Alkitab Setahun')),
       body: Consumer<QuestProvider>(
         builder: (context, questProvider, child) {
           if (questProvider.isLoading) {
@@ -32,6 +29,46 @@ class _QuestScreenState extends State<QuestScreen> {
 
           return Column(
             children: [
+              Consumer<AuthProvider>(
+                builder: (context, authProvider, child) {
+                  if (!authProvider.isAdmin) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pengaturan Admin',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Target bacaan harian: ${questProvider.dailyTarget} pasal/hari',
+                        ),
+                        Slider(
+                          value: questProvider.dailyTarget.toDouble(),
+                          min: 1,
+                          max: 10,
+                          divisions: 9,
+                          label: '${questProvider.dailyTarget}',
+                          onChanged: (value) {
+                            questProvider.updateDailyTarget(value.round());
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
               // Progress Header
               Container(
                 padding: const EdgeInsets.all(16),
@@ -39,7 +76,7 @@ class _QuestScreenState extends State<QuestScreen> {
                   gradient: LinearGradient(
                     colors: [
                       Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.7),
+                      Theme.of(context).primaryColor.withValues(alpha: 0.7),
                     ],
                   ),
                 ),
@@ -88,8 +125,10 @@ class _QuestScreenState extends State<QuestScreen> {
                         const SizedBox(height: 8),
                         LinearProgressIndicator(
                           value: questProvider.progress,
-                          backgroundColor: Colors.white.withOpacity(0.3),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                          backgroundColor: Colors.white.withValues(alpha: 0.3),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                           minHeight: 8,
                         ),
                       ],
@@ -105,74 +144,198 @@ class _QuestScreenState extends State<QuestScreen> {
                   itemCount: questProvider.readingPlan.length,
                   itemBuilder: (context, index) {
                     final quest = questProvider.readingPlan[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: quest.isCompleted
-                              ? Colors.green
-                              : Theme.of(context).primaryColor.withOpacity(0.2),
-                          child: Icon(
-                            quest.isCompleted ? Icons.check : Icons.book,
-                            color: quest.isCompleted ? Colors.white : Colors.grey,
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: quest.isCompleted
+                                ? [
+                                    const Color(0xFF10B981),
+                                    const Color(
+                                      0xFF059669,
+                                    ).withValues(alpha: 0.7),
+                                  ]
+                                : [Colors.grey[100]!, Colors.grey[50]!],
                           ),
-                        ),
-                        title: Text(
-                          'Hari ${quest.day}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: quest.readings
-                              .map((reading) => Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      '📖 ${reading.displayText}',
-                                      style: TextStyle(
-                                        color: Colors.grey[700],
+                          border: Border.all(
+                            color: quest.isCompleted
+                                ? Colors.transparent
+                                : const Color(0xFFE5E7EB),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  (quest.isCompleted
+                                          ? const Color(0xFF10B981)
+                                          : Colors.black)
+                                      .withValues(
+                                        alpha: quest.isCompleted ? 0.2 : 0.04,
                                       ),
-                                    ),
-                                  ))
-                              .toList(),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        trailing: quest.isCompleted
-                            ? const Icon(Icons.check_circle, color: Colors.green)
-                            : IconButton(
-                                icon: const Icon(Icons.check_circle_outline),
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Tandai Selesai'),
-                                      content: Text(
-                                        'Tandai bacaan Hari ${quest.day} sebagai selesai?',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
-                                          child: const Text('Batal'),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: !quest.isCompleted
+                                ? () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Tandai Selesai'),
+                                        content: Text(
+                                          'Tandai bacaan Hari ${quest.day} sebagai selesai?',
                                         ),
-                                        ElevatedButton(
-                                          onPressed: () => Navigator.pop(context, true),
-                                          child: const Text('Ya'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text('Batal'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: const Text('Ya'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirm == true && mounted) {
+                                      await questProvider.markDayCompleted(
+                                        quest.day,
+                                      );
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Selamat! Bacaan hari ini selesai! 🎉',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                : null,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: quest.isCompleted
+                                          ? Colors.white.withValues(alpha: 0.2)
+                                          : const Color(0xFFF3F4F6),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      quest.isCompleted
+                                          ? Icons.check
+                                          : Icons.book,
+                                      color: quest.isCompleted
+                                          ? Colors.white
+                                          : Colors.grey[600],
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Hari ${quest.day}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                                color: quest.isCompleted
+                                                    ? Colors.white
+                                                    : const Color(0xFF1F2937),
+                                              ),
+                                            ),
+                                            if (quest.isCompleted)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.3),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                ),
+                                                child: const Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.check_circle,
+                                                      color: Colors.white,
+                                                      size: 16,
+                                                    ),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      'Selesai',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        ...quest.readings.map(
+                                          (reading) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 4,
+                                            ),
+                                            child: Text(
+                                              '📖 ${reading.displayText}',
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: quest.isCompleted
+                                                    ? Colors.white.withValues(
+                                                        alpha: 0.85,
+                                                      )
+                                                    : Colors.grey[700],
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
-                                  );
-
-                                  if (confirm == true && mounted) {
-                                    await questProvider.markDayCompleted(quest.day);
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Selamat! Bacaan hari ini selesai! 🎉'),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
+                                  ),
+                                ],
                               ),
+                            ),
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -205,7 +368,7 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -222,10 +385,7 @@ class _StatCard extends StatelessWidget {
           ),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
       ),
