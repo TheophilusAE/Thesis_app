@@ -24,6 +24,15 @@ class AuthProvider with ChangeNotifier {
     _isLoggedIn = await _authService.isLoggedIn();
     if (_isLoggedIn) {
       _currentUser = await _authService.getCurrentUser();
+      final isBlockedMember =
+          _currentUser?.role == 'jemaat' &&
+          _currentUser?.membershipStatus != 'verified';
+      if (isBlockedMember) {
+        await _authService.logout();
+        _currentUser = null;
+        _isLoggedIn = false;
+        _lastMessage = 'Akun Anda belum diverifikasi admin.';
+      }
     }
 
     _isLoading = false;
@@ -35,7 +44,6 @@ class AuthProvider with ChangeNotifier {
     required String email,
     required String phone,
     required String password,
-    String role = 'jemaat',
     String? identityNumber,
     String? familyGroup,
     String? membershipType,
@@ -50,8 +58,8 @@ class AuthProvider with ChangeNotifier {
       name: name,
       email: email,
       phone: phone,
-      role: role,
-      membershipStatus: role == 'admin' ? 'verified' : 'pending',
+      role: 'jemaat',
+      membershipStatus: 'pending',
       identityNumber: identityNumber,
       familyGroup: familyGroup,
       membershipType: membershipType,
@@ -64,14 +72,53 @@ class AuthProvider with ChangeNotifier {
     _lastMessage = result.message;
 
     if (result.success) {
-      if (user.role == 'admin') {
-        _currentUser = user;
-        _isLoggedIn = true;
-      } else {
-        _currentUser = null;
-        _isLoggedIn = false;
-      }
+      _currentUser = null;
+      _isLoggedIn = false;
     }
+
+    _isLoading = false;
+    notifyListeners();
+
+    return result.success;
+  }
+
+  Future<bool> createUser({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    String role = 'jemaat',
+    String? identityNumber,
+    String? familyGroup,
+    String? membershipType,
+    String? address,
+    String? memberCardNumber,
+    String? memberSince,
+    String? baptismDate,
+    String membershipStatus = 'pending',
+  }) async {
+    _isLoading = true;
+    _lastMessage = null;
+    notifyListeners();
+
+    final user = User(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      email: email,
+      phone: phone,
+      role: role,
+      membershipStatus: membershipStatus,
+      identityNumber: identityNumber,
+      familyGroup: familyGroup,
+      membershipType: membershipType,
+      memberCardNumber: memberCardNumber ?? 'MEM${DateTime.now().millisecondsSinceEpoch}',
+      memberSince: memberSince ?? DateTime.now().toString().substring(0, 10),
+      address: address,
+      baptismDate: baptismDate,
+    );
+
+    final result = await _authService.createUser(user, password);
+    _lastMessage = result.message;
 
     _isLoading = false;
     notifyListeners();
@@ -106,9 +153,23 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> updateProfile(User updatedUser) async {
+    return updateUser(updatedUser);
+  }
+
+  Future<bool> updateUser(User updatedUser) async {
     final success = await _authService.updateUser(updatedUser);
-    if (success) {
+    if (success && _currentUser?.id == updatedUser.id) {
       _currentUser = updatedUser;
+      notifyListeners();
+    }
+    return success;
+  }
+
+  Future<bool> deleteUser(String userId) async {
+    final success = await _authService.deleteUser(userId);
+    if (success && _currentUser?.id == userId) {
+      _currentUser = null;
+      _isLoggedIn = false;
       notifyListeners();
     }
     return success;

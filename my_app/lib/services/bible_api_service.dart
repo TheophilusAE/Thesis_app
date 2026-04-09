@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'dart:io';
 
 /// Service to fetch Indonesian Bible data using GetBible API
 class BibleApiService {
@@ -17,9 +17,9 @@ class BibleApiService {
       // GetBible API format: /{translation}/{book}/{chapter}.json
       final url = '$_baseUrl/$_translation/$bookCode/$chapter.json';
       
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('API REQUEST: $url');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('API REQUEST: $url');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
       final response = await http.get(
         Uri.parse(url),
@@ -29,28 +29,28 @@ class BibleApiService {
         },
       ).timeout(const Duration(seconds: 20));
 
-      print('RESPONSE: ${response.statusCode}');
+      debugPrint('RESPONSE: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        print('✓ Successfully fetched $bookCode chapter $chapter');
+        debugPrint('✓ Successfully fetched $bookCode chapter $chapter');
         return data;
       } else if (response.statusCode == 404) {
-        print('⚠ Book or chapter not found: $bookCode chapter $chapter');
+        debugPrint('⚠ Book or chapter not found: $bookCode chapter $chapter');
         return null;
       } else {
-        print('✗ API Error: ${response.statusCode}');
-        print('Response: ${response.body}');
+        debugPrint('✗ API Error: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
         return null;
       }
-    } on SocketException catch (e) {
-      print('✗ Network error: $e');
-      return null;
     } on TimeoutException catch (e) {
-      print('✗ Request timeout: $e');
+      debugPrint('✗ Request timeout: $e');
       return null;
     } catch (e) {
-      print('✗ Error fetching Bible chapter: $e');
+      debugPrint('✗ Error fetching Bible chapter: $e');
+      return null;
+    } catch (e) {
+      debugPrint('✗ Error fetching Bible chapter: $e');
       return null;
     }
   }
@@ -60,8 +60,8 @@ class BibleApiService {
     final verses = <Map<String, dynamic>>[];
     
     try {
-      print('Parsing GetBible API response for $bookName chapter $chapter');
-      print('API Response keys: ${apiResponse.keys.toList()}');
+      debugPrint('Parsing GetBible API response for $bookName chapter $chapter');
+      debugPrint('API Response keys: ${apiResponse.keys.toList()}');
       
       // GetBible API structure: {book_nr, book_name, chapter_nr, verses: {"1": {verse, text}, "2": {...}}}
       
@@ -69,7 +69,7 @@ class BibleApiService {
       var versesData = apiResponse['verses'] as Map?;
       
       if (versesData != null && versesData.isNotEmpty) {
-        print('Found ${versesData.length} verses in API response');
+        debugPrint('Found ${versesData.length} verses in API response');
         
         versesData.forEach((key, value) {
           if (value is Map) {
@@ -86,21 +86,21 @@ class BibleApiService {
                 });
               }
             } catch (e) {
-              print('Error parsing verse $key: $e');
+              debugPrint('Error parsing verse $key: $e');
             }
           }
         });
         
         // Sort by verse number
         verses.sort((a, b) => (a['verse'] as int).compareTo(b['verse'] as int));
-        print('✓ Successfully parsed ${verses.length} verses');
+        debugPrint('✓ Successfully parsed ${verses.length} verses');
       } else {
-        print('⚠ No verses found in API response');
-        print('Response structure: $apiResponse');
+        debugPrint('⚠ No verses found in API response');
+        debugPrint('Response structure: $apiResponse');
       }
     } catch (e) {
-      print('Error parsing verses: $e');
-      print('Stack trace: ${StackTrace.current}');
+      debugPrint('Error parsing verses: $e');
+      debugPrint('Stack trace: ${StackTrace.current}');
     }
     
     return verses;
@@ -183,7 +183,7 @@ class BibleApiService {
     
     final code = bookCodes[indonesianName];
     if (code == null) {
-      print('⚠ Unknown book: $indonesianName, using default');
+      debugPrint('⚠ Unknown book: $indonesianName, using default');
       return '1'; // Default to Genesis
     }
     return code;

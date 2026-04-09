@@ -53,10 +53,7 @@ dependencies:
   
   # QR Code Generation
   qr_flutter: ^4.1.0
-  
-  # # QR Code
-  # mobile_scanner: ^5.2.3
-  # qr_flutter: ^4.1.0
+  mobile_scanner: ^5.2.3
   
   # UI Components
   google_fonts: ^6.1.0
@@ -79,6 +76,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -121,3 +119,19 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/app_logo.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/images/app_logo.png
+  web:
+    generate: true
+    image_path: assets/images/app_logo.png
+    background_color: "#FFFFFF"
+    theme_color: "#4B9A72"
+  windows:
+    generate: false
+  macos:
+    generate: false

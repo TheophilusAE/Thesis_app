@@ -1,33 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../models/user.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:intl/intl.dart';
+import '../utils/app_theme.dart';
+import 'admin_management_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _isEditing = false;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profil'),
         actions: [
-          IconButton(
-            icon: Icon(_isEditing ? Icons.close : Icons.edit),
-            onPressed: () {
-              setState(() {
-                _isEditing = !_isEditing;
-              });
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return IconButton(
+                icon: Icon(
+                  themeProvider.themeMode == ThemeMode.dark
+                      ? Icons.light_mode
+                      : Icons.dark_mode,
+                ),
+                onPressed: () {
+                  themeProvider.toggleTheme();
+                },
+              );
             },
           ),
         ],
@@ -38,16 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return const Center(child: Text('Tidak ada data user'));
           }
 
-          return _isEditing
-              ? EditProfileForm(
-                  user: authProvider.currentUser!,
-                  onSave: () {
-                    setState(() {
-                      _isEditing = false;
-                    });
-                  },
-                )
-              : ProfileView(user: authProvider.currentUser!);
+          return ProfileView(user: authProvider.currentUser!);
         },
       ),
     );
@@ -57,10 +54,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class ProfileView extends StatelessWidget {
   final User user;
 
-  const ProfileView({Key? key, required this.user}) : super(key: key);
+  const ProfileView({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final chipTextColor = isDark ? Colors.white : Colors.black87;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(0),
       child: Column(
@@ -68,14 +68,7 @@ class ProfileView extends StatelessWidget {
           // Profile Header
           Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF10B981),
-                  const Color(0xFF059669).withValues(alpha: 0.8),
-                ],
-              ),
+               gradient: AppTheme.purpleBlueGradient,
             ),
             padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
             child: Column(
@@ -95,22 +88,14 @@ class ProfileView extends StatelessWidget {
                   ),
                   child: CircleAvatar(
                     radius: 60,
-                    backgroundImage:
-                        user.profileImage != null &&
-                            user.profileImage!.isNotEmpty
-                        ? FileImage(File(user.profileImage!))
-                        : null,
                     backgroundColor: Colors.white.withValues(alpha: 0.3),
-                    child:
-                        user.profileImage == null || user.profileImage!.isEmpty
-                        ? Text(
-                            user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-                            style: const TextStyle(
-                              fontSize: 48,
-                              color: Colors.white,
-                            ),
-                          )
-                        : null,
+                    child: Text(
+                      user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+                      style: const TextStyle(
+                        fontSize: 48,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -137,14 +122,14 @@ class ProfileView extends StatelessWidget {
                     Chip(
                       label: Text(
                         user.role == 'admin' ? 'Admin' : 'Jemaat',
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: chipTextColor),
                       ),
                       backgroundColor: Colors.white.withValues(alpha: 0.2),
                     ),
                     Chip(
                       label: Text(
                         'Status: ${user.membershipStatus}',
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: chipTextColor),
                       ),
                       backgroundColor: Colors.white.withValues(alpha: 0.2),
                     ),
@@ -208,6 +193,25 @@ class ProfileView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
+                if (user.role == 'admin')
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminManagementScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.manage_accounts),
+                      label: const Text('Kelola Data User'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                    ),
+                  ),
                 ElevatedButton.icon(
                   onPressed: () async {
                     final authProvider = Provider.of<AuthProvider>(
@@ -243,8 +247,11 @@ class EditProfileForm extends StatefulWidget {
   final User user;
   final VoidCallback onSave;
 
-  const EditProfileForm({Key? key, required this.user, required this.onSave})
-    : super(key: key);
+  const EditProfileForm({
+    super.key,
+    required this.user,
+    required this.onSave,
+  });
 
   @override
   State<EditProfileForm> createState() => _EditProfileFormState();
@@ -349,15 +356,14 @@ class _EditProfileFormState extends State<EditProfileForm> {
               children: [
                 CircleAvatar(
                   radius: 60,
-                  backgroundImage: _profileImagePath != null
-                      ? FileImage(File(_profileImagePath!))
-                      : null,
-                  child: _profileImagePath == null
-                      ? Text(
-                          widget.user.name[0].toUpperCase(),
-                          style: const TextStyle(fontSize: 48),
-                        )
-                      : null,
+                  backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                  child: Text(
+                    widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : 'U',
+                    style: TextStyle(
+                      fontSize: 48,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
                 ),
                 Positioned(
                   bottom: 0,
@@ -476,11 +482,13 @@ class _InfoCard extends StatelessWidget {
   final String title;
   final List<_InfoItem> items;
 
-  const _InfoCard({Key? key, required this.title, required this.items})
-    : super(key: key);
+  const _InfoCard({required this.title, required this.items});
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final secondaryTextColor = colorScheme.onSurface.withValues(alpha: 0.72);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -499,7 +507,7 @@ class _InfoCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
                   children: [
-                    Icon(item.icon, size: 20, color: Colors.grey[600]),
+                    Icon(item.icon, size: 20, color: secondaryTextColor),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -508,11 +516,15 @@ class _InfoCard extends StatelessWidget {
                           Text(
                             item.label,
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey[600]),
+                                ?.copyWith(color: secondaryTextColor),
                           ),
                           Text(
                             item.value,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                            ),
                           ),
                         ],
                       ),

@@ -71,6 +71,15 @@ A comprehensive Flutter mobile application for church community management with 
    flutter run -d ios
    ```
 
+3. **Use your own app logo**
+   - Add your logo file at `assets/images/app_logo.png` (recommended square PNG, at least 1024x1024).
+   - Generate launcher icons:
+   ```bash
+   flutter pub get
+   flutter pub run flutter_launcher_icons
+   ```
+   - Rebuild and run the app so the new icon is applied.
+
 ## Project Structure
 
 ```

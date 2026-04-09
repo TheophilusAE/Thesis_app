@@ -6,10 +6,67 @@ import 'bible_service.dart';
 class QuestService {
   static const String _progressKey = 'reading_quest_progress';
   static const String _targetKey = 'reading_daily_target';
+  static const String _customPlanKey = 'reading_quest_custom_plan';
+
+  Future<List<ReadingQuest>?> _loadCustomPlan() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_customPlanKey);
+    if (raw == null) {
+      return null;
+    }
+
+    if (raw.isEmpty) {
+      return <ReadingQuest>[];
+    }
+
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    final plan = decoded
+        .map((item) => ReadingQuest.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+    plan.sort((a, b) => a.day.compareTo(b.day));
+    return plan;
+  }
+
+  Future<void> _saveCustomPlan(List<ReadingQuest> plan) async {
+    final prefs = await SharedPreferences.getInstance();
+    final cleaned = plan
+        .map(
+          (quest) => ReadingQuest(
+            day: quest.day,
+            readings: quest.readings,
+            isCompleted: false,
+          ),
+        )
+        .toList()
+      ..sort((a, b) => a.day.compareTo(b.day));
+
+    await prefs.setString(
+      _customPlanKey,
+      jsonEncode(cleaned.map((item) => item.toJson()).toList()),
+    );
+  }
+
+  Future<List<ReadingQuest>> _loadEditablePlan() async {
+    final custom = await _loadCustomPlan();
+    if (custom != null) {
+      return custom;
+    }
+
+    return _generateYearPlan(await getDailyReadingTarget());
+  }
 
   Future<List<ReadingQuest>> getYearlyReadingPlan() async {
+    final custom = await _loadCustomPlan();
+    if (custom != null) {
+      return custom;
+    }
+
     final target = await getDailyReadingTarget();
     return _generateYearPlan(target);
+  }
+
+  Future<List<ReadingQuest>> getManagedPlan() async {
+    return _loadEditablePlan();
   }
 
   List<ReadingQuest> _generateYearPlan(int dailyTarget) {
@@ -101,5 +158,56 @@ class QuestService {
   Future<void> updateDailyReadingTarget(int target) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_targetKey, target.clamp(1, 10));
+  }
+
+  Future<void> saveManagedPlan(List<ReadingQuest> plan) async {
+    await _saveCustomPlan(plan);
+  }
+
+  Future<bool> addReadingQuest(ReadingQuest quest) async {
+    final plan = await _loadEditablePlan();
+    if (plan.any((entry) => entry.day == quest.day)) {
+      return false;
+    }
+
+    plan.add(quest);
+    await _saveCustomPlan(plan);
+    return true;
+  }
+
+  Future<bool> updateReadingQuest(int originalDay, ReadingQuest updatedQuest) async {
+    final plan = await _loadEditablePlan();
+    final index = plan.indexWhere((entry) => entry.day == originalDay);
+    if (index == -1) {
+      return false;
+    }
+
+    final normalizedQuest = ReadingQuest(
+      day: updatedQuest.day,
+      readings: updatedQuest.readings,
+      isCompleted: false,
+    );
+
+    plan[index] = normalizedQuest;
+    plan.sort((a, b) => a.day.compareTo(b.day));
+    await _saveCustomPlan(plan);
+    return true;
+  }
+
+  Future<bool> deleteReadingQuest(int day) async {
+    final plan = await _loadEditablePlan();
+    final before = plan.length;
+    plan.removeWhere((entry) => entry.day == day);
+    if (plan.length == before) {
+      return false;
+    }
+
+    await _saveCustomPlan(plan);
+    return true;
+  }
+
+  Future<void> resetManagedPlan() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_customPlanKey);
   }
 }

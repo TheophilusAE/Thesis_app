@@ -3,9 +3,10 @@ import 'package:provider/provider.dart';
 import '../services/playlist_service.dart';
 import '../models/playlist.dart';
 import '../providers/auth_provider.dart';
+import '../utils/app_theme.dart';
 
 class PlaylistScreen extends StatefulWidget {
-  const PlaylistScreen({Key? key}) : super(key: key);
+  const PlaylistScreen({super.key});
 
   @override
   State<PlaylistScreen> createState() => _PlaylistScreenState();
@@ -131,13 +132,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor.withValues(alpha: 0.7),
-                      ],
+                    gradient: AppTheme.purpleBlueGradient,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(26),
+                      bottomRight: Radius.circular(26),
                     ),
                   ),
                   child: Column(
@@ -195,8 +193,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                   itemBuilder: (context, index) {
                     final song = playlist.songs[index];
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
+                      margin: const EdgeInsets.only(bottom: 10),
                       child: ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
                         leading: CircleAvatar(
                           backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
                           child: Text(
@@ -266,6 +267,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 child: ListTile(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
                                   leading: const Icon(Icons.playlist_play),
                                   title: Text(pl.title),
                                   subtitle: Text('${pl.songs.length} lagu'),
@@ -297,60 +301,65 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) {
-          return Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  song.title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  song.artist,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: Text(
-                      song.lyrics ?? '',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        height: 1.8,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final secondaryTextColor = colorScheme.onSurface.withValues(alpha: 0.72);
+        
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: secondaryTextColor,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+                  const SizedBox(height: 20),
+                  Text(
+                    song.title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    song.artist,
+                    style: TextStyle(
+                      color: secondaryTextColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: Text(
+                        song.lyrics ?? '',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          height: 1.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +7,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqflite_ffi;
 import 'providers/auth_provider.dart';
 import 'providers/bible_provider.dart';
 import 'providers/quest_provider.dart';
+import 'providers/theme_provider.dart';
+import 'utils/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 
@@ -23,7 +23,9 @@ Future<void> _initializeDatabaseFactory() async {
     return;
   }
 
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+  if (defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux ||
+      defaultTargetPlatform == TargetPlatform.macOS) {
     sqflite_ffi.sqfliteFfiInit();
     sqflite.databaseFactory = sqflite_ffi.databaseFactoryFfi;
   }
@@ -39,22 +41,23 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => BibleProvider()),
         ChangeNotifierProvider(create: (_) => QuestProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'Gereja App',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF0F766E),
-            brightness: Brightness.light,
-          ),
-        ),
-        routes: {
-          '/login': (context) => const LoginScreen(),
-          '/home': (context) => const HomeScreen(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Gereja App',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
+            routes: {
+              '/login': (context) => const LoginScreen(),
+              '/home': (context) => const HomeScreen(),
+            },
+            home: const _AuthGate(),
+          );
         },
-        home: const _AuthGate(),
       ),
     );
   }

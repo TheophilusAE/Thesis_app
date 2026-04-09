@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../services/attendance_service.dart';
+import '../utils/app_theme.dart';
 
 class QRScannerScreen extends StatefulWidget {
   final String memberId;
@@ -29,6 +32,16 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   String _eventId = 'evt-default';
   String _eventName = 'Ibadah Umum';
   Timer? timer;
+
+  bool get _supportsCameraScan {
+    if (kIsWeb) {
+      return true;
+    }
+
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+  }
 
   @override
   void initState() {
@@ -151,7 +164,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       return;
     }
 
-    await _attendanceService.markAttendance(
+    final isRecorded = await _attendanceService.markAttendance(
       eventId: _eventId,
       eventName: _eventName,
       memberId: memberId,
@@ -164,12 +177,192 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Kehadiran berhasil dicatat.')),
+      SnackBar(
+        content: Text(
+          isRecorded
+              ? 'Kehadiran berhasil dicatat.'
+              : 'Kehadiran sudah pernah dicatat untuk event ini.',
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _scanQrPayloadWithCamera({required String title}) async {
+    if (!_supportsCameraScan) {
+      if (!mounted) {
+        return null;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pemindaian kamera belum didukung di perangkat ini. Gunakan input manual.',
+          ),
+        ),
+      );
+      return null;
+    }
+
+    bool alreadyHandled = false;
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 320,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: MobileScanner(
+              fit: BoxFit.cover,
+              onDetect: (capture) {
+                if (alreadyHandled || capture.barcodes.isEmpty) {
+                  return;
+                }
+
+                final rawValue = capture.barcodes.first.rawValue;
+                if (rawValue == null || rawValue.trim().isEmpty) {
+                  return;
+                }
+
+                alreadyHandled = true;
+                Navigator.of(context).pop(rawValue.trim());
+              },
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _scanAdminMemberWithCamera() async {
+    final rawPayload = await _scanQrPayloadWithCamera(title: 'Scan QR Jemaat');
+    if (rawPayload == null || rawPayload.isEmpty) {
+      return;
+    }
+
+    final parsed = _attendanceService.parseMemberQr(rawPayload);
+    if (parsed == null) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Format QR jemaat tidak valid.')),
+      );
+      return;
+    }
+
+    final isRecorded = await _attendanceService.markAttendance(
+      eventId: _eventId,
+      eventName: _eventName,
+      memberId: parsed.memberId,
+      memberName: parsed.memberName,
+      source: 'scanner-admin',
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isRecorded
+              ? 'Kehadiran ${parsed.memberName} berhasil dicatat.'
+              : 'Jemaat ini sudah tercatat untuk event ini.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _simulateMemberScanEvent() async {
+    final controller = TextEditingController();
+    final rawPayload = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Input QR Event'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Tempel payload QR event',
+            hintText: 'CHURCH_EVENT|EID:...|EVENT:...|...',
+          ),
+          minLines: 2,
+          maxLines: 4,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Gunakan'),
+          ),
+        ],
+      ),
+    );
+
+    if (rawPayload == null || rawPayload.isEmpty) {
+      return;
+    }
+
+    final parsed = _attendanceService.parseEventQr(rawPayload);
+    if (parsed == null) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Format QR event tidak valid.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _eventId = parsed.eventId;
+      _eventName = parsed.eventName;
+    });
+    generateQR();
+  }
+
+  Future<void> _scanMemberEventWithCamera() async {
+    final rawPayload = await _scanQrPayloadWithCamera(title: 'Scan QR Event');
+    if (rawPayload == null || rawPayload.isEmpty) {
+      return;
+    }
+
+    final parsed = _attendanceService.parseEventQr(rawPayload);
+    if (parsed == null) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Format QR event tidak valid.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _eventId = parsed.eventId;
+      _eventName = parsed.eventName;
+    });
+    generateQR();
+
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Event terdeteksi: ${parsed.eventName}')),
     );
   }
 
   Future<void> _markSelfAttendance() async {
-    await _attendanceService.markAttendance(
+    final isRecorded = await _attendanceService.markAttendance(
       eventId: _eventId,
       eventName: _eventName,
       memberId: widget.memberId,
@@ -182,7 +375,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Kehadiran Anda sudah tercatat.')),
+      SnackBar(
+        content: Text(
+          isRecorded
+              ? 'Kehadiran Anda sudah tercatat.'
+              : 'Anda sudah tercatat untuk event ini.',
+        ),
+      ),
     );
   }
 
@@ -194,19 +393,55 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final secondaryTextColor = colorScheme.onSurface.withValues(alpha: 0.72);
+
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(widget.isAdminMode ? 'Kelola QR Event' : 'QR Kehadiran Ibadah'),
         centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
 
-            const Icon(Icons.church, size: 80, color: Colors.blue),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.timer_outlined, color: Color(0xFF58A77E)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      widget.isAdminMode
+                          ? 'Mode Admin: buat dan validasi QR event.'
+                          : 'Mode Jemaat: tunjukkan QR ke petugas.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+             Container(
+               padding: const EdgeInsets.all(16),
+               decoration: BoxDecoration(
+                 gradient: AppTheme.purpleBlueGradient,
+                 borderRadius: BorderRadius.circular(22),
+               ),
+               child: const Icon(Icons.church, size: 80, color: Colors.white),
+             ),
 
             const SizedBox(height: 16),
 
@@ -224,11 +459,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
                     blurRadius: 12,
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: const Color(0xFF58A77E).withValues(alpha: 0.2),
                     offset: const Offset(0, 6),
                   ),
                 ],
@@ -252,7 +487,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
             Text(
               'ID: ${widget.isAdminMode ? _eventId : widget.memberId}',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: secondaryTextColor),
             ),
 
             const SizedBox(height: 8),
@@ -271,20 +506,47 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _createEventQr,
                       icon: const Icon(Icons.qr_code_2),
-                      label: const Text('Buat QR Event'),
+                      label: const Text('Buat QR'),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: _simulateAdminScanMember,
+                      onPressed: _scanAdminMemberWithCamera,
                       icon: const Icon(Icons.document_scanner),
-                      label: const Text('Scan QR Jemaat'),
+                      label: const Text('Scan Jemaat'),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  onPressed: _simulateAdminScanMember,
+                  icon: const Icon(Icons.edit_note),
+                  label: const Text('Input Manual Jemaat'),
+                ),
+              ),
             ] else ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _scanMemberEventWithCamera,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('Scan QR Event'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _simulateMemberScanEvent,
+                  icon: const Icon(Icons.edit_note),
+                  label: const Text('Input QR Event Manual'),
+                ),
+              ),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

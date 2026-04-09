@@ -66,7 +66,30 @@ class AuthService {
     await prefs.setString(_accountsKey, jsonEncode(accounts));
   }
 
+  Future<User?> _getCachedCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString(_userKey);
+
+    if (userJson == null) {
+      return null;
+    }
+
+    return User.fromJson(jsonDecode(userJson));
+  }
+
   Future<AuthOperationResult> register(User user, String password) async {
+    return _createUserInternal(user, password, updateSession: true);
+  }
+
+  Future<AuthOperationResult> createUser(User user, String password) async {
+    return _createUserInternal(user, password, updateSession: false);
+  }
+
+  Future<AuthOperationResult> _createUserInternal(
+    User user,
+    String password, {
+    required bool updateSession,
+  }) async {
     try {
       await _seedAdminIfNeeded();
       final accounts = await _getAccounts();
@@ -99,9 +122,16 @@ class AuthService {
 
       await _saveAccounts(accounts);
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_userKey, jsonEncode(userToSave.toJson()));
-      await prefs.setBool(_isLoggedInKey, true);
+      if (updateSession) {
+        final prefs = await SharedPreferences.getInstance();
+        if (userToSave.role == 'admin') {
+          await prefs.setString(_userKey, jsonEncode(userToSave.toJson()));
+          await prefs.setBool(_isLoggedInKey, true);
+        } else {
+          await prefs.remove(_userKey);
+          await prefs.setBool(_isLoggedInKey, false);
+        }
+      }
 
       return AuthOperationResult(
         success: true,
@@ -202,6 +232,12 @@ class AuthService {
   Future<bool> updateUser(User user) async {
     try {
       await _seedAdminIfNeeded();
+      final currentUser = await _getCachedCurrentUser();
+      if (currentUser == null || currentUser.role != 'admin') {
+        debugPrint('Update user denied: admin access required.');
+        return false;
+      }
+
       final accounts = await _getAccounts();
       final idx = accounts.indexWhere(
         (entry) =>
@@ -220,10 +256,51 @@ class AuthService {
       await _saveAccounts(accounts);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_userKey, jsonEncode(user.toJson()));
+      if (currentUser.id == user.id) {
+        await prefs.setString(_userKey, jsonEncode(user.toJson()));
+      }
       return true;
     } catch (e) {
       debugPrint('Update user error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteUser(String userId) async {
+    try {
+      await _seedAdminIfNeeded();
+      final currentUser = await _getCachedCurrentUser();
+      if (currentUser == null || currentUser.role != 'admin') {
+        debugPrint('Delete user denied: admin access required.');
+        return false;
+      }
+
+      final accounts = await _getAccounts();
+      final before = accounts.length;
+      accounts.removeWhere(
+        (entry) =>
+            ((entry['user'] as Map<String, dynamic>)['id'] as String) == userId,
+      );
+
+      if (accounts.length == before) {
+        return false;
+      }
+
+      await _saveAccounts(accounts);
+
+      final prefs = await SharedPreferences.getInstance();
+      final current = prefs.getString(_userKey);
+      if (current != null) {
+        final currentAccount = User.fromJson(jsonDecode(current));
+        if (currentAccount.id == userId) {
+          await prefs.remove(_userKey);
+          await prefs.setBool(_isLoggedInKey, false);
+        }
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Delete user error: $e');
       return false;
     }
   }

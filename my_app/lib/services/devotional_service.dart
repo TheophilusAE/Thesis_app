@@ -18,6 +18,12 @@ class DevotionalService {
         .toList();
   }
 
+  List<Devotional> _sortDevotionals(List<Devotional> devotionals) {
+    final sorted = List<Devotional>.from(devotionals);
+    sorted.sort((a, b) => b.date.compareTo(a.date));
+    return sorted;
+  }
+
   Future<void> _saveAll(List<Devotional> devotionals) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
@@ -27,15 +33,28 @@ class DevotionalService {
   }
 
   Future<Devotional> getTodaysDevotional() async {
-    final all = await _loadAll();
-    all.sort((a, b) => b.date.compareTo(a.date));
+    final all = await getAllDevotionals();
     return all.first;
   }
 
   Future<List<Devotional>> getDevotionalHistory() async {
-    final all = await _loadAll();
-    all.sort((a, b) => b.date.compareTo(a.date));
+    final all = await getAllDevotionals();
     return all.skip(1).toList();
+  }
+
+  Future<List<Devotional>> getAllDevotionals() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_devotionalsKey);
+
+    if (raw == null || raw.isEmpty) {
+      return _defaultDevotionals();
+    }
+
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    final devotionals = decoded
+        .map((item) => Devotional.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+    return _sortDevotionals(devotionals);
   }
 
   Future<void> addDevotional({
@@ -58,7 +77,32 @@ class DevotionalService {
         author: author,
       ),
     );
-    await _saveAll(all);
+    await _saveAll(_sortDevotionals(all));
+  }
+
+  Future<bool> updateDevotional(Devotional updatedDevotional) async {
+    final all = await _loadAll();
+    final index = all.indexWhere((devotional) => devotional.id == updatedDevotional.id);
+    if (index == -1) {
+      return false;
+    }
+
+    all[index] = updatedDevotional;
+    await _saveAll(_sortDevotionals(all));
+    return true;
+  }
+
+  Future<bool> deleteDevotional(String devotionalId) async {
+    final all = await _loadAll();
+    final before = all.length;
+    all.removeWhere((devotional) => devotional.id == devotionalId);
+    final removed = all.length < before;
+    if (!removed) {
+      return false;
+    }
+
+    await _saveAll(_sortDevotionals(all));
+    return true;
   }
 
   List<Devotional> _defaultDevotionals() {

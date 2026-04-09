@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/quest_provider.dart';
+import '../utils/app_theme.dart';
 
 class QuestScreen extends StatefulWidget {
   const QuestScreen({super.key});
@@ -19,6 +20,9 @@ class _QuestScreenState extends State<QuestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final secondaryTextColor = colorScheme.onSurface.withValues(alpha: 0.72);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Quest Baca Alkitab Setahun')),
       body: Consumer<QuestProvider>(
@@ -71,14 +75,11 @@ class _QuestScreenState extends State<QuestScreen> {
               ),
               // Progress Header
               Container(
+                margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withValues(alpha: 0.7),
-                    ],
-                  ),
+                  gradient: AppTheme.purpleBlueGradient,
+                  borderRadius: BorderRadius.circular(22),
                 ),
                 child: Column(
                   children: [
@@ -148,16 +149,14 @@ class _QuestScreenState extends State<QuestScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(18),
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: quest.isCompleted
                                 ? [
-                                    const Color(0xFF10B981),
-                                    const Color(
-                                      0xFF059669,
-                                    ).withValues(alpha: 0.7),
+                                    const Color(0xFF66B68D),
+                                    const Color(0xFF58A77E).withValues(alpha: 0.8),
                                   ]
                                 : [Colors.grey[100]!, Colors.grey[50]!],
                           ),
@@ -171,7 +170,7 @@ class _QuestScreenState extends State<QuestScreen> {
                             BoxShadow(
                               color:
                                   (quest.isCompleted
-                                          ? const Color(0xFF10B981)
+                                          ? const Color(0xFF58A77E)
                                           : Colors.black)
                                       .withValues(
                                         alpha: quest.isCompleted ? 0.2 : 0.04,
@@ -212,18 +211,17 @@ class _QuestScreenState extends State<QuestScreen> {
                                       await questProvider.markDayCompleted(
                                         quest.day,
                                       );
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Selamat! Bacaan hari ini selesai! 🎉',
-                                            ),
-                                            backgroundColor: Colors.green,
-                                          ),
-                                        );
+                                      if (!context.mounted) {
+                                        return;
                                       }
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Selamat! Bacaan hari ini selesai! 🎉',
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
                                     }
                                   }
                                 : null,
@@ -246,7 +244,7 @@ class _QuestScreenState extends State<QuestScreen> {
                                           : Icons.book,
                                       color: quest.isCompleted
                                           ? Colors.white
-                                          : Colors.grey[600],
+                                          : secondaryTextColor,
                                       size: 24,
                                     ),
                                   ),
@@ -267,7 +265,7 @@ class _QuestScreenState extends State<QuestScreen> {
                                                 fontSize: 16,
                                                 color: quest.isCompleted
                                                     ? Colors.white
-                                                    : const Color(0xFF1F2937),
+                                                    : colorScheme.onSurface,
                                               ),
                                             ),
                                             if (quest.isCompleted)
@@ -314,7 +312,7 @@ class _QuestScreenState extends State<QuestScreen> {
                                               bottom: 4,
                                             ),
                                             child: Text(
-                                              '📖 ${reading.displayText}',
+                                              reading.displayText,
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
@@ -356,15 +354,17 @@ class _StatCard extends StatelessWidget {
   final Color color;
 
   const _StatCard({
-    Key? key,
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelTextColor = isDark ? Colors.white : Colors.black87;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -385,7 +385,7 @@ class _StatCard extends StatelessWidget {
           ),
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontSize: 12),
+            style: TextStyle(color: labelTextColor, fontSize: 12),
           ),
         ],
       ),

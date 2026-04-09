@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/attendance_service.dart';
 import '../models/user.dart';
+import 'admin_management_screen.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -62,6 +63,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   Future<void> _verify(String userId, bool approved) async {
     final auth = context.read<AuthProvider>();
     final ok = await auth.verifyUser(userId: userId, approved: approved);
+    if (ok) {
+      _allUsers = await auth.getAllUsers();
+      await _loadAttendanceRecords();
+    }
 
     if (!mounted) {
       return;
@@ -78,8 +83,179 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
+  Future<void> _editUser(User user) async {
+    final nameController = TextEditingController(text: user.name);
+    final emailController = TextEditingController(text: user.email);
+    final phoneController = TextEditingController(text: user.phone);
+    final identityController = TextEditingController(text: user.identityNumber ?? '');
+    final familyController = TextEditingController(text: user.familyGroup ?? '');
+    final membershipTypeController = TextEditingController(text: user.membershipType ?? '');
+    final memberCardController = TextEditingController(text: user.memberCardNumber ?? '');
+    final addressController = TextEditingController(text: user.address ?? '');
+    final memberSinceController = TextEditingController(text: user.memberSince ?? '');
+    final baptismController = TextEditingController(text: user.baptismDate ?? '');
+    String membershipStatus = user.membershipStatus;
+
+    final updatedUser = await showDialog<User>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Edit ${user.name}'),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 420,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: nameController,
+                        decoration: const InputDecoration(labelText: 'Nama'),
+                      ),
+                      TextField(
+                        controller: emailController,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                      ),
+                      TextField(
+                        controller: phoneController,
+                        decoration: const InputDecoration(labelText: 'Telepon'),
+                      ),
+                      TextField(
+                        controller: identityController,
+                        decoration: const InputDecoration(labelText: 'NIK'),
+                      ),
+                      TextField(
+                        controller: familyController,
+                        decoration: const InputDecoration(labelText: 'Komunitas / Family Group'),
+                      ),
+                      TextField(
+                        controller: membershipTypeController,
+                        decoration: const InputDecoration(labelText: 'Tipe Keanggotaan'),
+                      ),
+                      TextField(
+                        controller: memberCardController,
+                        decoration: const InputDecoration(labelText: 'Nomor Kartu Anggota'),
+                      ),
+                      TextField(
+                        controller: addressController,
+                        decoration: const InputDecoration(labelText: 'Alamat'),
+                      ),
+                      TextField(
+                        controller: memberSinceController,
+                        decoration: const InputDecoration(labelText: 'Member Sejak'),
+                      ),
+                      TextField(
+                        controller: baptismController,
+                        decoration: const InputDecoration(labelText: 'Tanggal Baptis'),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: membershipStatus,
+                        decoration: const InputDecoration(labelText: 'Status'),
+                        items: const [
+                          DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                          DropdownMenuItem(value: 'verified', child: Text('Verified')),
+                          DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          setDialogState(() {
+                            membershipStatus = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(
+                      dialogContext,
+                      user.copyWith(
+                        name: nameController.text.trim(),
+                        email: emailController.text.trim(),
+                        phone: phoneController.text.trim(),
+                        identityNumber: identityController.text.trim().isEmpty
+                            ? null
+                            : identityController.text.trim(),
+                        familyGroup: familyController.text.trim().isEmpty
+                            ? null
+                            : familyController.text.trim(),
+                        membershipType: membershipTypeController.text.trim().isEmpty
+                            ? null
+                            : membershipTypeController.text.trim(),
+                        memberCardNumber: memberCardController.text.trim().isEmpty
+                            ? null
+                            : memberCardController.text.trim(),
+                        address: addressController.text.trim().isEmpty
+                            ? null
+                            : addressController.text.trim(),
+                        memberSince: memberSinceController.text.trim().isEmpty
+                            ? null
+                            : memberSinceController.text.trim(),
+                        baptismDate: baptismController.text.trim().isEmpty
+                            ? null
+                            : baptismController.text.trim(),
+                        membershipStatus: membershipStatus,
+                      ),
+                    );
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (updatedUser == null) {
+      return;
+    }
+
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.updateUser(updatedUser);
+    if (ok) {
+      await auth.loadPendingUsers();
+      _allUsers = await auth.getAllUsers();
+      if (mounted) {
+        setState(() {});
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? 'Data user berhasil diperbarui.' : 'Gagal memperbarui data user.'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isAdmin = context.watch<AuthProvider>().isAdmin;
+
+    if (!isAdmin) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Panel Admin')),
+        body: const Center(
+          child: Text('Akses ditolak. Hanya admin yang dapat membuka halaman ini.'),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Panel Admin'),
@@ -112,6 +288,22 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         Text('Menunggu verifikasi: ${pending.length} akun'),
                       ],
                     ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminManagementScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.manage_accounts),
+                  label: const Text('Kelola Data User'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -193,7 +385,17 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(child: Text(user.name)),
-                                      Text('${(pct * 100).toStringAsFixed(0)}%'),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('${(pct * 100).toStringAsFixed(0)}%'),
+                                          IconButton(
+                                            tooltip: 'Edit user',
+                                            icon: const Icon(Icons.edit_outlined),
+                                            onPressed: () => _editUser(user),
+                                          ),
+                                        ],
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 4),

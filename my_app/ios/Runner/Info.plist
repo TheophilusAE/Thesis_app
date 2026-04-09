@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Aplikasi menggunakan kamera untuk memindai QR kehadiran ibadah.</string>
 </dict>
 </plist>

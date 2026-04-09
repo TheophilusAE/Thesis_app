@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/devotional_service.dart';
 import '../models/devotional.dart';
-import '../providers/auth_provider.dart';
+import '../utils/app_theme.dart';
 
 class DevotionalScreen extends StatefulWidget {
-  const DevotionalScreen({Key? key}) : super(key: key);
+  const DevotionalScreen({super.key});
 
   @override
   State<DevotionalScreen> createState() => _DevotionalScreenState();
@@ -21,87 +21,12 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
     _todayFuture = _devotionalService.getTodaysDevotional();
   }
 
-  Future<void> _showCreateDevotionalDialog() async {
-    final titleController = TextEditingController();
-    final verseRefController = TextEditingController();
-    final verseController = TextEditingController();
-    final contentController = TextEditingController();
-
-    final shouldSave = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Tambah Renungan'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Judul'),
-                ),
-                TextField(
-                  controller: verseRefController,
-                  decoration: const InputDecoration(labelText: 'Referensi Ayat'),
-                ),
-                TextField(
-                  controller: verseController,
-                  decoration: const InputDecoration(labelText: 'Ayat'),
-                  maxLines: 2,
-                ),
-                TextField(
-                  controller: contentController,
-                  decoration: const InputDecoration(labelText: 'Isi Renungan'),
-                  maxLines: 4,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Simpan'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (shouldSave != true) {
-      return;
-    }
-
-    await _devotionalService.addDevotional(
-      title: titleController.text.trim(),
-      content: contentController.text.trim(),
-      verse: verseController.text.trim(),
-      verseReference: verseRefController.text.trim(),
-      date: DateTime.now(),
-      author: 'Admin',
-    );
-
-    setState(() {
-      _todayFuture = _devotionalService.getTodaysDevotional();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isAdmin = context.watch<AuthProvider>().isAdmin;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Renungan Harian')),
-      floatingActionButton: isAdmin
-          ? FloatingActionButton.extended(
-              onPressed: _showCreateDevotionalDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Tambah Renungan'),
-            )
-          : null,
       body: FutureBuilder<Devotional>(
         future: _todayFuture,
         builder: (context, snapshot) {
@@ -127,13 +52,10 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                 Container(
                   height: 200,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF7C3AED),
-                        const Color(0xFF5B21B6).withValues(alpha: 0.8),
-                      ],
+                    gradient: AppTheme.purpleGradient,
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(26),
+                      bottomRight: Radius.circular(26),
                     ),
                   ),
                   child: Center(
@@ -182,22 +104,24 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
 
                 // Verse Reference
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
                         const Color(0xFF0EA5E9).withValues(alpha: 0.1),
-                        const Color(0xFF3B82F6).withValues(alpha: 0.05),
+                        const Color(0xFF73B995).withValues(alpha: 0.08),
                       ],
                     ),
                     border: Border(
                       left: BorderSide(
-                        color: const Color(0xFF0EA5E9),
+                        color: const Color(0xFF58A77E),
                         width: 4,
                       ),
                     ),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,7 +129,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                       Text(
                         devotional.verseReference,
                         style: const TextStyle(
-                          color: Color(0xFF1E40AF),
+                          color: Color(0xFF3F916B),
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
@@ -216,7 +140,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                         style: const TextStyle(
                           fontSize: 15,
                           fontStyle: FontStyle.italic,
-                          color: Color(0xFF1E40AF),
+                          color: Color(0xFF2E7D5A),
                           height: 1.6,
                           letterSpacing: 0.3,
                         ),
@@ -235,16 +159,16 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                         'Renungan',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1F2937),
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         devotional.content,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           height: 1.8,
-                          color: Color(0xFF374151),
+                          color: colorScheme.onSurface,
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -280,7 +204,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Disimpan ke favorit'),
-                                    backgroundColor: Colors.green,
+                                    backgroundColor: Color(0xFF58A77E),
                                   ),
                                 );
                               },
@@ -305,7 +229,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1F2937),
+                              color: colorScheme.onSurface,
                             ),
                       ),
                       const SizedBox(height: 12),
@@ -353,14 +277,14 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                                               padding: const EdgeInsets.all(8),
                                               decoration: BoxDecoration(
                                                 color: const Color(
-                                                  0xFF7C3AED,
+                                                  0xFF58A77E,
                                                 ).withValues(alpha: 0.1),
                                                 borderRadius:
                                                     BorderRadius.circular(8),
                                               ),
                                               child: const Icon(
                                                 Icons.menu_book,
-                                                color: Color(0xFF7C3AED),
+                                                color: Color(0xFF3F916B),
                                                 size: 20,
                                               ),
                                             ),
@@ -374,10 +298,10 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                                                     dev.title,
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold,
-                                                      color: Color(0xFF1F2937),
+                                                      color: colorScheme.onSurface,
                                                       fontSize: 14,
                                                     ),
                                                   ),
@@ -387,7 +311,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                     style: const TextStyle(
-                                                      color: Color(0xFF7C3AED),
+                                                      color: Color(0xFF3F916B),
                                                       fontSize: 12,
                                                     ),
                                                   ),
