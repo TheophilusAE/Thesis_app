@@ -17,7 +17,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _identityNumberController = TextEditingController();
+  final _familyGroupController = TextEditingController();
+  final _addressController = TextEditingController();
   final _passwordController = TextEditingController();
+  String _baptismStatus = 'Belum';
   bool _obscurePassword = true;
 
   @override
@@ -25,6 +29,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _identityNumberController.dispose();
+    _familyGroupController.dispose();
+    _addressController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -40,6 +47,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: _emailController.text.trim(),
       phone: _phoneController.text.trim(),
       password: _passwordController.text,
+      identityNumber: _identityNumberController.text.trim(),
+      familyGroup: _familyGroupController.text.trim(),
+      address: _addressController.text.trim(),
+      baptismDate: _baptismStatus,
     );
 
     if (!mounted) {
@@ -49,7 +60,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.lastMessage ?? 'Registrasi berhasil.'),
+          content: Text(
+            authProvider.lastMessage ??
+                'Registrasi berhasil. Akun menunggu verifikasi admin.',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -110,6 +124,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                    ),
+                    child: Text(
+                      'Lengkapi data di bawah. Setelah daftar, akun akan menunggu verifikasi admin sebelum bisa dipakai login.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.95),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 40),
                   _buildTextField(
                     controller: _nameController,
@@ -150,6 +181,124 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Nomor telepon tidak boleh kosong';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTextField(
+                    controller: _identityNumberController,
+                    label: 'NIK',
+                    hint: 'Masukkan NIK',
+                    icon: Icons.badge_outlined,
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'NIK wajib diisi';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTextField(
+                    controller: _familyGroupController,
+                    label: 'Keluarga',
+                    hint: 'Masukkan keluarga',
+                    icon: Icons.groups_outlined,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Keluarga wajib diisi';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 8),
+                        child: Text(
+                          'Apakah sudah di baptis?',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      DropdownButtonFormField<String>(
+                        value: _baptismStatus,
+                        decoration: InputDecoration(
+                          hintText: 'Pilih status baptis',
+                          hintStyle: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 15,
+                          ),
+                          prefixIcon: Icon(Icons.water_drop_outlined, color: Colors.grey[600]),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF58A77E),
+                              width: 2,
+                            ),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.red,
+                              width: 1,
+                            ),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.red,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                        ),
+                        dropdownColor: Colors.white,
+                        iconEnabledColor: Colors.grey[600],
+                        items: const [
+                          DropdownMenuItem(value: 'Belum', child: Text('Belum')),
+                          DropdownMenuItem(value: 'Sudah', child: Text('Sudah')),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          setState(() {
+                            _baptismStatus = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTextField(
+                    controller: _addressController,
+                    label: 'Alamat',
+                    hint: 'Masukkan alamat lengkap',
+                    icon: Icons.home_outlined,
+                    maxLines: 3,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Alamat wajib diisi';
                       }
                       return null;
                     },
@@ -268,6 +417,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     TextInputType? keyboardType,
     bool obscureText = false,
     Widget? suffixIcon,
+    int maxLines = 1,
     String? Function(String?)? validator,
   }) {
     return Column(
@@ -336,6 +486,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           keyboardType: keyboardType,
           obscureText: obscureText,
+          maxLines: obscureText ? 1 : maxLines,
           validator: validator,
         ),
       ],

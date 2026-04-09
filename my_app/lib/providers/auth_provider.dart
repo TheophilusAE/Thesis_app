@@ -46,8 +46,8 @@ class AuthProvider with ChangeNotifier {
     required String password,
     String? identityNumber,
     String? familyGroup,
-    String? membershipType,
     String? address,
+    String? baptismDate,
   }) async {
     _isLoading = true;
     _lastMessage = null;
@@ -62,10 +62,10 @@ class AuthProvider with ChangeNotifier {
       membershipStatus: 'pending',
       identityNumber: identityNumber,
       familyGroup: familyGroup,
-      membershipType: membershipType,
       memberCardNumber: 'MEM${DateTime.now().millisecondsSinceEpoch}',
       memberSince: DateTime.now().toString().substring(0, 10),
       address: address,
+      baptismDate: baptismDate,
     );
 
     final result = await _authService.register(user, password);
