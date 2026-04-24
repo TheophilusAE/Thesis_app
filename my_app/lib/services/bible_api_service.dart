@@ -49,9 +49,6 @@ class BibleApiService {
     } catch (e) {
       debugPrint('✗ Error fetching Bible chapter: $e');
       return null;
-    } catch (e) {
-      debugPrint('✗ Error fetching Bible chapter: $e');
-      return null;
     }
   }
 

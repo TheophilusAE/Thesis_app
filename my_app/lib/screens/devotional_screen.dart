@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../services/devotional_service.dart';
 import '../models/devotional.dart';
 import '../utils/app_theme.dart';
