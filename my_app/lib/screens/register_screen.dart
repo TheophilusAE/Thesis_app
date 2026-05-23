@@ -151,6 +151,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Nama tidak boleh kosong';
                       }
+                      if (value.trim().length < 3) {
+                        return 'Nama minimal 3 karakter';
+                      }
+                      if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+                        return 'Nama hanya boleh mengandung huruf dan spasi';
+                      }
                       return null;
                     },
                   ),
@@ -165,8 +171,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Email tidak boleh kosong';
                       }
-                      if (!value.contains('@')) {
-                        return 'Format email tidak valid';
+                      final emailRegex = RegExp(
+                        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                      );
+                      if (!emailRegex.hasMatch(value.trim())) {
+                        return 'Format email tidak valid (contoh: nama@email.com)';
                       }
                       return null;
                     },
@@ -182,6 +191,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Nomor telepon tidak boleh kosong';
                       }
+                      final phoneRegex = RegExp(r'^0\d{9,12}$');
+                      if (!phoneRegex.hasMatch(value.trim())) {
+                        return 'Nomor telepon harus dimulai 0 dan berisi 10-13 digit';
+                      }
                       return null;
                     },
                   ),
@@ -189,12 +202,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _buildTextField(
                     controller: _identityNumberController,
                     label: 'NIK',
-                    hint: 'Masukkan NIK',
+                    hint: 'Masukkan NIK (16 digit)',
                     icon: Icons.badge_outlined,
                     keyboardType: TextInputType.number,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'NIK wajib diisi';
+                      }
+                      if (!RegExp(r'^\d{16}$').hasMatch(value.trim())) {
+                        return 'NIK harus berisi tepat 16 digit';
                       }
                       return null;
                     },
@@ -208,6 +224,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Keluarga wajib diisi';
+                      }
+                      if (value.trim().length < 2) {
+                        return 'Keluarga minimal 2 karakter';
                       }
                       return null;
                     },
@@ -228,7 +247,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       DropdownButtonFormField<String>(
-                        value: _baptismStatus,
+                        initialValue: _baptismStatus,
                         decoration: InputDecoration(
                           hintText: 'Pilih status baptis',
                           hintStyle: TextStyle(
@@ -327,8 +346,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Password tidak boleh kosong';
                       }
-                      if (value.length < 6) {
-                        return 'Password minimal 6 karakter';
+                      if (value.length < 8) {
+                        return 'Password minimal 8 karakter';
+                      }
+                      if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                        return 'Password harus mengandung huruf besar';
+                      }
+                      if (!RegExp(r'[a-z]').hasMatch(value)) {
+                        return 'Password harus mengandung huruf kecil';
+                      }
+                      if (!RegExp(r'[0-9]').hasMatch(value)) {
+                        return 'Password harus mengandung angka';
                       }
                       return null;
                     },

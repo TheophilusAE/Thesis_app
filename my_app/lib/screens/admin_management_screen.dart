@@ -6,8 +6,15 @@ import '../models/devotional.dart';
 import '../models/reading_quest.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import '../providers/feedback_provider.dart';
 import '../services/devotional_service.dart';
 import '../services/quest_service.dart';
+import 'admin_substitution_review_screen.dart';
+import 'feedback_management_screen.dart';
+import 'pelayan_management_screen.dart';
+import 'role_management_screen.dart';
+import 'service_schedule_management_screen.dart';
+import 'training_schedule_management_screen.dart';
 
 class AdminManagementScreen extends StatefulWidget {
   const AdminManagementScreen({super.key});
@@ -105,8 +112,9 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     final query = _userSearchController.text.trim().toLowerCase();
     return _users.where((user) {
       final matchesFilter = switch (_userFilter) {
-        'admin' => user.role == 'admin',
-        'jemaat' => user.role == 'jemaat',
+        'admin' => user.hasRole('admin'),
+        'pelayan' => user.hasRole('pelayan'),
+        'jemaat' => user.hasRole('jemaat'),
         'pending' => user.membershipStatus == 'pending',
         'verified' => user.membershipStatus == 'verified',
         _ => true,
@@ -200,7 +208,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     final addressController = TextEditingController(text: existingUser?.address ?? '');
     final memberSinceController = TextEditingController(text: existingUser?.memberSince ?? '');
     final baptismController = TextEditingController(text: existingUser?.baptismDate ?? '');
-    String role = existingUser?.role ?? 'jemaat';
+    List<String> selectedRoles = existingUser?.roles ?? ['jemaat'];
     String membershipStatus = existingUser?.membershipStatus ?? 'pending';
     final isMobile = MediaQuery.of(context).size.width < 700;
 
@@ -220,21 +228,55 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
               label: 'Password',
               obscureText: true,
             ),
-          _dialogDropdownField<String>(
-            label: 'Role',
-            value: role,
-            items: const [
-              DropdownMenuItem(value: 'jemaat', child: Text('Jemaat')),
-              DropdownMenuItem(value: 'admin', child: Text('Admin')),
+          _dialogSectionTitle('Role'),
+          const SizedBox(height: 8),
+          Column(
+            children: [
+              CheckboxListTile(
+                title: const Text('Jemaat'),
+                value: selectedRoles.contains('jemaat'),
+                onChanged: (value) {
+                  setDialogState(() {
+                    if (value == true) {
+                      if (!selectedRoles.contains('jemaat')) selectedRoles.add('jemaat');
+                    } else {
+                      selectedRoles.remove('jemaat');
+                    }
+                  });
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              CheckboxListTile(
+                title: const Text('Pelayan'),
+                value: selectedRoles.contains('pelayan'),
+                onChanged: (value) {
+                  setDialogState(() {
+                    if (value == true) {
+                      if (!selectedRoles.contains('pelayan')) selectedRoles.add('pelayan');
+                    } else {
+                      selectedRoles.remove('pelayan');
+                    }
+                  });
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              CheckboxListTile(
+                title: const Text('Admin'),
+                value: selectedRoles.contains('admin'),
+                onChanged: (value) {
+                  setDialogState(() {
+                    if (value == true) {
+                      if (!selectedRoles.contains('admin')) selectedRoles.add('admin');
+                    } else {
+                      selectedRoles.remove('admin');
+                    }
+                  });
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
             ],
-            onChanged: (value) {
-              if (value != null) {
-                setDialogState(() {
-                  role = value;
-                });
-              }
-            },
           ),
+          const SizedBox(height: 6),
           _dialogDropdownField<String>(
             label: 'Status Keanggotaan',
             value: membershipStatus,
@@ -283,7 +325,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
         name: nameController.text.trim(),
         email: emailController.text.trim(),
         phone: phoneController.text.trim(),
-        role: role,
+        roles: selectedRoles.isEmpty ? ['jemaat'] : selectedRoles,
         membershipStatus: membershipStatus,
         identityNumber: identityController.text.trim().isEmpty ? null : identityController.text.trim(),
         familyGroup: familyController.text.trim().isEmpty ? null : familyController.text.trim(),
@@ -421,7 +463,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             email: result.email,
             phone: result.phone,
             password: passwordController.text.trim(),
-            role: result.role,
+            roles: result.roles,
             identityNumber: result.identityNumber,
             familyGroup: result.familyGroup,
             membershipType: result.membershipType,
@@ -832,15 +874,22 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     }
 
     return DefaultTabController(
-      length: 3,
+      length: 9,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Kelola Data'),
           bottom: const TabBar(
+            isScrollable: true,
             tabs: [
               Tab(icon: Icon(Icons.people), text: 'User'),
+              Tab(icon: Icon(Icons.security), text: 'Role'),
               Tab(icon: Icon(Icons.menu_book), text: 'Renungan'),
               Tab(icon: Icon(Icons.task_alt), text: 'Quest Baca'),
+              Tab(icon: Icon(Icons.feedback), text: 'Feedback'),
+              Tab(icon: Icon(Icons.volunteer_activism), text: 'Pelayan'),
+              Tab(icon: Icon(Icons.event_available), text: 'Jadwal Ibadah'),
+              Tab(icon: Icon(Icons.school), text: 'Jadwal Latihan'),
+              Tab(icon: Icon(Icons.swap_horiz), text: 'Substitusi'),
             ],
           ),
           actions: [
@@ -856,8 +905,14 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             : TabBarView(
                 children: [
                   _buildUserTab(),
+                  const RoleManagementScreen(),
                   _buildDevotionalTab(),
                   _buildQuestTab(),
+                  const FeedbackManagementScreen(),
+                  const PelayaniManagementScreen(),
+                  const ServiceScheduleManagementScreen(),
+                  const TrainingScheduleManagementScreen(),
+                  const AdminSubstitutionReviewScreen(),
                 ],
               ),
       ),
@@ -866,8 +921,8 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
 
   Widget _buildUserTab() {
     final filteredUsers = _filteredUsers;
-    final pendingCount = _users.where((user) => user.role == 'jemaat' && user.membershipStatus == 'pending').length;
-    final adminCount = _users.where((user) => user.role == 'admin').length;
+    final pendingCount = _users.where((user) => user.hasRole('jemaat') && user.membershipStatus == 'pending').length;
+    final adminCount = _users.where((user) => user.hasRole('admin')).length;
     final verifiedCount = _users.where((user) => user.membershipStatus == 'verified').length;
 
     return RefreshIndicator(
@@ -994,7 +1049,12 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: [
-                                    Chip(label: Text(user.role == 'admin' ? 'Admin' : 'Jemaat')),
+                                    // Display all roles
+                                    ...user.roles.map((role) {
+                                      final roleLabel = role == 'admin' ? 'Admin' : 
+                                                       role == 'pelayan' ? 'Pelayan' : 'Jemaat';
+                                      return Chip(label: Text(roleLabel));
+                                    }),
                                     Chip(label: Text(user.membershipStatus)),
                                     Chip(label: Text('${(completeness * 100).toStringAsFixed(0)}% lengkap')),
                                   ],
@@ -1044,7 +1104,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                       const SizedBox(height: 12),
                       LinearProgressIndicator(value: completeness),
                       const SizedBox(height: 12),
-                      if (user.role == 'jemaat' && user.membershipStatus == 'pending')
+                      if (user.hasRole('jemaat') && user.membershipStatus == 'pending')
                         Row(
                           children: [
                             Expanded(

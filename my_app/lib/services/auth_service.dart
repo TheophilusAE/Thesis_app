@@ -22,9 +22,11 @@ class AuthService {
     if (raw != null) {
       final parsed = List<Map<String, dynamic>>.from(jsonDecode(raw));
       final hasAdmin = parsed.any(
-        (entry) =>
-            (entry['user'] as Map<String, dynamic>)['role']?.toString() ==
-            'admin',
+        (entry) {
+          final user = entry['user'] as Map<String, dynamic>;
+          final roles = user['roles'] as List<dynamic>? ?? [];
+          return roles.contains('admin');
+        },
       );
       if (hasAdmin) {
         return;
@@ -36,7 +38,7 @@ class AuthService {
       name: 'Administrator Gereja',
       email: 'admin@gereja.local',
       phone: '0800000000',
-      role: 'admin',
+      roles: const ['admin'],
       membershipStatus: 'verified',
       memberCardNumber: 'ADM-0001',
       memberSince: DateTime.now().toIso8601String().split('T').first,
@@ -111,8 +113,7 @@ class AuthService {
 
       final userToSave = user.copyWith(
         email: email,
-        role: user.role,
-        membershipStatus: user.role == 'admin' ? 'verified' : 'pending',
+        membershipStatus: user.hasRole('admin') ? 'verified' : 'pending',
       );
 
       accounts.add({
@@ -124,7 +125,7 @@ class AuthService {
 
       if (updateSession) {
         final prefs = await SharedPreferences.getInstance();
-        if (userToSave.role == 'admin') {
+        if (userToSave.hasRole('admin')) {
           await prefs.setString(_userKey, jsonEncode(userToSave.toJson()));
           await prefs.setBool(_isLoggedInKey, true);
         } else {
@@ -180,7 +181,7 @@ class AuthService {
         Map<String, dynamic>.from(account['user'] as Map),
       );
 
-      if (user.role == 'jemaat' && user.membershipStatus != 'verified') {
+      if (user.hasRole('jemaat') && user.membershipStatus != 'verified') {
         return const AuthOperationResult(
           success: false,
           message: 'Akun Anda belum diverifikasi admin.',
@@ -233,7 +234,7 @@ class AuthService {
     try {
       await _seedAdminIfNeeded();
       final currentUser = await _getCachedCurrentUser();
-      if (currentUser == null || currentUser.role != 'admin') {
+      if (currentUser == null || !currentUser.hasRole('admin')) {
         debugPrint('Update user denied: admin access required.');
         return false;
       }
@@ -270,7 +271,7 @@ class AuthService {
     try {
       await _seedAdminIfNeeded();
       final currentUser = await _getCachedCurrentUser();
-      if (currentUser == null || currentUser.role != 'admin') {
+      if (currentUser == null || !currentUser.hasRole('admin')) {
         debugPrint('Delete user denied: admin access required.');
         return false;
       }
@@ -310,7 +311,7 @@ class AuthService {
     final accounts = await _getAccounts();
     return accounts
         .map((entry) => User.fromJson(Map<String, dynamic>.from(entry['user'])))
-        .where((user) => user.role == 'jemaat' && user.membershipStatus == 'pending')
+        .where((user) => user.hasRole('jemaat') && user.membershipStatus == 'pending')
         .toList();
   }
 

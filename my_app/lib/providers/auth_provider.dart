@@ -15,7 +15,16 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get lastMessage => _lastMessage;
   List<User> get pendingUsers => _pendingUsers;
-  bool get isAdmin => _currentUser?.role == 'admin';
+  bool get isAdmin => _currentUser?.hasRole('admin') ?? false;
+  bool get isPelayan => _currentUser?.hasRole('pelayan') ?? false;
+  bool get isJemaat => _currentUser?.hasRole('jemaat') ?? false;
+  List<String> get userRoles => _currentUser?.roles ?? [];
+  User? get user => _currentUser;
+
+  /// Load all users for admin management
+  Future<List<User>> getAllUsers() {
+    return _authService.getAllUsers();
+  }
 
   Future<void> checkAuthStatus() async {
     _isLoading = true;
@@ -25,7 +34,7 @@ class AuthProvider with ChangeNotifier {
     if (_isLoggedIn) {
       _currentUser = await _authService.getCurrentUser();
       final isBlockedMember =
-          _currentUser?.role == 'jemaat' &&
+          _currentUser?.hasRole('jemaat') ?? false &&
           _currentUser?.membershipStatus != 'verified';
       if (isBlockedMember) {
         await _authService.logout();
@@ -58,7 +67,7 @@ class AuthProvider with ChangeNotifier {
       name: name,
       email: email,
       phone: phone,
-      role: 'jemaat',
+      roles: const ['jemaat'], // Default to jemaat role
       membershipStatus: 'pending',
       identityNumber: identityNumber,
       familyGroup: familyGroup,
@@ -87,7 +96,7 @@ class AuthProvider with ChangeNotifier {
     required String email,
     required String phone,
     required String password,
-    String role = 'jemaat',
+    List<String> roles = const ['jemaat'],
     String? identityNumber,
     String? familyGroup,
     String? membershipType,
@@ -106,7 +115,7 @@ class AuthProvider with ChangeNotifier {
       name: name,
       email: email,
       phone: phone,
-      role: role,
+      roles: roles,
       membershipStatus: membershipStatus,
       identityNumber: identityNumber,
       familyGroup: familyGroup,
@@ -186,9 +195,5 @@ class AuthProvider with ChangeNotifier {
       await loadPendingUsers();
     }
     return success;
-  }
-
-  Future<List<User>> getAllUsers() {
-    return _authService.getAllUsers();
   }
 }

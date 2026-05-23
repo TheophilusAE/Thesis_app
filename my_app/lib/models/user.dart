@@ -3,7 +3,7 @@ class User {
   final String name;
   final String email;
   final String phone;
-  final String role;
+  final List<String> roles; // Multiple roles per user (e.g., ['jemaat', 'pelayan'])
   final String membershipStatus;
   final String? identityNumber;
   final String? familyGroup;
@@ -20,7 +20,7 @@ class User {
     required this.name,
     required this.email,
     required this.phone,
-    this.role = 'jemaat',
+    this.roles = const ['jemaat'], // Default to jemaat role
     this.membershipStatus = 'pending',
     this.identityNumber,
     this.familyGroup,
@@ -33,13 +33,29 @@ class User {
     this.memberSince,
   });
 
+  /// Check if user has a specific role
+  bool hasRole(String role) => roles.contains(role);
+
+  /// Check if user has any of the specified roles
+  bool hasAnyRole(List<String> checkRoles) => 
+      checkRoles.any((r) => roles.contains(r));
+
+  /// Check if user is admin
+  bool get isAdmin => hasRole('admin');
+
+  /// Check if user is pelayan
+  bool get isPelayan => hasRole('pelayan');
+
+  /// Check if user is jemaat
+  bool get isJemaat => hasRole('jemaat');
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       'email': email,
       'phone': phone,
-      'role': role,
+      'roles': roles,
       'membershipStatus': membershipStatus,
       'identityNumber': identityNumber,
       'familyGroup': familyGroup,
@@ -54,12 +70,22 @@ class User {
   }
 
   factory User.fromJson(Map<String, dynamic> json) {
+    // Handle both old single 'role' format and new 'roles' format for backward compatibility
+    List<String> userRoles = const ['jemaat'];
+    
+    if (json['roles'] != null && json['roles'] is List) {
+      userRoles = List<String>.from(json['roles']);
+    } else if (json['role'] != null) {
+      // Backward compatibility: convert single role to list
+      userRoles = [json['role'] as String];
+    }
+
     return User(
       id: json['id'],
       name: json['name'],
       email: json['email'],
       phone: json['phone'],
-      role: json['role'] ?? 'jemaat',
+      roles: userRoles,
       membershipStatus: json['membershipStatus'] ?? 'pending',
       identityNumber: json['identityNumber'],
       familyGroup: json['familyGroup'],
@@ -80,7 +106,7 @@ class User {
     String? name,
     String? email,
     String? phone,
-    String? role,
+    List<String>? roles,
     String? membershipStatus,
     String? identityNumber,
     String? familyGroup,
@@ -97,7 +123,7 @@ class User {
       name: name ?? this.name,
       email: email ?? this.email,
       phone: phone ?? this.phone,
-      role: role ?? this.role,
+      roles: roles ?? this.roles,
       membershipStatus: membershipStatus ?? this.membershipStatus,
       identityNumber: identityNumber ?? this.identityNumber,
       familyGroup: familyGroup ?? this.familyGroup,

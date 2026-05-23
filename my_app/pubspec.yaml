@@ -65,6 +65,9 @@ dependencies:
   
   # Image Picker
   image_picker: ^1.0.7
+  
+  # UUID Generation
+  uuid: ^4.0.0
 
 dev_dependencies:
   flutter_test:

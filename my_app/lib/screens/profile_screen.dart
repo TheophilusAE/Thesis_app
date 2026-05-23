@@ -116,16 +116,22 @@ class ProfileView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   children: [
-                    Chip(
-                      label: Text(
-                        user.role == 'admin' ? 'Admin' : 'Jemaat',
-                        style: TextStyle(color: chipTextColor),
-                      ),
-                      backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    ),
+                    // Display all roles
+                    ...user.roles.map((role) {
+                      final roleLabel = role == 'admin' ? 'Admin' : 
+                                       role == 'pelayan' ? 'Pelayan' : 'Jemaat';
+                      return Chip(
+                        label: Text(
+                          roleLabel,
+                          style: TextStyle(color: chipTextColor),
+                        ),
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      );
+                    }),
                     Chip(
                       label: Text(
                         'Status: ${user.membershipStatus}',
@@ -193,7 +199,7 @@ class ProfileView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                if (user.role == 'admin')
+                if (user.hasRole('admin'))
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: OutlinedButton.icon(
