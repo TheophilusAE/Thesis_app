@@ -14,7 +14,9 @@ import 'providers/service_schedule_provider.dart';
 import 'providers/training_schedule_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/substitution_request_provider.dart';
+import 'providers/attendance_confirmation_provider.dart';
 import 'services/pelayan_service.dart';
+import 'services/attendance_confirmation_service.dart';
 import 'services/service_schedule_service.dart';
 import 'services/training_schedule_service.dart';
 import 'services/notification_service.dart';
@@ -31,6 +33,7 @@ late TrainingScheduleService _trainingScheduleService;
 late NotificationService _notificationService;
 late NotificationScheduler _notificationScheduler;
 late SubstitutionRequestService _substitutionRequestService;
+late AttendanceConfirmationService _attendanceConfirmationService;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +48,7 @@ Future<void> _initializeServices() async {
   _trainingScheduleService = TrainingScheduleService();
   _notificationService = NotificationService();
   _substitutionRequestService = SubstitutionRequestService();
+  _attendanceConfirmationService = AttendanceConfirmationService();
   _notificationScheduler = NotificationScheduler(
     serviceScheduleService: _serviceScheduleService,
     trainingScheduleService: _trainingScheduleService,
@@ -56,6 +60,7 @@ Future<void> _initializeServices() async {
   await _trainingScheduleService.init();
   await _notificationService.init();
   await _substitutionRequestService.init();
+  await _attendanceConfirmationService.init();
   await _notificationScheduler.init();
 }
 
@@ -108,6 +113,12 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => SubstitutionRequestProvider(
             service: _substitutionRequestService,
+            notificationService: _notificationService,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AttendanceConfirmationProvider(
+            service: _attendanceConfirmationService,
           ),
         ),
       ],

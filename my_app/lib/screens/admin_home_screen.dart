@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../services/feedback_service.dart';
 import 'admin_management_screen.dart';
 import 'feedback_management_screen.dart';
+import '../widgets/role_switcher.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -32,6 +33,35 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Dashboard Admin'),
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                colorScheme.primary,
+                colorScheme.primaryContainer,
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, _) {
+              if (authProvider.userRoles.length > 1) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Center(
+                    child: RoleSwitcher(),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      ),
       body: _screens[_currentIndex],
       bottomNavigationBar: Material(
         elevation: 8,

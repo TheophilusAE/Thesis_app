@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../services/devotional_service.dart';
 import '../models/devotional.dart';
 import '../utils/app_theme.dart';
+import '../widgets/role_switcher.dart';
 import 'bible_screen.dart';
 import 'profile_screen.dart';
 import 'member_card_screen.dart';
@@ -39,6 +40,35 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Beranda'),
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.primaryContainer,
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, _) {
+              if (authProvider.userRoles.length > 1) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Center(
+                    child: RoleSwitcher(),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      ),
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/substitution_request.dart';
 import '../services/substitution_request_service.dart';
+import '../services/notification_service.dart';
 
 class SubstitutionRequestProvider extends ChangeNotifier {
   final SubstitutionRequestService _service;
+  final NotificationService _notificationService;
 
   List<SubstitutionRequest> _allRequests = [];
   List<SubstitutionRequest> _filteredRequests = [];
@@ -14,7 +16,9 @@ class SubstitutionRequestProvider extends ChangeNotifier {
 
   SubstitutionRequestProvider({
     required SubstitutionRequestService service,
-  }) : _service = service;
+    required NotificationService notificationService,
+  }) : _service = service,
+       _notificationService = notificationService;
 
   // Getters
   List<SubstitutionRequest> get allRequests => _allRequests;
@@ -107,7 +111,8 @@ class SubstitutionRequestProvider extends ChangeNotifier {
       if (success) {
         final index = _allRequests.indexWhere((r) => r.id == requestId);
         if (index != -1) {
-          _allRequests[index] = _allRequests[index].copyWith(
+          final approvedRequest = _allRequests[index];
+          _allRequests[index] = approvedRequest.copyWith(
             status: 'approved',
             replacementUserId: replacementUserId,
             replacementName: replacementName,
@@ -115,6 +120,20 @@ class SubstitutionRequestProvider extends ChangeNotifier {
             updatedAt: DateTime.now(),
             reviewedAt: DateTime.now(),
           );
+
+          // Create notification for the requester
+          try {
+            await _notificationService.createNotification(
+              userId: approvedRequest.requestedByUserId,
+              title: 'Permintaan Substitusi Disetujui',
+              message: 'Permintaan substitusi Anda telah disetujui. Pengganti: $replacementName',
+              type: 'substitution_approved',
+              relatedScheduleId: approvedRequest.serviceScheduleId,
+            );
+          } catch (notifError) {
+            debugPrint('Error creating notification: $notifError');
+            // Don't fail the approval if notification fails
+          }
         }
 
         _pendingRequests.removeWhere((r) => r.id == requestId);
@@ -143,12 +162,31 @@ class SubstitutionRequestProvider extends ChangeNotifier {
       if (success) {
         final index = _allRequests.indexWhere((r) => r.id == requestId);
         if (index != -1) {
-          _allRequests[index] = _allRequests[index].copyWith(
+          final rejectedRequest = _allRequests[index];
+          _allRequests[index] = rejectedRequest.copyWith(
             status: 'rejected',
             adminNotes: adminNotes,
             updatedAt: DateTime.now(),
             reviewedAt: DateTime.now(),
           );
+
+          // Create notification for the requester
+          try {
+            final notifMessage = adminNotes != null && adminNotes.isNotEmpty
+                ? 'Permintaan substitusi Anda ditolak. Alasan: $adminNotes'
+                : 'Permintaan substitusi Anda ditolak.';
+            
+            await _notificationService.createNotification(
+              userId: rejectedRequest.requestedByUserId,
+              title: 'Permintaan Substitusi Ditolak',
+              message: notifMessage,
+              type: 'substitution_rejected',
+              relatedScheduleId: rejectedRequest.serviceScheduleId,
+            );
+          } catch (notifError) {
+            debugPrint('Error creating rejection notification: $notifError');
+            // Don't fail the rejection if notification fails
+          }
         }
 
         _pendingRequests.removeWhere((r) => r.id == requestId);

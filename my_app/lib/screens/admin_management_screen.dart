@@ -10,6 +10,7 @@ import '../providers/feedback_provider.dart';
 import '../services/devotional_service.dart';
 import '../services/quest_service.dart';
 import 'admin_substitution_review_screen.dart';
+import 'admin_attendance_monitoring_screen.dart';
 import 'feedback_management_screen.dart';
 import 'pelayan_management_screen.dart';
 import 'role_management_screen.dart';
@@ -874,7 +875,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     }
 
     return DefaultTabController(
-      length: 9,
+      length: 10,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Kelola Data'),
@@ -890,6 +891,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
               Tab(icon: Icon(Icons.event_available), text: 'Jadwal Ibadah'),
               Tab(icon: Icon(Icons.school), text: 'Jadwal Latihan'),
               Tab(icon: Icon(Icons.swap_horiz), text: 'Substitusi'),
+              Tab(icon: Icon(Icons.check_circle), text: 'Kehadiran'),
             ],
           ),
           actions: [
@@ -913,6 +915,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                   const ServiceScheduleManagementScreen(),
                   const TrainingScheduleManagementScreen(),
                   const AdminSubstitutionReviewScreen(),
+                  const AdminAttendanceMonitoringScreen(),
                 ],
               ),
       ),

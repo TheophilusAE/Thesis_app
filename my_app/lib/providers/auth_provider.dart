@@ -9,6 +9,7 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _lastMessage;
   List<User> _pendingUsers = [];
+  late String _currentDisplayRole; // Track which role is currently being displayed
 
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _isLoggedIn;
@@ -20,6 +21,15 @@ class AuthProvider with ChangeNotifier {
   bool get isJemaat => _currentUser?.hasRole('jemaat') ?? false;
   List<String> get userRoles => _currentUser?.roles ?? [];
   User? get user => _currentUser;
+  String get currentDisplayRole => _currentDisplayRole;
+  
+  /// Switch the currently displayed role
+  void switchRole(String role) {
+    if (userRoles.contains(role)) {
+      _currentDisplayRole = role;
+      notifyListeners();
+    }
+  }
 
   /// Load all users for admin management
   Future<List<User>> getAllUsers() {
@@ -33,6 +43,18 @@ class AuthProvider with ChangeNotifier {
     _isLoggedIn = await _authService.isLoggedIn();
     if (_isLoggedIn) {
       _currentUser = await _authService.getCurrentUser();
+      // Initialize display role
+      if (_currentUser != null) {
+        if (_currentUser!.hasRole('admin')) {
+          _currentDisplayRole = 'admin';
+        } else if (_currentUser!.hasRole('pelayan')) {
+          _currentDisplayRole = 'pelayan';
+        } else {
+          _currentDisplayRole = 'jemaat';
+        }
+      } else {
+        _currentDisplayRole = 'jemaat';
+      }
       final isBlockedMember =
           _currentUser?.hasRole('jemaat') ?? false &&
           _currentUser?.membershipStatus != 'verified';
@@ -42,6 +64,9 @@ class AuthProvider with ChangeNotifier {
         _isLoggedIn = false;
         _lastMessage = 'Akun Anda belum diverifikasi admin.';
       }
+    } else {
+      // Initialize to default when not logged in
+      _currentDisplayRole = 'jemaat';
     }
 
     _isLoading = false;
@@ -146,6 +171,16 @@ class AuthProvider with ChangeNotifier {
     if (result.success) {
       _isLoggedIn = true;
       _currentUser = await _authService.getCurrentUser();
+      // Set initial display role (priority: admin > pelayan > jemaat)
+      if (_currentUser != null) {
+        if (_currentUser!.hasRole('admin')) {
+          _currentDisplayRole = 'admin';
+        } else if (_currentUser!.hasRole('pelayan')) {
+          _currentDisplayRole = 'pelayan';
+        } else {
+          _currentDisplayRole = 'jemaat';
+        }
+      }
     }
 
     _isLoading = false;
