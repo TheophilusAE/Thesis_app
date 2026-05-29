@@ -116,7 +116,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                     ),
                     border: Border(
                       left: BorderSide(
-                        color: const Color(0xFF58A77E),
+                        color: const Color(0xFF1E3A5F),
                         width: 4,
                       ),
                     ),
@@ -203,7 +203,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Disimpan ke favorit'),
-                                    backgroundColor: Color(0xFF58A77E),
+                                    backgroundColor: Color(0xFF1E3A5F),
                                   ),
                                 );
                               },
@@ -276,7 +276,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                                               padding: const EdgeInsets.all(8),
                                               decoration: BoxDecoration(
                                                 color: const Color(
-                                                  0xFF58A77E,
+                                                  0xFF1E3A5F,
                                                 ).withValues(alpha: 0.1),
                                                 borderRadius:
                                                     BorderRadius.circular(8),

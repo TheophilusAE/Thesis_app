@@ -1,7 +1,5 @@
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/service_schedule.dart';
-import '../models/training_schedule.dart';
 import '../services/service_schedule_service.dart';
 import '../services/training_schedule_service.dart';
 import '../services/notification_service.dart';
@@ -74,7 +72,7 @@ class NotificationScheduler {
           }
         }
       } catch (e) {
-        print('Error checking service reminders for Pelayan $pelayaniId: $e');
+        debugPrint('Error checking service reminders for Pelayan $pelayaniId: $e');
       }
     }
   }
@@ -119,7 +117,7 @@ class NotificationScheduler {
           }
         }
       } catch (e) {
-        print('Error checking training reminders for Pelayan $pelayaniId: $e');
+        debugPrint('Error checking training reminders for Pelayan $pelayaniId: $e');
       }
     }
   }
@@ -166,7 +164,7 @@ class NotificationScheduler {
 
   /// Generate unique notification ID
   String _generateNotificationId(String type, String scheduleId, int hoursBefore) {
-    return '${type}_${scheduleId}_h${hoursBefore}';
+    return '${type}_${scheduleId}_h$hoursBefore';
   }
 
   /// Format time info for notification message

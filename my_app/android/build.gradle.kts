@@ -24,9 +24,9 @@ subprojects {
         }
     }
 
-    // Apply Java 17 compatibility to all subprojects (including Flutter plugins)
     afterEvaluate {
         extensions.findByType<com.android.build.gradle.BaseExtension>()?.apply {
+            compileSdkVersion(36)
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_17
                 targetCompatibility = JavaVersion.VERSION_17

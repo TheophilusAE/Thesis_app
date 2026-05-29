@@ -1,29 +1,74 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../models/user.dart';
-import '../services/auth_service.dart';
+import '../services/supabase_service.dart';
 
 class AuthProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final SupabaseService _supabaseService = SupabaseService();
   User? _currentUser;
   bool _isLoggedIn = false;
   bool _isLoading = false;
+  bool _isInitializing = true;
   String? _lastMessage;
-  List<User> _pendingUsers = [];
-  late String _currentDisplayRole; // Track which role is currently being displayed
+  late String _currentDisplayRole = 'jemaat';
 
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _isLoggedIn;
   bool get isLoading => _isLoading;
+  bool get isInitializing => _isInitializing;
   String? get lastMessage => _lastMessage;
-  List<User> get pendingUsers => _pendingUsers;
   bool get isAdmin => _currentUser?.hasRole('admin') ?? false;
   bool get isPelayan => _currentUser?.hasRole('pelayan') ?? false;
   bool get isJemaat => _currentUser?.hasRole('jemaat') ?? false;
   List<String> get userRoles => _currentUser?.roles ?? [];
   User? get user => _currentUser;
   String get currentDisplayRole => _currentDisplayRole;
-  
-  /// Switch the currently displayed role
+
+  String _mapError(dynamic e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('email not confirmed') || msg.contains('email_not_confirmed')) {
+      return 'Email belum dikonfirmasi. Periksa kotak masuk email Anda.';
+    }
+    if (msg.contains('invalid login credentials') || msg.contains('invalid_credentials')) {
+      return 'Email atau password salah. Silakan coba lagi.';
+    }
+    if (msg.contains('user already registered') ||
+        msg.contains('user_already_exists') ||
+        msg.contains('already registered')) {
+      return 'Email ini sudah terdaftar. Silakan login.';
+    }
+    if (msg.contains('password should be') || msg.contains('weak_password')) {
+      return 'Password terlalu lemah. Gunakan minimal 6 karakter.';
+    }
+    if (msg.contains('unable to validate email') || msg.contains('invalid email')) {
+      return 'Format email tidak valid.';
+    }
+    if (msg.contains('rate_limit') || msg.contains('over_request_rate_limit')) {
+      return 'Terlalu banyak percobaan. Tunggu beberapa saat.';
+    }
+    if (msg.contains('network') || msg.contains('socket') || msg.contains('connection')) {
+      return 'Tidak ada koneksi internet. Periksa jaringan Anda.';
+    }
+    return 'Terjadi kesalahan. Silakan coba lagi.';
+  }
+
+  void init() {
+    _supabaseService.onAuthStateChange().listen((data) {
+      final event = data.event;
+      final session = data.session;
+
+      if (event == AuthChangeEvent.signedIn && session != null) {
+        _isLoggedIn = true;
+        _loadUserData(session.user.id);
+      } else if (event == AuthChangeEvent.signedOut) {
+        _isLoggedIn = false;
+        _currentUser = null;
+        _currentDisplayRole = 'jemaat';
+        notifyListeners();
+      }
+    });
+  }
+
   void switchRole(String role) {
     if (userRoles.contains(role)) {
       _currentDisplayRole = role;
@@ -31,45 +76,73 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// Load all users for admin management
-  Future<List<User>> getAllUsers() {
-    return _authService.getAllUsers();
-  }
-
   Future<void> checkAuthStatus() async {
     _isLoading = true;
     notifyListeners();
 
-    _isLoggedIn = await _authService.isLoggedIn();
-    if (_isLoggedIn) {
-      _currentUser = await _authService.getCurrentUser();
-      // Initialize display role
-      if (_currentUser != null) {
-        if (_currentUser!.hasRole('admin')) {
-          _currentDisplayRole = 'admin';
-        } else if (_currentUser!.hasRole('pelayan')) {
-          _currentDisplayRole = 'pelayan';
-        } else {
-          _currentDisplayRole = 'jemaat';
-        }
+    try {
+      final user = _supabaseService.getCurrentUser();
+      if (user != null) {
+        _isLoggedIn = true;
+        await _loadUserData(user.id);
+      } else {
+        _isLoggedIn = false;
+        _currentUser = null;
+        _currentDisplayRole = 'jemaat';
+      }
+    } catch (e) {
+      _lastMessage = _mapError(e);
+      _isLoggedIn = false;
+    } finally {
+      _isLoading = false;
+      _isInitializing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadUserData(String userId) async {
+    try {
+      final profileData = await _supabaseService.getUserProfile(userId);
+      if (profileData != null) {
+        _currentUser = User(
+          id: profileData['id'] ?? userId,
+          name: profileData['nama'] ?? '',
+          email: profileData['email'] ?? '',
+          phone: profileData['phone'] ?? '',
+          roles: List<String>.from(profileData['roles'] ?? ['jemaat']),
+          membershipStatus: profileData['membership_status'] ?? 'pending',
+          identityNumber: profileData['identity_number'],
+          familyGroup: profileData['family_group'],
+          memberCardNumber: profileData['member_card_number'],
+          memberSince: profileData['member_since'],
+          address: profileData['address'],
+          baptismDate: profileData['baptism_date'],
+        );
+      } else {
+        // Fallback: build minimal user from auth metadata so home screen doesn't crash
+        final authUser = _supabaseService.getCurrentUser();
+        _currentUser = User(
+          id: userId,
+          name: authUser?.userMetadata?['nama'] as String? ??
+              authUser?.email?.split('@').first ??
+              '',
+          email: authUser?.email ?? '',
+          phone: authUser?.userMetadata?['phone'] as String? ?? '',
+          roles: ['jemaat'],
+          membershipStatus: 'pending',
+        );
+      }
+
+      if (_currentUser!.hasRole('admin')) {
+        _currentDisplayRole = 'admin';
+      } else if (_currentUser!.hasRole('pelayan')) {
+        _currentDisplayRole = 'pelayan';
       } else {
         _currentDisplayRole = 'jemaat';
       }
-      final isBlockedMember =
-          _currentUser?.hasRole('jemaat') ?? false &&
-          _currentUser?.membershipStatus != 'verified';
-      if (isBlockedMember) {
-        await _authService.logout();
-        _currentUser = null;
-        _isLoggedIn = false;
-        _lastMessage = 'Akun Anda belum diverifikasi admin.';
-      }
-    } else {
-      // Initialize to default when not logged in
-      _currentDisplayRole = 'jemaat';
+    } catch (e) {
+      debugPrint('Error loading user data: $e');
     }
-
-    _isLoading = false;
     notifyListeners();
   }
 
@@ -87,33 +160,203 @@ class AuthProvider with ChangeNotifier {
     _lastMessage = null;
     notifyListeners();
 
-    final user = User(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
-      email: email,
-      phone: phone,
-      roles: const ['jemaat'], // Default to jemaat role
-      membershipStatus: 'pending',
-      identityNumber: identityNumber,
-      familyGroup: familyGroup,
-      memberCardNumber: 'MEM${DateTime.now().millisecondsSinceEpoch}',
-      memberSince: DateTime.now().toString().substring(0, 10),
-      address: address,
-      baptismDate: baptismDate,
-    );
+    try {
+      final response = await _supabaseService.signUp(
+        email: email,
+        password: password,
+        nama: name,
+        phone: phone,
+        additionalData: {
+          if (identityNumber != null && identityNumber.isNotEmpty)
+            'identity_number': identityNumber,
+          if (familyGroup != null && familyGroup.isNotEmpty)
+            'family_group': familyGroup,
+          if (address != null && address.isNotEmpty) 'address': address,
+          if (baptismDate != null && baptismDate.isNotEmpty)
+            'baptism_date': baptismDate,
+        },
+      );
 
-    final result = await _authService.register(user, password);
-    _lastMessage = result.message;
+      if (response.user == null) {
+        _lastMessage = 'Registrasi gagal. Silakan coba lagi.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
 
-    if (result.success) {
-      _currentUser = null;
+      // Always sign out after registration — account must be verified by admin first
+      try {
+        await _supabaseService.signOut();
+      } catch (_) {}
       _isLoggedIn = false;
-    }
+      _lastMessage =
+          'Registrasi berhasil! Akun Anda sedang menunggu verifikasi admin. Anda dapat login setelah akun disetujui.';
 
-    _isLoading = false;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastMessage = _mapError(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> resendConfirmationEmail(String email) async {
+    try {
+      await _supabaseService.resendConfirmationEmail(email);
+      _lastMessage = 'Email konfirmasi telah dikirim ulang. Periksa kotak masuk Anda.';
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastMessage = _mapError(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> login(String email, String password) async {
+    _isLoading = true;
+    _lastMessage = null;
     notifyListeners();
 
-    return result.success;
+    try {
+      final response = await _supabaseService.signIn(
+        email: email,
+        password: password,
+      );
+
+      if (response.user != null) {
+        await _loadUserData(response.user!.id);
+
+        // Block accounts that haven't been verified by admin yet
+        if (_currentUser?.membershipStatus == 'pending') {
+          _isLoggedIn = false;
+          _currentUser = null;
+          _currentDisplayRole = 'jemaat';
+          _lastMessage =
+              'Akun Anda belum diverifikasi admin. Silakan tunggu persetujuan untuk dapat login.';
+          try {
+            await _supabaseService.signOut();
+          } catch (_) {}
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+
+        _isLoggedIn = true;
+        _lastMessage = 'Login berhasil';
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _lastMessage = 'Login gagal. Silakan coba lagi.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _lastMessage = _mapError(e);
+      _isLoggedIn = false;
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> forgotPassword(String email) async {
+    try {
+      await _supabaseService.resetPassword(email);
+      _lastMessage = 'Link reset password telah dikirim ke email Anda.';
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastMessage = _mapError(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      await _supabaseService.signOut();
+    } catch (e) {
+      _lastMessage = 'Error logout: $e';
+    }
+    _isLoggedIn = false;
+    _currentUser = null;
+    _currentDisplayRole = 'jemaat';
+    notifyListeners();
+  }
+
+  Future<bool> updateProfile(User updatedUser) async {
+    try {
+      await _supabaseService.updateUserProfile(
+        updatedUser.id,
+        {
+          'nama': updatedUser.name,
+          'phone': updatedUser.phone,
+          if (updatedUser.address != null) 'address': updatedUser.address,
+        },
+      );
+      _currentUser = updatedUser;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastMessage = 'Error updating profile: $e';
+      return false;
+    }
+  }
+
+  Future<List<User>> getAllUsers() async {
+    try {
+      final data = await _supabaseService.getAllUsers();
+      return data
+          .map((p) => User(
+                id: p['id'] ?? '',
+                name: p['nama'] ?? '',
+                email: p['email'] ?? '',
+                phone: p['phone'] ?? '',
+                roles: List<String>.from(p['roles'] ?? ['jemaat']),
+                membershipStatus: p['membership_status'] ?? 'pending',
+                identityNumber: p['identity_number'],
+                familyGroup: p['family_group'],
+                memberCardNumber: p['member_card_number'],
+                memberSince: p['member_since'],
+                address: p['address'],
+                baptismDate: p['baptism_date'],
+              ))
+          .toList();
+    } catch (e) {
+      _lastMessage = e.toString();
+      return [];
+    }
+  }
+
+  Future<List<User>> getPendingUsers() async {
+    try {
+      final data = await _supabaseService.getPendingUsers();
+      return data
+          .map((p) => User(
+                id: p['id'] ?? '',
+                name: p['nama'] ?? '',
+                email: p['email'] ?? '',
+                phone: p['phone'] ?? '',
+                roles: List<String>.from(p['roles'] ?? ['jemaat']),
+                membershipStatus: p['membership_status'] ?? 'pending',
+                identityNumber: p['identity_number'],
+                familyGroup: p['family_group'],
+                memberCardNumber: p['member_card_number'],
+                memberSince: p['member_since'],
+                address: p['address'],
+                baptismDate: p['baptism_date'],
+              ))
+          .toList();
+    } catch (e) {
+      _lastMessage = e.toString();
+      return [];
+    }
   }
 
   Future<bool> createUser({
@@ -129,106 +372,90 @@ class AuthProvider with ChangeNotifier {
     String? memberCardNumber,
     String? memberSince,
     String? baptismDate,
-    String membershipStatus = 'pending',
+    String? membershipStatus,
   }) async {
-    _isLoading = true;
-    _lastMessage = null;
-    notifyListeners();
-
-    final user = User(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
-      email: email,
-      phone: phone,
-      roles: roles,
-      membershipStatus: membershipStatus,
-      identityNumber: identityNumber,
-      familyGroup: familyGroup,
-      membershipType: membershipType,
-      memberCardNumber: memberCardNumber ?? 'MEM${DateTime.now().millisecondsSinceEpoch}',
-      memberSince: memberSince ?? DateTime.now().toString().substring(0, 10),
-      address: address,
-      baptismDate: baptismDate,
-    );
-
-    final result = await _authService.createUser(user, password);
-    _lastMessage = result.message;
-
-    _isLoading = false;
-    notifyListeners();
-
-    return result.success;
-  }
-
-  Future<bool> login(String email, String password) async {
-    _isLoading = true;
-    _lastMessage = null;
-    notifyListeners();
-
-    final result = await _authService.login(email, password);
-    _lastMessage = result.message;
-
-    if (result.success) {
-      _isLoggedIn = true;
-      _currentUser = await _authService.getCurrentUser();
-      // Set initial display role (priority: admin > pelayan > jemaat)
-      if (_currentUser != null) {
-        if (_currentUser!.hasRole('admin')) {
-          _currentDisplayRole = 'admin';
-        } else if (_currentUser!.hasRole('pelayan')) {
-          _currentDisplayRole = 'pelayan';
-        } else {
-          _currentDisplayRole = 'jemaat';
-        }
+    try {
+      final response = await _supabaseService.signUp(
+        email: email,
+        password: password,
+        nama: name,
+        phone: phone,
+      );
+      if (response.user != null) {
+        await _supabaseService.updateUserProfile(response.user!.id, {
+          'roles': roles,
+          'identity_number': identityNumber,
+          'family_group': familyGroup,
+          'address': address,
+          'member_card_number': memberCardNumber,
+          'member_since': memberSince,
+          'baptism_date': baptismDate,
+          'membership_status': membershipStatus ?? 'active',
+        });
       }
+      return true;
+    } catch (e) {
+      _lastMessage = e.toString();
+      return false;
     }
-
-    _isLoading = false;
-    notifyListeners();
-
-    return result.success;
-  }
-
-  Future<void> logout() async {
-    await _authService.logout();
-    _isLoggedIn = false;
-    _currentUser = null;
-    notifyListeners();
-  }
-
-  Future<bool> updateProfile(User updatedUser) async {
-    return updateUser(updatedUser);
   }
 
   Future<bool> updateUser(User updatedUser) async {
-    final success = await _authService.updateUser(updatedUser);
-    if (success && _currentUser?.id == updatedUser.id) {
-      _currentUser = updatedUser;
-      notifyListeners();
+    try {
+      await _supabaseService.updateUserProfile(updatedUser.id, {
+        'nama': updatedUser.name,
+        'phone': updatedUser.phone,
+        'roles': updatedUser.roles,
+        'identity_number': updatedUser.identityNumber,
+        'family_group': updatedUser.familyGroup,
+        'member_card_number': updatedUser.memberCardNumber,
+        'member_since': updatedUser.memberSince,
+        'address': updatedUser.address,
+        'baptism_date': updatedUser.baptismDate,
+        'membership_status': updatedUser.membershipStatus,
+      });
+      if (_currentUser?.id == updatedUser.id) {
+        _currentUser = updatedUser;
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      _lastMessage = e.toString();
+      return false;
     }
-    return success;
+  }
+
+  Future<bool> updateUserRoles(String userId, List<String> roles) async {
+    try {
+      await _supabaseService.updateUserRoles(userId, roles);
+      return true;
+    } catch (e) {
+      _lastMessage = e.toString();
+      return false;
+    }
   }
 
   Future<bool> deleteUser(String userId) async {
-    final success = await _authService.deleteUser(userId);
-    if (success && _currentUser?.id == userId) {
-      _currentUser = null;
-      _isLoggedIn = false;
-      notifyListeners();
+    try {
+      await _supabaseService.deleteUserProfile(userId);
+      return true;
+    } catch (e) {
+      _lastMessage = e.toString();
+      return false;
     }
-    return success;
   }
 
   Future<void> loadPendingUsers() async {
-    _pendingUsers = await _authService.getPendingUsers();
-    notifyListeners();
+    // Exposed as getPendingUsers() — call that instead
   }
 
   Future<bool> verifyUser({required String userId, required bool approved}) async {
-    final success = await _authService.verifyUser(userId: userId, approved: approved);
-    if (success) {
-      await loadPendingUsers();
+    try {
+      await _supabaseService.verifyUser(userId, approved: approved);
+      return true;
+    } catch (e) {
+      _lastMessage = e.toString();
+      return false;
     }
-    return success;
   }
 }

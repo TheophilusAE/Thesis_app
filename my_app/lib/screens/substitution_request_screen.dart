@@ -8,7 +8,7 @@ import '../providers/service_schedule_provider.dart';
 import '../providers/substitution_request_provider.dart';
 
 class SubstitutionRequestScreen extends StatefulWidget {
-  const SubstitutionRequestScreen({Key? key}) : super(key: key);
+  const SubstitutionRequestScreen({super.key});
 
   @override
   State<SubstitutionRequestScreen> createState() =>
@@ -125,7 +125,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                           backgroundColor: Colors.green,
                         ),
                       );
-                      Navigator.of(dialogContext).pop();
+                      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
                     },
               child: const Text('Buat'),
             ),

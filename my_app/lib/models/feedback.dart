@@ -2,10 +2,10 @@ class UserFeedback {
   final String id;
   final String userId;
   final String userName;
-  final String feedbackType; // 'event', 'facility', 'hospitality'
-  final String? eventId; // null if feedback is for facility/hospitality
-  final String? eventName; // null if feedback is for facility/hospitality
-  final int rating; // 1-5 stars
+  final String feedbackType;
+  final String? eventId;
+  final String? eventName;
+  final int rating;
   final String message;
   final DateTime createdAt;
   final bool isAnonymous;
@@ -25,31 +25,46 @@ class UserFeedback {
 
   factory UserFeedback.fromJson(Map<String, dynamic> json) {
     return UserFeedback(
-      id: json['id'],
-      userId: json['userId'],
-      userName: json['userName'],
-      feedbackType: json['feedbackType'],
-      eventId: json['eventId'],
-      eventName: json['eventName'],
-      rating: json['rating'],
-      message: json['message'],
-      createdAt: DateTime.parse(json['createdAt']),
-      isAnonymous: json['isAnonymous'] ?? false,
+      id: json['id'] as String,
+      userId: (json['user_id'] ?? json['userId'] ?? '') as String,
+      userName: (json['user_name'] ?? json['userName'] ?? '') as String,
+      feedbackType: (json['feedback_type'] ?? json['feedbackType'] ?? 'general') as String,
+      eventId: (json['event_id'] ?? json['eventId']) as String?,
+      eventName: (json['event_name'] ?? json['eventName']) as String?,
+      rating: (json['rating'] ?? 0) as int,
+      message: (json['message'] ?? '') as String,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
+      isAnonymous: (json['is_anonymous'] ?? json['isAnonymous'] ?? false) as bool,
     );
+  }
+
+  Map<String, dynamic> toSupabaseJson() {
+    return {
+      'user_id': userId,
+      'user_name': userName,
+      'feedback_type': feedbackType,
+      'event_id': eventId,
+      'event_name': eventName,
+      'rating': rating,
+      'message': message,
+      'is_anonymous': isAnonymous,
+    };
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'userId': userId,
-      'userName': userName,
-      'feedbackType': feedbackType,
-      'eventId': eventId,
-      'eventName': eventName,
+      'user_id': userId,
+      'user_name': userName,
+      'feedback_type': feedbackType,
+      'event_id': eventId,
+      'event_name': eventName,
       'rating': rating,
       'message': message,
-      'createdAt': createdAt.toIso8601String(),
-      'isAnonymous': isAnonymous,
+      'created_at': createdAt.toIso8601String(),
+      'is_anonymous': isAnonymous,
     };
   }
 }

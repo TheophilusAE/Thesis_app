@@ -7,7 +7,7 @@ import '../providers/attendance_confirmation_provider.dart';
 import '../providers/service_schedule_provider.dart';
 
 class AttendanceConfirmationScreen extends StatefulWidget {
-  const AttendanceConfirmationScreen({Key? key}) : super(key: key);
+  const AttendanceConfirmationScreen({super.key});
 
   @override
   State<AttendanceConfirmationScreen> createState() =>
@@ -110,7 +110,7 @@ class _AttendanceConfirmationScreenState
                     backgroundColor: Colors.green,
                   ),
                 );
-                Navigator.of(dialogContext).pop();
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
               },
               child: const Text('Konfirmasi Hadir'),
             ),
@@ -145,7 +145,7 @@ class _AttendanceConfirmationScreenState
                     backgroundColor: Colors.orange,
                   ),
                 );
-                Navigator.of(dialogContext).pop();
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,

@@ -1,160 +1,96 @@
-# Gereja App - Church Community Mobile Application
+# GPDI Church App
 
-A comprehensive Flutter mobile application for church community management with offline Bible, devotionals, member cards, and more.
+A mobile church management application built with Flutter and Supabase, designed for GPDI (Gereja Pantekosta di Indonesia) congregations. Supports three roles — Jemaat, Pelayan, and Admin — each with a dedicated interface.
 
-## Features
+---
 
-### 1. ✅ Registrasi (Registration)
-- User registration with complete profile information
-- Email and phone validation
-- Automatic member card number generation
+## Tech Stack
 
-### 2. 👤 Info Profil Lengkap (Complete Profile Management)
-- View and edit profile information
-- Upload profile picture
-- Personal information (name, email, phone, address, birth date)
-- Church member information (baptism date, member since)
+| Layer | Technology |
+|-------|-----------|
+| Framework | Flutter (Dart) |
+| Backend | Supabase (PostgreSQL + Auth + RLS) |
+| State management | Provider |
+| Local storage | SharedPreferences, sqflite |
+| Fonts | Poppins (Google Fonts) |
 
-### 3. 📖 Alkitab Offline (Offline Bible)
-- Browse Bible by book and chapter
-- Search verses by keyword
-- Indonesian Bible (Alkitab Terjemahan Baru)
-- Offline access with SQLite database
+---
 
-### 4. 💳 Kartu Jemaat Digital (Digital Member Card)
-- Digital member card with QR code
-- Display member information
-- QR code for event check-in
+## Roles & Features
 
-### 5. 📷 Scan Event/Ibadah (Event/Service Scanner)
-- QR code scanner for event attendance
-- Flashlight support
-- Automatic attendance recording
+### Jemaat (Congregation Member)
+- **Home dashboard** — banner carousel, verse of the day, worship schedule, announcements
+- **Alkitab** — full Indonesian Bible with chapter navigation and search
+- **Renungan Harian** — daily devotional content
+- **Quest Baca** — Bible reading challenge with progress tracking
+- **Playlist Pujian** — curated worship music playlist
+- **Kartu Anggota Digital** — digital membership card with QR code
+- **Daftar Event** — register for church events (Natal, Paskah, Ibadah Padang, etc.) including family members in one registration
+- **Permintaan Doa** — submit prayer requests to the church
+- **Persembahan** — view offering methods (QRIS, bank transfer, in-person)
+- **Feedback** — submit feedback on events, facilities, and hospitality
+- **Profil** — view and edit personal profile, logout
 
-### 6. 🎯 Quest Baca Alkitab Setahun (Yearly Bible Reading Quest)
-- 365-day Bible reading plan
-- Track reading progress
-- Streak counter for consecutive days
-- Progress visualization
+### Pelayan (Church Minister)
+- **Beranda** — dashboard with stats, quick actions, and recent notifications
+- **Jadwal** — view service schedules and training schedules with toggle
+- **Konfirmasi Kehadiran** — confirm attendance for assigned services
+- **Permintaan Substitusi** — request and track service substitutions
+- **Profil** — profile management
 
-### 7. 🙏 Renungan (Daily Devotional)
-- Daily devotional content
-- Bible verses with reflections
-- Save favorite devotionals
-- History of past devotionals
+### Admin
+- **Dashboard** — user stats, feedback ratings, and quick actions
+- **Kelola Data** — full CRUD across 11 management tabs: User, Role, Renungan, Quest Baca, Feedback, Pelayan, Jadwal Ibadah, Jadwal Latihan, Substitusi, Kehadiran, Event
+- **Event Management** — create/edit/delete events, set capacity, view all registrations with family member breakdown
+- **Profil** — admin profile and logout
 
-### 8. 🎵 Playlist Hari Ini (Today's Playlist)
-- Daily worship song playlist
-- View song lyrics
-- Browse previous playlists
+> Users can hold multiple roles simultaneously and switch between them using the role switcher in the app bar.
 
-## Installation
+---
 
-### Prerequisites
-- Flutter SDK (>= 3.10.4)
-- Android Studio / Xcode for mobile development
-- VS Code or Android Studio IDE
+## Database Setup
 
-### Setup Steps
+> ⚠️ The setup file is excluded from this repository (see `.gitignore`).
+> Contact the project owner for the `database_setup.sql` file.
 
-1. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
+1. Open [Supabase Dashboard](https://supabase.com) → your project → **SQL Editor**
+2. Paste the full contents of `database_setup.sql`
+3. Click **Run All**
+4. Default admin: `admin@gereja.com` / `Admin@123` *(change after first login)*
 
-2. **Run the app**
-   ```bash
-   # For Android
-   flutter run
+### Tables
+`users` · `pelayans` · `schedules` · `training_schedules` · `substitution_requests` · `attendance` · `notifications` · `feedback` · `bible_verses` · `church_events` · `event_registrations`
 
-   # For iOS (on macOS)
-   flutter run -d ios
-   ```
-
-3. **Use your own app logo**
-   - Add your logo file at `assets/images/app_logo.png` (recommended square PNG, at least 1024x1024).
-   - Generate launcher icons:
-   ```bash
-   flutter pub get
-   flutter pub run flutter_launcher_icons
-   ```
-   - Rebuild and run the app so the new icon is applied.
+---
 
 ## Project Structure
 
 ```
 lib/
-├── main.dart                 # App entry point
-├── models/                   # Data models
-│   ├── user.dart
-│   ├── bible_verse.dart
-│   ├── devotional.dart
-│   ├── reading_quest.dart
-│   ├── playlist.dart
-│   └── event.dart
-├── providers/                # State management (Provider)
-│   ├── auth_provider.dart
-│   ├── bible_provider.dart
-│   └── quest_provider.dart
-├── screens/                  # UI screens
-│   ├── login_screen.dart
-│   ├── register_screen.dart
-│   ├── home_screen.dart
-│   ├── profile_screen.dart
-│   ├── bible_screen.dart
-│   ├── member_card_screen.dart
-│   ├── qr_scanner_screen.dart
-│   ├── quest_screen.dart
-│   ├── devotional_screen.dart
-│   └── playlist_screen.dart
-├── services/                 # Business logic & data services
-│   ├── auth_service.dart
-│   ├── bible_service.dart
-│   ├── quest_service.dart
-│   ├── devotional_service.dart
-│   └── playlist_service.dart
-└── widgets/                  # Reusable widgets
+├── main.dart                  # App entry point, Provider setup
+├── models/                    # Data models
+├── providers/                 # State management (ChangeNotifier)
+├── screens/                   # UI screens
+├── services/                  # Supabase & local data services
+├── utils/                     # Theme, constants
+└── widgets/                   # Reusable components
 ```
-
-## Key Dependencies
-
-- **provider**: State management
-- **sqflite**: Local database for offline Bible
-- **shared_preferences**: Local storage for user data
-- **qr_code_scanner**: QR code scanning
-- **qr_flutter**: QR code generation
-- **image_picker**: Profile image selection
-- **google_fonts**: Custom fonts
-- **intl**: Date formatting
-
-## How to Use
-
-1. **First Launch**: The app will show a splash screen and navigate to login
-2. **Register**: Create a new account with your details
-3. **Explore Features**: Use bottom navigation to access different features
-4. **Scan QR**: Use the scanner icon in the app bar to scan event QR codes
-5. **Read Bible**: Browse offline Bible content by book and chapter
-6. **Track Reading**: Complete daily Bible reading quests
-7. **View Member Card**: Access your digital member card with QR code
-
-## Building for Production
-
-### Android
-```bash
-flutter build apk --release
-```
-
-### iOS
-```bash
-flutter build ios --release
-```
-
-## Notes
-
-- This app is designed to work offline for Bible and basic features
-- Some features (devotionals, playlists) currently use local mock data
-- For production, integrate with a backend API for real-time content
 
 ---
 
-**Built with Flutter** 💙 - Adaptive for iOS and Android
+## Running the App
+
+```bash
+flutter pub get
+flutter run
+```
+
+Requires Flutter 3.x and a configured Supabase project. The Supabase URL and anon key are configured in `lib/main.dart`.
+
+---
+
+## Notes
+
+- Developed as a thesis project (skripsi) for a church management system
+- Role-based access control enforced both in-app and at the database level via Supabase RLS policies
+- All sensitive credentials and SQL setup files are excluded from version control

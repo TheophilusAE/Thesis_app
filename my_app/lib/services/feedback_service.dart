@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/feedback.dart' as fb;
 
@@ -20,7 +21,7 @@ class FeedbackService {
           .map((item) => fb.UserFeedback.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      print('Error loading feedback: $e');
+      debugPrint('Error loading feedback: $e');
       return [];
     }
   }
@@ -85,7 +86,7 @@ class FeedbackService {
       await prefs.setString(_feedbackKey, feedbackJson);
       return true;
     } catch (e) {
-      print('Error submitting feedback: $e');
+      debugPrint('Error submitting feedback: $e');
       return false;
     }
   }
@@ -108,7 +109,7 @@ class FeedbackService {
       await prefs.setString(_feedbackKey, feedbackJson);
       return true;
     } catch (e) {
-      print('Error updating feedback: $e');
+      debugPrint('Error updating feedback: $e');
       return false;
     }
   }
@@ -128,7 +129,7 @@ class FeedbackService {
       await prefs.setString(_feedbackKey, feedbackJson);
       return true;
     } catch (e) {
-      print('Error deleting feedback: $e');
+      debugPrint('Error deleting feedback: $e');
       return false;
     }
   }

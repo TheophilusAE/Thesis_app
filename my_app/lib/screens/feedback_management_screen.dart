@@ -3,8 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/feedback.dart' as fb;
 import '../providers/feedback_provider.dart';
-import '../services/feedback_service.dart';
-import '../utils/app_theme.dart';
 
 class FeedbackManagementScreen extends StatefulWidget {
   const FeedbackManagementScreen({super.key});
@@ -15,7 +13,6 @@ class FeedbackManagementScreen extends StatefulWidget {
 }
 
 class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
-  final FeedbackService _feedbackService = FeedbackService();
   String? _selectedType;
   String? _sortBy = 'latest'; // latest, oldest, rating_high, rating_low
 
@@ -223,15 +220,14 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
                                   if (confirmed == true) {
                                     await provider
                                         .deleteFeedback(feedback.id);
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content:
-                                              Text('Feedback berhasil dihapus'),
-                                        ),
-                                      );
-                                    }
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(
+                                      const SnackBar(
+                                        content:
+                                            Text('Feedback berhasil dihapus'),
+                                      ),
+                                    );
                                   }
                                 },
                               );

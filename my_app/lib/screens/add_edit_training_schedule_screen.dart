@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/training_schedule.dart';
-import '../models/pelayan.dart';
 import '../providers/training_schedule_provider.dart';
 import '../providers/pelayan_provider.dart';
 
 class AddEditTrainingScheduleScreen extends StatefulWidget {
   final TrainingSchedule? schedule;
 
-  const AddEditTrainingScheduleScreen({Key? key, this.schedule}) : super(key: key);
+  const AddEditTrainingScheduleScreen({super.key, this.schedule});
 
   @override
   State<AddEditTrainingScheduleScreen> createState() =>

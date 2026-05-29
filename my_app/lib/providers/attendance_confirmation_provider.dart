@@ -1,180 +1,190 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/attendance_confirmation.dart';
-import '../services/attendance_confirmation_service.dart';
+import '../services/supabase_service.dart';
 
 class AttendanceConfirmationProvider extends ChangeNotifier {
-  final AttendanceConfirmationService _service;
+  final SupabaseService _service = SupabaseService();
 
   List<AttendanceConfirmation> _allConfirmations = [];
   List<AttendanceConfirmation> _userConfirmations = [];
   List<AttendanceConfirmation> _pendingConfirmations = [];
   int _unconfirmedCount = 0;
   bool _isLoading = false;
+  String? _error;
+  RealtimeChannel? _subscription;
 
-  AttendanceConfirmationProvider({
-    required AttendanceConfirmationService service,
-  }) : _service = service;
-
-  // Getters
   List<AttendanceConfirmation> get allConfirmations => _allConfirmations;
   List<AttendanceConfirmation> get userConfirmations => _userConfirmations;
   List<AttendanceConfirmation> get pendingConfirmations => _pendingConfirmations;
   int get unconfirmedCount => _unconfirmedCount;
   bool get isLoading => _isLoading;
+  String? get error => _error;
 
-  /// Load all attendance confirmations
   Future<void> loadAllConfirmations() async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
-
     try {
-      _allConfirmations =
-          await _service.getAllAttendanceConfirmations();
+      final data = await _service.getAllAttendance();
+      _allConfirmations = data.map((e) => AttendanceConfirmation.fromJson(e)).toList();
+      _pendingConfirmations = _allConfirmations.where((a) => !a.confirmed).toList();
     } catch (e) {
+      _error = e.toString();
       debugPrint('Error loading all confirmations: $e');
     }
-
     _isLoading = false;
     notifyListeners();
   }
 
-  /// Load confirmations for specific user
   Future<void> loadUserConfirmations(String userId) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
-
     try {
-      _userConfirmations = await _service.getAttendanceByUserId(userId);
-      _pendingConfirmations =
-          await _service.getPendingConfirmationsByUserId(userId);
+      final data = await _service.getAttendanceByUser(userId);
+      _userConfirmations = data.map((e) => AttendanceConfirmation.fromJson(e)).toList();
+      _pendingConfirmations = _userConfirmations.where((a) => !a.confirmed).toList();
       _unconfirmedCount = _pendingConfirmations.length;
     } catch (e) {
+      _error = e.toString();
       debugPrint('Error loading user confirmations: $e');
     }
-
     _isLoading = false;
     notifyListeners();
   }
 
-  /// Create or update attendance confirmation
-  Future<bool> createOrUpdateConfirmation(
-    AttendanceConfirmation confirmation,
-  ) async {
+  Future<void> loadUnconfirmedCount(String userId) async {
     try {
-      final newConfirmation =
-          await _service.addOrUpdateAttendanceConfirmation(confirmation);
-      final index = _allConfirmations.indexWhere(
-          (ac) => ac.serviceScheduleId == newConfirmation.serviceScheduleId &&
-              ac.userId == newConfirmation.userId);
+      final data = await _service.getAttendanceByUser(userId);
+      final confirmations = data.map((e) => AttendanceConfirmation.fromJson(e)).toList();
+      _unconfirmedCount = confirmations.where((a) => !a.confirmed).length;
+    } catch (e) {
+      debugPrint('Error loading unconfirmed count: $e');
+    }
+    notifyListeners();
+  }
 
-      if (index != -1) {
-        _allConfirmations[index] = newConfirmation;
+  Future<bool> createOrUpdateConfirmation(AttendanceConfirmation confirmation) async {
+    try {
+      final data = confirmation.toSupabaseJson();
+      final result = await _service.upsertAttendance(data);
+      final updated = AttendanceConfirmation.fromJson(result);
+
+      final allIdx = _allConfirmations.indexWhere((a) => a.id == updated.id);
+      if (allIdx != -1) {
+        _allConfirmations[allIdx] = updated;
       } else {
-        _allConfirmations.add(newConfirmation);
+        _allConfirmations.insert(0, updated);
       }
 
+      final userIdx = _userConfirmations.indexWhere((a) => a.id == updated.id);
+      if (userIdx != -1) {
+        _userConfirmations[userIdx] = updated;
+      } else {
+        _userConfirmations.insert(0, updated);
+      }
+
+      _pendingConfirmations = _userConfirmations.where((a) => !a.confirmed).toList();
+      _unconfirmedCount = _pendingConfirmations.length;
       notifyListeners();
       return true;
     } catch (e) {
+      _error = e.toString();
       debugPrint('Error creating/updating confirmation: $e');
       return false;
     }
   }
 
-  /// Confirm attendance
-  Future<bool> confirmAttendance(
-    String confirmationId,
-    String? notes,
-  ) async {
+  Future<bool> confirmAttendance(String confirmationId, String? notes) async {
     try {
-      final success = await _service.confirmAttendance(confirmationId, notes);
-
-      if (success) {
-        final index =
-            _allConfirmations.indexWhere((ac) => ac.id == confirmationId);
-        if (index != -1) {
-          _allConfirmations[index] = _allConfirmations[index].copyWith(
-            confirmed: true,
-            confirmedAt: DateTime.now(),
-            notes: notes,
-            updatedAt: DateTime.now(),
-          );
-        }
-
-        _pendingConfirmations
-            .removeWhere((ac) => ac.id == confirmationId);
-        _unconfirmedCount = _pendingConfirmations.length;
-        notifyListeners();
-      }
-
-      return success;
+      final now = DateTime.now();
+      await _service.updateAttendance(confirmationId, {
+        'confirmed': true,
+        'confirmed_at': now.toIso8601String(),
+        'updated_at': now.toIso8601String(),
+        'notes': notes,
+      });
+      _updateLocalConfirmation(confirmationId, confirmed: true, confirmedAt: now, notes: notes);
+      return true;
     } catch (e) {
+      _error = e.toString();
       debugPrint('Error confirming attendance: $e');
       return false;
     }
   }
 
-  /// Cancel confirmation
   Future<bool> cancelConfirmation(String confirmationId) async {
     try {
-      final success = await _service.cancelConfirmation(confirmationId);
-
-      if (success) {
-        final index =
-            _allConfirmations.indexWhere((ac) => ac.id == confirmationId);
-        if (index != -1) {
-          _allConfirmations[index] = _allConfirmations[index].copyWith(
-            confirmed: false,
-            confirmedAt: null,
-            notes: null,
-            updatedAt: DateTime.now(),
-          );
-        }
-
-        final pendingIndex =
-            _pendingConfirmations.indexWhere((ac) => ac.id == confirmationId);
-        if (pendingIndex == -1) {
-          _pendingConfirmations.add(_allConfirmations[index]);
-        }
-        _unconfirmedCount = _pendingConfirmations.length;
-        notifyListeners();
-      }
-
-      return success;
+      final now = DateTime.now();
+      await _service.updateAttendance(confirmationId, {
+        'confirmed': false,
+        'confirmed_at': null,
+        'updated_at': now.toIso8601String(),
+      });
+      _updateLocalConfirmation(confirmationId, confirmed: false);
+      return true;
     } catch (e) {
-      debugPrint('Error canceling confirmation: $e');
+      _error = e.toString();
+      debugPrint('Error cancelling confirmation: $e');
       return false;
     }
   }
 
-  /// Delete confirmation
   Future<bool> deleteConfirmation(String confirmationId) async {
     try {
-      final success =
-          await _service.deleteAttendanceConfirmation(confirmationId);
-
-      if (success) {
-        _allConfirmations.removeWhere((ac) => ac.id == confirmationId);
-        _userConfirmations.removeWhere((ac) => ac.id == confirmationId);
-        _pendingConfirmations.removeWhere((ac) => ac.id == confirmationId);
-        _unconfirmedCount = _pendingConfirmations.length;
-        notifyListeners();
-      }
-
-      return success;
+      await _service.deleteAttendance(confirmationId);
+      _allConfirmations.removeWhere((a) => a.id == confirmationId);
+      _userConfirmations.removeWhere((a) => a.id == confirmationId);
+      _pendingConfirmations.removeWhere((a) => a.id == confirmationId);
+      _unconfirmedCount = _pendingConfirmations.length;
+      notifyListeners();
+      return true;
     } catch (e) {
+      _error = e.toString();
       debugPrint('Error deleting confirmation: $e');
       return false;
     }
   }
 
-  /// Get unconfirmed count
-  Future<void> loadUnconfirmedCount(String userId) async {
-    try {
-      _unconfirmedCount = await _service.getUnconfirmedCount(userId);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading unconfirmed count: $e');
+  void _updateLocalConfirmation(
+    String id, {
+    bool? confirmed,
+    DateTime? confirmedAt,
+    String? notes,
+  }) {
+    AttendanceConfirmation update(AttendanceConfirmation a) => a.copyWith(
+          confirmed: confirmed,
+          confirmedAt: confirmedAt,
+          notes: notes,
+          updatedAt: DateTime.now(),
+        );
+
+    final allIdx = _allConfirmations.indexWhere((a) => a.id == id);
+    if (allIdx != -1) _allConfirmations[allIdx] = update(_allConfirmations[allIdx]);
+
+    final userIdx = _userConfirmations.indexWhere((a) => a.id == id);
+    if (userIdx != -1) _userConfirmations[userIdx] = update(_userConfirmations[userIdx]);
+
+    _pendingConfirmations = _userConfirmations.where((a) => !a.confirmed).toList();
+    _unconfirmedCount = _pendingConfirmations.length;
+    notifyListeners();
+  }
+
+  void subscribeToRealtime() {
+    _subscription = _service.subscribeToAttendance((_) => loadAllConfirmations());
+  }
+
+  void unsubscribeFromRealtime() {
+    if (_subscription != null) {
+      _service.unsubscribeChannel(_subscription!);
+      _subscription = null;
     }
+  }
+
+  @override
+  void dispose() {
+    unsubscribeFromRealtime();
+    super.dispose();
   }
 }

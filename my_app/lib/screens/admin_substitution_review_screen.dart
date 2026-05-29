@@ -3,12 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/service_schedule.dart';
 import '../models/substitution_request.dart';
-import '../providers/auth_provider.dart';
 import '../providers/service_schedule_provider.dart';
 import '../providers/substitution_request_provider.dart';
 
 class AdminSubstitutionReviewScreen extends StatefulWidget {
-  const AdminSubstitutionReviewScreen({Key? key}) : super(key: key);
+  const AdminSubstitutionReviewScreen({super.key});
 
   @override
   State<AdminSubstitutionReviewScreen> createState() =>
@@ -19,7 +18,6 @@ class _AdminSubstitutionReviewScreenState
     extends State<AdminSubstitutionReviewScreen> {
   late SubstitutionRequestProvider _substitutionProvider;
   late ServiceScheduleProvider _scheduleProvider;
-  late AuthProvider _authProvider;
   String _statusFilter = 'pending';
 
   @override
@@ -27,7 +25,6 @@ class _AdminSubstitutionReviewScreenState
     super.initState();
     _substitutionProvider = context.read<SubstitutionRequestProvider>();
     _scheduleProvider = context.read<ServiceScheduleProvider>();
-    _authProvider = context.read<AuthProvider>();
     _substitutionProvider.loadAllRequests();
   }
 
@@ -117,7 +114,7 @@ class _AdminSubstitutionReviewScreenState
                           backgroundColor: Colors.green,
                         ),
                       );
-                      Navigator.of(dialogContext).pop();
+                      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
                     },
               child: const Text('Setujui'),
             ),
@@ -182,7 +179,7 @@ class _AdminSubstitutionReviewScreenState
                           backgroundColor: Colors.orange,
                         ),
                       );
-                      Navigator.of(dialogContext).pop();
+                      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
                     },
               child: const Text('Tolak'),
             ),

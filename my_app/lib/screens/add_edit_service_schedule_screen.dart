@@ -9,7 +9,7 @@ import '../providers/pelayan_provider.dart';
 class AddEditServiceScheduleScreen extends StatefulWidget {
   final ServiceSchedule? schedule;
 
-  const AddEditServiceScheduleScreen({Key? key, this.schedule}) : super(key: key);
+  const AddEditServiceScheduleScreen({super.key, this.schedule});
 
   @override
   State<AddEditServiceScheduleScreen> createState() =>
@@ -116,7 +116,7 @@ class _AddEditServiceScheduleScreenState
                         .toList();
 
                     return DropdownButtonFormField<Pelayan>(
-                      value: _selectedPelayan,
+                      initialValue: _selectedPelayan,
                       decoration: InputDecoration(
                         labelText: 'Pilih Pelayan',
                         prefixIcon: const Icon(Icons.person),
@@ -147,7 +147,7 @@ class _AddEditServiceScheduleScreenState
 
               // Service type
               DropdownButtonFormField<String>(
-                value: _namaJenisController.text.isNotEmpty
+                initialValue: _namaJenisController.text.isNotEmpty
                     ? _namaJenisController.text
                     : null,
                 decoration: InputDecoration(
@@ -259,7 +259,7 @@ class _AddEditServiceScheduleScreenState
               // Recurring pattern
               if (_isRecurring)
                 DropdownButtonFormField<String>(
-                  value: _recurringPattern,
+                  initialValue: _recurringPattern,
                   decoration: InputDecoration(
                     labelText: 'Pola Pengulangan',
                     border: OutlineInputBorder(

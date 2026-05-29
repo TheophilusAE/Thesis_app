@@ -5,10 +5,9 @@ import '../models/feedback.dart' as fb;
 import '../models/event.dart';
 import '../providers/auth_provider.dart';
 import '../services/feedback_service.dart';
-import '../utils/app_theme.dart';
 
 class FeedbackScreen extends StatefulWidget {
-  final Event? event;
+  final ChurchEvent? event;
   final String feedbackType; // 'event', 'facility', 'hospitality'
 
   const FeedbackScreen({
@@ -63,7 +62,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         userName: _isAnonymous ? 'Anonymous' : user.name,
         feedbackType: widget.feedbackType,
         eventId: widget.event?.id,
-        eventName: widget.event?.name,
+        eventName: widget.event?.title,
         rating: _rating,
         message: _messageController.text.trim(),
         createdAt: DateTime.now(),
@@ -109,7 +108,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   String _getFeedbackTitle() {
     switch (widget.feedbackType) {
       case 'event':
-        return 'Feedback Event: ${widget.event?.name}';
+        return 'Feedback Event: ${widget.event?.title}';
       case 'facility':
         return 'Feedback Fasilitas Gereja';
       case 'hospitality':
@@ -267,7 +266,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 }
 
 class FeedbackDialog extends StatefulWidget {
-  final Event? event;
+  final ChurchEvent? event;
   final String feedbackType;
 
   const FeedbackDialog({
@@ -320,7 +319,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
         userName: _isAnonymous ? 'Anonymous' : user.name,
         feedbackType: widget.feedbackType,
         eventId: widget.event?.id,
-        eventName: widget.event?.name,
+        eventName: widget.event?.title,
         rating: _rating,
         message: _messageController.text.trim(),
         createdAt: DateTime.now(),

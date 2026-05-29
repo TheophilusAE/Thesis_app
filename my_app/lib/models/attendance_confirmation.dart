@@ -23,43 +23,54 @@ class AttendanceConfirmation {
     this.updatedAt,
   });
 
-  /// Convert to JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'userId': userId,
-      'userName': userName,
-      'serviceScheduleId': serviceScheduleId,
-      'scheduleDate': scheduleDate.toIso8601String(),
-      'confirmed': confirmed,
-      'confirmedAt': confirmedAt?.toIso8601String(),
-      'notes': notes,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-    };
-  }
-
-  /// Create from JSON
   factory AttendanceConfirmation.fromJson(Map<String, dynamic> json) {
     return AttendanceConfirmation(
       id: json['id'] as String,
-      userId: json['userId'] as String,
-      userName: json['userName'] as String,
-      serviceScheduleId: json['serviceScheduleId'] as String,
-      scheduleDate: DateTime.parse(json['scheduleDate'] as String),
-      confirmed: json['confirmed'] as bool? ?? false,
-      confirmedAt: json['confirmedAt'] != null
-          ? DateTime.parse(json['confirmedAt'] as String)
+      userId: (json['user_id'] ?? json['userId'] ?? '') as String,
+      userName: (json['user_name'] ?? json['userName'] ?? '') as String,
+      serviceScheduleId: (json['service_schedule_id'] ?? json['serviceScheduleId'] ?? '') as String,
+      scheduleDate: DateTime.parse((json['schedule_date'] ?? json['scheduleDate']) as String),
+      confirmed: (json['confirmed'] ?? false) as bool,
+      confirmedAt: (json['confirmed_at'] ?? json['confirmedAt']) != null
+          ? DateTime.parse((json['confirmed_at'] ?? json['confirmedAt']) as String)
           : null,
       notes: json['notes'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
+      updatedAt: (json['updated_at'] ?? json['updatedAt']) != null
+          ? DateTime.parse((json['updated_at'] ?? json['updatedAt']) as String)
           : null,
     );
   }
 
-  /// Copy with updates
+  Map<String, dynamic> toSupabaseJson() {
+    return {
+      'user_id': userId,
+      'user_name': userName,
+      'service_schedule_id': serviceScheduleId,
+      'schedule_date': scheduleDate.toIso8601String(),
+      'confirmed': confirmed,
+      'confirmed_at': confirmedAt?.toIso8601String(),
+      'notes': notes,
+    };
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'user_name': userName,
+      'service_schedule_id': serviceScheduleId,
+      'schedule_date': scheduleDate.toIso8601String(),
+      'confirmed': confirmed,
+      'confirmed_at': confirmedAt?.toIso8601String(),
+      'notes': notes,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
+
   AttendanceConfirmation copyWith({
     String? id,
     String? userId,

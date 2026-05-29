@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 class RoleSwitcher extends StatelessWidget {
-  const RoleSwitcher({Key? key}) : super(key: key);
+  const RoleSwitcher({super.key});
 
   String _getRoleLabel(String role) {
     switch (role) {

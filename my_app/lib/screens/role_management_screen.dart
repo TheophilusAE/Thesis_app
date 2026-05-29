@@ -4,7 +4,7 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 
 class RoleManagementScreen extends StatefulWidget {
-  const RoleManagementScreen({Key? key}) : super(key: key);
+  const RoleManagementScreen({super.key});
 
   @override
   State<RoleManagementScreen> createState() => _RoleManagementScreenState();
@@ -58,7 +58,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
       context: context,
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (_, setState) {
             return AlertDialog(
               title: Text('Kelola Role: ${user.name}'),
               content: SingleChildScrollView(
@@ -144,7 +144,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                               backgroundColor: success ? Colors.green : Colors.red,
                             ),
                           );
-                          Navigator.of(dialogContext).pop();
+                          if (dialogContext.mounted) Navigator.of(dialogContext).pop();
                         },
                   child: const Text('Simpan'),
                 ),

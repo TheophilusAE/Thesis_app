@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 import '../models/pelayan.dart';
-import '../services/pelayan_service.dart';
+import '../services/supabase_service.dart';
 
 class PelayaniProvider extends ChangeNotifier {
-  final PelayaniService _pelayaniService;
+  final SupabaseService _supabaseService = SupabaseService();
 
   List<Pelayan> _allPelayan = [];
   List<Pelayan> _filteredPelayan = [];
   bool _isLoading = false;
 
-  PelayaniProvider({required PelayaniService pelayaniService}) : _pelayaniService = pelayaniService;
+  PelayaniProvider();
 
   // Getters
   List<Pelayan> get allPelayan => _allPelayan;
   List<Pelayan> get filteredPelayan => _filteredPelayan;
   bool get isLoading => _isLoading;
 
-  /// Load all Pelayan
+  /// Load all Pelayan from Supabase
   Future<void> loadAllPelayan() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      _allPelayan = await _pelayaniService.getAllPelayan();
+      final data = await _supabaseService.getPelayans();
+      _allPelayan = data.map((e) => Pelayan.fromJson(e)).toList();
       _filteredPelayan = _allPelayan;
     } catch (e) {
       debugPrint('Error loading Pelayan: $e');
@@ -32,28 +33,14 @@ class PelayaniProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Load Pelayan by User ID
-  Future<void> loadPelayaniByUserId(String userId) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      _filteredPelayan = await _pelayaniService.getPelayaniByUserId(userId);
-    } catch (e) {
-      debugPrint('Error loading Pelayan by user: $e');
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  /// Load active Pelayan
+  /// Load active Pelayan from Supabase
   Future<void> loadActivePelayan() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      _filteredPelayan = await _pelayaniService.getActivePelayan();
+      final data = await _supabaseService.getActivePelayans();
+      _filteredPelayan = data.map((e) => Pelayan.fromJson(e)).toList();
     } catch (e) {
       debugPrint('Error loading active Pelayan: $e');
     }
@@ -62,25 +49,23 @@ class PelayaniProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Add new Pelayan
+  /// Add new Pelayan to Supabase
   Future<bool> addPelayan({
-    required String userId,
     required String nama,
     required String noTelepon,
     required String posisi,
+    String? userId,
   }) async {
     try {
-      final newPelayan = await _pelayaniService.addPelayan(
-        userId: userId,
-        nama: nama,
-        noTelepon: noTelepon,
-        posisi: posisi,
-      );
+      await _supabaseService.addPelayan({
+        'nama': nama,
+        'no_telepon': noTelepon,
+        'posisi': posisi,
+        'is_aktif': true,
+        'user_id': userId,
+      });
 
-      _allPelayan.add(newPelayan);
-      _filteredPelayan = _allPelayan;
-      notifyListeners();
-
+      await loadAllPelayan();
       return true;
     } catch (e) {
       debugPrint('Error adding Pelayan: $e');
@@ -88,7 +73,7 @@ class PelayaniProvider extends ChangeNotifier {
     }
   }
 
-  /// Update Pelayan
+  /// Update Pelayan in Supabase
   Future<bool> updatePelayan(
     String id, {
     String? nama,
@@ -97,53 +82,54 @@ class PelayaniProvider extends ChangeNotifier {
     bool? isAktif,
   }) async {
     try {
-      final updated = await _pelayaniService.updatePelayan(
-        id,
-        nama: nama,
-        noTelepon: noTelepon,
-        posisi: posisi,
-        isAktif: isAktif,
-      );
+      final updateData = <String, dynamic>{};
+      if (nama != null) updateData['nama'] = nama;
+      if (noTelepon != null) updateData['no_telepon'] = noTelepon;
+      if (posisi != null) updateData['posisi'] = posisi;
+      if (isAktif != null) updateData['is_aktif'] = isAktif;
 
-      if (updated != null) {
-        int index = _allPelayan.indexWhere((p) => p.id == id);
-        if (index != -1) {
-          _allPelayan[index] = updated;
-          _filteredPelayan = _allPelayan;
-          notifyListeners();
-        }
-        return true;
+      await _supabaseService.updatePelayan(id, updateData);
+
+      int index = _allPelayan.indexWhere((p) => p.id == id);
+      if (index != -1) {
+        _allPelayan[index] = _allPelayan[index].copyWith(
+          nama: nama,
+          noTelepon: noTelepon,
+          posisi: posisi,
+          isAktif: isAktif,
+        );
+        _filteredPelayan = _allPelayan;
+        notifyListeners();
       }
-      return false;
+      return true;
     } catch (e) {
       debugPrint('Error updating Pelayan: $e');
       return false;
     }
   }
 
-  /// Delete Pelayan
+  /// Delete Pelayan from Supabase
   Future<bool> deletePelayan(String id) async {
     try {
-      final success = await _pelayaniService.deletePelayan(id);
-      if (success) {
-        _allPelayan.removeWhere((p) => p.id == id);
-        _filteredPelayan = _allPelayan;
-        notifyListeners();
-      }
-      return success;
+      await _supabaseService.deletePelayan(id);
+      _allPelayan.removeWhere((p) => p.id == id);
+      _filteredPelayan = _allPelayan;
+      notifyListeners();
+      return true;
     } catch (e) {
       debugPrint('Error deleting Pelayan: $e');
       return false;
     }
   }
 
-  /// Search Pelayan by name
+  /// Search Pelayan by name from Supabase
   Future<void> searchPelayan(String query) async {
     if (query.isEmpty) {
       _filteredPelayan = _allPelayan;
     } else {
       try {
-        _filteredPelayan = await _pelayaniService.searchPelayan(query);
+        final data = await _supabaseService.searchPelayans(query);
+        _filteredPelayan = data.map((e) => Pelayan.fromJson(e)).toList();
       } catch (e) {
         debugPrint('Error searching Pelayan: $e');
       }
@@ -162,12 +148,12 @@ class PelayaniProvider extends ChangeNotifier {
   }
 
   /// Get Pelayan count
-  Future<int> getPelayaniCount() async {
-    return await _pelayaniService.getPelayaniCount();
+  int getPelayaniCount() {
+    return _allPelayan.length;
   }
 
   /// Get active Pelayan count
-  Future<int> getActivePelayaniCount() async {
-    return await _pelayaniService.getActivePelayaniCount();
+  int getActivePelayaniCount() {
+    return _allPelayan.where((p) => p.isAktif).length;
   }
 }

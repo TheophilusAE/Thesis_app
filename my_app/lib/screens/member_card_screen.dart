@@ -46,7 +46,7 @@ class MemberCardScreen extends StatelessWidget {
                           radius: 28,
                           backgroundColor: colorScheme.primary.withValues(alpha: 0.12),
                           child: Text(
-                            user.name.substring(0, 1).toUpperCase(),
+                            user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: colorScheme.primary,

@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/attendance_confirmation_provider.dart';
-import '../providers/auth_provider.dart';
 import '../models/attendance_confirmation.dart';
 
 class AdminAttendanceMonitoringScreen extends StatefulWidget {
-  const AdminAttendanceMonitoringScreen({Key? key}) : super(key: key);
+  const AdminAttendanceMonitoringScreen({super.key});
 
   @override
   State<AdminAttendanceMonitoringScreen> createState() =>
@@ -195,7 +194,6 @@ class _AdminAttendanceMonitoringScreenState
   }
 
   Widget _buildConfirmationTile(AttendanceConfirmation confirmation) {
-    final colorScheme = Theme.of(context).colorScheme;
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm', 'id_ID');
     final scheduleDate = dateFormat.format(confirmation.scheduleDate);
 

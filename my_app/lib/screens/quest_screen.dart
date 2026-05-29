@@ -155,8 +155,8 @@ class _QuestScreenState extends State<QuestScreen> {
                             end: Alignment.bottomRight,
                             colors: quest.isCompleted
                                 ? [
-                                    const Color(0xFF66B68D),
-                                    const Color(0xFF58A77E).withValues(alpha: 0.8),
+                                    const Color(0xFF2C5282),
+                                    const Color(0xFF1E3A5F),
                                   ]
                                 : [Colors.grey[100]!, Colors.grey[50]!],
                           ),
@@ -170,7 +170,7 @@ class _QuestScreenState extends State<QuestScreen> {
                             BoxShadow(
                               color:
                                   (quest.isCompleted
-                                          ? const Color(0xFF58A77E)
+                                          ? const Color(0xFF1E3A5F)
                                           : Colors.black)
                                       .withValues(
                                         alpha: quest.isCompleted ? 0.2 : 0.04,

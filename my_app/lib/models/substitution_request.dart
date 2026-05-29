@@ -1,18 +1,18 @@
 class SubstitutionRequest {
   final String id;
-  final String serviceScheduleId; // Reference to ServiceSchedule being substituted
-  final String requestedByUserId; // Pelayan requesting substitution
+  final String serviceScheduleId;
+  final String requestedByUserId;
   final String requestedByName;
-  final String? replacementUserId; // Person to replace them (optional at request time)
+  final String? replacementUserId;
   final String? replacementName;
-  final String reason; // Reason for substitution request
-  final String status; // 'pending', 'approved', 'rejected', 'completed'
-  final String? adminNotes; // Notes from admin when approving/rejecting
-  final String? requestedReplacementName; // If requesting specific person but name provided
+  final String reason;
+  final String status;
+  final String? adminNotes;
+  final String? requestedReplacementName;
   final DateTime createdAt;
   final DateTime? updatedAt;
-  final DateTime? reviewedAt; // When admin reviewed it
-  final String? reviewedByAdminId; // Which admin reviewed it
+  final DateTime? reviewedAt;
+  final String? reviewedByAdminId;
 
   SubstitutionRequest({
     required this.id,
@@ -31,51 +31,64 @@ class SubstitutionRequest {
     this.reviewedByAdminId,
   });
 
-  /// Convert to JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'serviceScheduleId': serviceScheduleId,
-      'requestedByUserId': requestedByUserId,
-      'requestedByName': requestedByName,
-      'replacementUserId': replacementUserId,
-      'replacementName': replacementName,
-      'reason': reason,
-      'status': status,
-      'adminNotes': adminNotes,
-      'requestedReplacementName': requestedReplacementName,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-      'reviewedAt': reviewedAt?.toIso8601String(),
-      'reviewedByAdminId': reviewedByAdminId,
-    };
-  }
-
-  /// Create from JSON
   factory SubstitutionRequest.fromJson(Map<String, dynamic> json) {
     return SubstitutionRequest(
       id: json['id'] as String,
-      serviceScheduleId: json['serviceScheduleId'] as String,
-      requestedByUserId: json['requestedByUserId'] as String,
-      requestedByName: json['requestedByName'] as String,
-      replacementUserId: json['replacementUserId'] as String?,
-      replacementName: json['replacementName'] as String?,
-      reason: json['reason'] as String,
-      status: json['status'] as String? ?? 'pending',
-      adminNotes: json['adminNotes'] as String?,
-      requestedReplacementName: json['requestedReplacementName'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.parse(json['updatedAt'] as String)
+      serviceScheduleId: (json['service_schedule_id'] ?? json['serviceScheduleId'] ?? '') as String,
+      requestedByUserId: (json['requested_by_user_id'] ?? json['requestedByUserId'] ?? '') as String,
+      requestedByName: (json['requested_by_name'] ?? json['requestedByName'] ?? '') as String,
+      replacementUserId: (json['replacement_user_id'] ?? json['replacementUserId']) as String?,
+      replacementName: (json['replacement_name'] ?? json['replacementName']) as String?,
+      reason: (json['reason'] ?? '') as String,
+      status: (json['status'] ?? 'pending') as String,
+      adminNotes: (json['admin_notes'] ?? json['adminNotes']) as String?,
+      requestedReplacementName: (json['requested_replacement_name'] ?? json['requestedReplacementName']) as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
+      updatedAt: (json['updated_at'] ?? json['updatedAt']) != null
+          ? DateTime.parse((json['updated_at'] ?? json['updatedAt']) as String)
           : null,
-      reviewedAt: json['reviewedAt'] != null 
-          ? DateTime.parse(json['reviewedAt'] as String)
+      reviewedAt: (json['reviewed_at'] ?? json['reviewedAt']) != null
+          ? DateTime.parse((json['reviewed_at'] ?? json['reviewedAt']) as String)
           : null,
-      reviewedByAdminId: json['reviewedByAdminId'] as String?,
+      reviewedByAdminId: (json['reviewed_by_admin_id'] ?? json['reviewedByAdminId']) as String?,
     );
   }
 
-  /// Copy with updates
+  Map<String, dynamic> toSupabaseJson() {
+    return {
+      'service_schedule_id': serviceScheduleId,
+      'requested_by_user_id': requestedByUserId,
+      'requested_by_name': requestedByName,
+      'replacement_user_id': replacementUserId,
+      'replacement_name': replacementName,
+      'reason': reason,
+      'status': status,
+      'admin_notes': adminNotes,
+      'requested_replacement_name': requestedReplacementName,
+    };
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'service_schedule_id': serviceScheduleId,
+      'requested_by_user_id': requestedByUserId,
+      'requested_by_name': requestedByName,
+      'replacement_user_id': replacementUserId,
+      'replacement_name': replacementName,
+      'reason': reason,
+      'status': status,
+      'admin_notes': adminNotes,
+      'requested_replacement_name': requestedReplacementName,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+      'reviewed_at': reviewedAt?.toIso8601String(),
+      'reviewed_by_admin_id': reviewedByAdminId,
+    };
+  }
+
   SubstitutionRequest copyWith({
     String? id,
     String? serviceScheduleId,

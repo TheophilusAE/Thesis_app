@@ -6,7 +6,7 @@ import '../providers/training_schedule_provider.dart';
 import 'add_edit_training_schedule_screen.dart';
 
 class TrainingScheduleManagementScreen extends StatefulWidget {
-  const TrainingScheduleManagementScreen({Key? key}) : super(key: key);
+  const TrainingScheduleManagementScreen({super.key});
 
   @override
   State<TrainingScheduleManagementScreen> createState() =>
@@ -99,7 +99,7 @@ class _TrainingScheduleManagementScreenState
           ),
         )
         .then((_) {
-          context.read<TrainingScheduleProvider>().loadAllSchedules();
+          if (mounted) context.read<TrainingScheduleProvider>().loadAllSchedules();
         });
   }
 
@@ -112,30 +112,31 @@ class _TrainingScheduleManagementScreenState
           ),
         )
         .then((_) {
-          context.read<TrainingScheduleProvider>().loadAllSchedules();
+          if (mounted) context.read<TrainingScheduleProvider>().loadAllSchedules();
         });
   }
 
   void _deleteSchedule(TrainingSchedule schedule) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Hapus Jadwal Latihan?'),
         content: Text(
           'Apakah Anda yakin ingin menghapus jadwal ${schedule.nama}?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogCtx);
               final success = await context
                   .read<TrainingScheduleProvider>()
                   .deleteTrainingSchedule(schedule.id);
-              if (success && mounted) {
+              if (!mounted) return;
+              if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Jadwal berhasil dihapus')),
                 );
@@ -155,11 +156,10 @@ class _TrainingScheduleCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   const _TrainingScheduleCard({
-    Key? key,
     required this.schedule,
     required this.onEdit,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

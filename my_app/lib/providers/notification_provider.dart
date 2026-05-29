@@ -1,54 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/notification.dart' as app_notification;
-import '../services/notification_service.dart';
+import '../services/supabase_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
-  final NotificationService _notificationService;
+  final SupabaseService _service = SupabaseService();
 
   List<app_notification.AppNotification> _allNotifications = [];
   List<app_notification.AppNotification> _unreadNotifications = [];
   int _unreadCount = 0;
   bool _isLoading = false;
-  String? _currentUserId;
+  String? _error;
+  RealtimeChannel? _subscription;
 
-  NotificationProvider({required NotificationService notificationService})
-      : _notificationService = notificationService;
-
-  // Getters
   List<app_notification.AppNotification> get allNotifications => _allNotifications;
   List<app_notification.AppNotification> get unreadNotifications => _unreadNotifications;
   int get unreadCount => _unreadCount;
   bool get isLoading => _isLoading;
+  String? get error => _error;
 
-  /// Load notifications for user
   Future<void> loadNotifications(String userId) async {
     _isLoading = true;
-    _currentUserId = userId;
+    _error = null;
     notifyListeners();
-
     try {
-      _allNotifications = await _notificationService.getNotificationsByUserId(userId);
+      final data = await _service.getNotifications(userId);
+      _allNotifications =
+          data.map((e) => app_notification.AppNotification.fromJson(e)).toList();
       _unreadNotifications = _allNotifications.where((n) => !n.isRead).toList();
       _unreadCount = _unreadNotifications.length;
     } catch (e) {
+      _error = e.toString();
       debugPrint('Error loading notifications: $e');
     }
-
     _isLoading = false;
     notifyListeners();
   }
 
-  /// Get unread count
   Future<void> getUnreadCount(String userId) async {
     try {
-      _unreadCount = await _notificationService.getUnreadCount(userId);
+      _unreadCount = await _service.getUnreadNotificationCount(userId);
     } catch (e) {
       debugPrint('Error getting unread count: $e');
     }
     notifyListeners();
   }
 
-  /// Create notification
   Future<bool> createNotification({
     required String userId,
     required String title,
@@ -57,29 +54,27 @@ class NotificationProvider extends ChangeNotifier {
     String? relatedScheduleId,
   }) async {
     try {
-      final notification = await _notificationService.createNotification(
-        userId: userId,
-        title: title,
-        message: message,
-        type: type,
-        relatedScheduleId: relatedScheduleId,
-      );
-
-      if (_currentUserId == userId) {
-        _allNotifications.insert(0, notification);
-        _unreadNotifications.insert(0, notification);
-        _unreadCount++;
-        notifyListeners();
-      }
-
+      final data = {
+        'user_id': userId,
+        'title': title,
+        'message': message,
+        'type': type,
+        'related_schedule_id': relatedScheduleId,
+        'is_read': false,
+      };
+      final result = await _service.addNotification(data);
+      _allNotifications.insert(0, app_notification.AppNotification.fromJson(result));
+      _unreadNotifications = _allNotifications.where((n) => !n.isRead).toList();
+      _unreadCount = _unreadNotifications.length;
+      notifyListeners();
       return true;
     } catch (e) {
+      _error = e.toString();
       debugPrint('Error creating notification: $e');
       return false;
     }
   }
 
-  /// Create service reminder notification
   Future<bool> createServiceReminderNotification({
     required String userId,
     required String pelayaniName,
@@ -87,142 +82,112 @@ class NotificationProvider extends ChangeNotifier {
     required String timeInfo,
     required String relatedScheduleId,
   }) async {
-    try {
-      await _notificationService.createServiceReminderNotification(
-        userId: userId,
-        pelayaniName: pelayaniName,
-        serviceType: serviceType,
-        timeInfo: timeInfo,
-        relatedScheduleId: relatedScheduleId,
-      );
-
-      if (_currentUserId == userId) {
-        await loadNotifications(userId);
-      }
-
-      return true;
-    } catch (e) {
-      debugPrint('Error creating service reminder: $e');
-      return false;
-    }
+    return createNotification(
+      userId: userId,
+      title: 'Pengingat Jadwal Ibadah',
+      message: '$pelayaniName, Anda dijadwalkan bertugas dalam $serviceType $timeInfo.',
+      type: 'service_reminder',
+      relatedScheduleId: relatedScheduleId,
+    );
   }
 
-  /// Create training reminder notification
   Future<bool> createTrainingReminderNotification({
     required String userId,
     required String trainingName,
     required String timeInfo,
     required String relatedScheduleId,
   }) async {
-    try {
-      await _notificationService.createTrainingReminderNotification(
-        userId: userId,
-        trainingName: trainingName,
-        timeInfo: timeInfo,
-        relatedScheduleId: relatedScheduleId,
-      );
-
-      if (_currentUserId == userId) {
-        await loadNotifications(userId);
-      }
-
-      return true;
-    } catch (e) {
-      debugPrint('Error creating training reminder: $e');
-      return false;
-    }
+    return createNotification(
+      userId: userId,
+      title: 'Pengingat Latihan',
+      message: 'Jadwal latihan "$trainingName" $timeInfo.',
+      type: 'training_reminder',
+      relatedScheduleId: relatedScheduleId,
+    );
   }
 
-  /// Mark notification as read
   Future<bool> markAsRead(String notificationId) async {
     try {
-      final success = await _notificationService.markAsRead(notificationId);
-      if (success) {
-        int index = _allNotifications.indexWhere((n) => n.id == notificationId);
-        if (index != -1) {
-          _allNotifications[index] = _allNotifications[index].copyWith(
-            isRead: true,
-            readAt: DateTime.now(),
-          );
-
-          _unreadNotifications.removeWhere((n) => n.id == notificationId);
-          _unreadCount = _unreadNotifications.length;
-          notifyListeners();
-        }
-      }
-      return success;
-    } catch (e) {
-      debugPrint('Error marking as read: $e');
-      return false;
-    }
-  }
-
-  /// Mark all as read
-  Future<bool> markAllAsRead(String userId) async {
-    try {
-      final success = await _notificationService.markAllAsRead(userId);
-      if (success) {
-        for (int i = 0; i < _allNotifications.length; i++) {
-          if (!_allNotifications[i].isRead) {
-            _allNotifications[i] = _allNotifications[i].copyWith(
-              isRead: true,
-              readAt: DateTime.now(),
-            );
-          }
-        }
-        _unreadNotifications.clear();
-        _unreadCount = 0;
-        notifyListeners();
-      }
-      return success;
-    } catch (e) {
-      debugPrint('Error marking all as read: $e');
-      return false;
-    }
-  }
-
-  /// Delete notification
-  Future<bool> deleteNotification(String notificationId) async {
-    try {
-      final success = await _notificationService.deleteNotification(notificationId);
-      if (success) {
-        _allNotifications.removeWhere((n) => n.id == notificationId);
-        _unreadNotifications.removeWhere((n) => n.id == notificationId);
+      await _service.markNotificationAsRead(notificationId);
+      final idx = _allNotifications.indexWhere((n) => n.id == notificationId);
+      if (idx != -1) {
+        _allNotifications[idx] = _allNotifications[idx].copyWith(
+          isRead: true,
+          readAt: DateTime.now(),
+        );
+        _unreadNotifications = _allNotifications.where((n) => !n.isRead).toList();
         _unreadCount = _unreadNotifications.length;
         notifyListeners();
       }
-      return success;
+      return true;
     } catch (e) {
+      _error = e.toString();
+      debugPrint('Error marking notification as read: $e');
+      return false;
+    }
+  }
+
+  Future<bool> markAllAsRead(String userId) async {
+    try {
+      await _service.markAllNotificationsAsRead(userId);
+      _allNotifications = _allNotifications
+          .map((n) => n.copyWith(isRead: true, readAt: DateTime.now()))
+          .toList();
+      _unreadNotifications = [];
+      _unreadCount = 0;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error marking all notifications as read: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteNotification(String notificationId) async {
+    try {
+      await _service.deleteNotification(notificationId);
+      _allNotifications.removeWhere((n) => n.id == notificationId);
+      _unreadNotifications = _allNotifications.where((n) => !n.isRead).toList();
+      _unreadCount = _unreadNotifications.length;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
       debugPrint('Error deleting notification: $e');
       return false;
     }
   }
 
-  /// Delete all notifications
   Future<bool> deleteAllNotifications(String userId) async {
     try {
-      final success = await _notificationService.deleteAllNotifications(userId);
-      if (success) {
-        _allNotifications.clear();
-        _unreadNotifications.clear();
-        _unreadCount = 0;
-        notifyListeners();
-      }
-      return success;
+      await _service.deleteAllNotifications(userId);
+      _allNotifications = [];
+      _unreadNotifications = [];
+      _unreadCount = 0;
+      notifyListeners();
+      return true;
     } catch (e) {
+      _error = e.toString();
       debugPrint('Error deleting all notifications: $e');
       return false;
     }
   }
 
-  /// Get notifications by type
-  Future<void> loadNotificationsByType(String userId, String type) async {
-    try {
-      final notifications = await _notificationService.getNotificationsByType(userId, type);
-      _allNotifications = notifications;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading notifications by type: $e');
+  void subscribeToRealtime(String userId) {
+    _subscription = _service.subscribeToNotifications(userId, (_) => loadNotifications(userId));
+  }
+
+  void unsubscribeFromRealtime() {
+    if (_subscription != null) {
+      _service.unsubscribeChannel(_subscription!);
+      _subscription = null;
     }
+  }
+
+  @override
+  void dispose() {
+    unsubscribeFromRealtime();
+    super.dispose();
   }
 }

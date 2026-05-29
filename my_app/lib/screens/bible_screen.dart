@@ -88,7 +88,7 @@ class _BibleScreenState extends State<BibleScreen> {
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF58A77E).withValues(alpha: 0.25),
+                      color: const Color(0xFF1E3A5F).withValues(alpha: 0.25),
                       blurRadius: 14,
                       offset: const Offset(0, 8),
                     ),
@@ -494,7 +494,7 @@ class BibleSearchDelegate extends SearchDelegate<String> {
                               gradient: LinearGradient(
                                 colors: [
                                   const Color(0xFF74BB96),
-                                  const Color(0xFF58A77E),
+                                  const Color(0xFF1E3A5F),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(6),

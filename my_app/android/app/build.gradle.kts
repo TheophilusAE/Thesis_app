@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.mycompany.my_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 34  // Set explicitly to support sign_in_with_apple and other plugins
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

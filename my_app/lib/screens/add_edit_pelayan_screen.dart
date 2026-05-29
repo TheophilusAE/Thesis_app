@@ -6,7 +6,7 @@ import '../providers/pelayan_provider.dart';
 class AddEditPelayaniScreen extends StatefulWidget {
   final Pelayan? pelayan;
 
-  const AddEditPelayaniScreen({Key? key, this.pelayan}) : super(key: key);
+  const AddEditPelayaniScreen({super.key, this.pelayan});
 
   @override
   State<AddEditPelayaniScreen> createState() => _AddEditPelayaniScreenState();
@@ -124,7 +124,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
 
               // Posisi field (dropdown)
               DropdownButtonFormField<String>(
-                value: _posisiController.text.isNotEmpty ? _posisiController.text : null,
+                initialValue: _posisiController.text.isNotEmpty ? _posisiController.text : null,
                 decoration: InputDecoration(
                   labelText: 'Posisi Pelayanan',
                   prefixIcon: const Icon(Icons.work),

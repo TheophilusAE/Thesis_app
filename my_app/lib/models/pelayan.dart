@@ -33,17 +33,21 @@ class Pelayan {
     };
   }
 
-  /// Create Pelayan object from JSON
+  /// Create Pelayan object from JSON (supports both camelCase and snake_case)
   factory Pelayan.fromJson(Map<String, dynamic> json) {
     return Pelayan(
-      id: json['id'] as String,
-      userId: json['userId'] as String,
-      nama: json['nama'] as String,
-      noTelepon: json['noTelepon'] as String,
-      posisi: json['posisi'] as String,
-      isAktif: json['isAktif'] as bool? ?? true,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      id: json['id'] as String? ?? '',
+      userId: json['userId'] as String? ?? json['user_id'] as String? ?? '',
+      nama: json['nama'] as String? ?? '',
+      noTelepon: json['noTelepon'] as String? ?? json['no_telepon'] as String? ?? '',
+      posisi: json['posisi'] as String? ?? '',
+      isAktif: json['isAktif'] as bool? ?? json['is_aktif'] as bool? ?? true,
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt'] as String)
+          : (json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : DateTime.now()),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : (json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : DateTime.now()),
     );
   }
 

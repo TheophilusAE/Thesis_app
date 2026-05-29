@@ -1,69 +1,89 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/service_schedule.dart';
-import '../services/service_schedule_service.dart';
+import '../services/supabase_service.dart';
 
 class ServiceScheduleProvider extends ChangeNotifier {
-  final ServiceScheduleService _serviceScheduleService;
+  final SupabaseService _service = SupabaseService();
 
   List<ServiceSchedule> _allSchedules = [];
   List<ServiceSchedule> _filteredSchedules = [];
   bool _isLoading = false;
+  String? _error;
+  RealtimeChannel? _subscription;
 
-  ServiceScheduleProvider({required ServiceScheduleService serviceScheduleService})
-      : _serviceScheduleService = serviceScheduleService;
-
-  // Getters
   List<ServiceSchedule> get allSchedules => _allSchedules;
   List<ServiceSchedule> get filteredSchedules => _filteredSchedules;
   bool get isLoading => _isLoading;
+  String? get error => _error;
 
-  /// Load all service schedules
   Future<void> loadAllSchedules() async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
-
     try {
-      _allSchedules = await _serviceScheduleService.getAllServiceSchedules();
-      _filteredSchedules = _allSchedules;
+      final data = await _service.getSchedules();
+      _allSchedules = data.map((e) => ServiceSchedule.fromJson(e)).toList();
+      _filteredSchedules = List.from(_allSchedules);
     } catch (e) {
-      debugPrint('Error loading service schedules: $e');
+      _error = e.toString();
+      debugPrint('Error loading schedules: $e');
     }
-
     _isLoading = false;
     notifyListeners();
   }
 
-  /// Load schedules for a Pelayan
   Future<void> loadSchedulesByPelayani(String pelayaniId) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
-
     try {
-      _filteredSchedules = await _serviceScheduleService.getSchedulesByPelayaniId(pelayaniId);
+      final data = await _service.getSchedulesByPelayan(pelayaniId);
+      _filteredSchedules = data.map((e) => ServiceSchedule.fromJson(e)).toList();
     } catch (e) {
-      debugPrint('Error loading schedules by Pelayan: $e');
+      _error = e.toString();
+      debugPrint('Error loading schedules by pelayani: $e');
     }
-
     _isLoading = false;
     notifyListeners();
   }
 
-  /// Load upcoming schedules for a Pelayan
   Future<void> loadUpcomingSchedules(String pelayaniId) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
-
     try {
-      _filteredSchedules = await _serviceScheduleService.getUpcomingSchedules(pelayaniId);
+      final data = await _service.getUpcomingSchedulesByPelayan(pelayaniId);
+      _filteredSchedules = data.map((e) => ServiceSchedule.fromJson(e)).toList();
     } catch (e) {
+      _error = e.toString();
       debugPrint('Error loading upcoming schedules: $e');
     }
-
     _isLoading = false;
     notifyListeners();
   }
 
-  /// Add new service schedule
+  Future<void> loadSchedulesByDateRange(DateTime startDate, DateTime endDate) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final data = await _service.getSchedulesByDateRange(startDate, endDate);
+      _filteredSchedules = data.map((e) => ServiceSchedule.fromJson(e)).toList();
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error loading schedules by date range: $e');
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadSchedulesByDate(DateTime date) async {
+    final start = DateTime(date.year, date.month, date.day);
+    final end = start.add(const Duration(days: 1));
+    await loadSchedulesByDateRange(start, end);
+  }
+
   Future<bool> addServiceSchedule({
     required String pelayaniId,
     required String pelayaniName,
@@ -77,7 +97,8 @@ class ServiceScheduleProvider extends ChangeNotifier {
     String? notes,
   }) async {
     try {
-      final newSchedule = await _serviceScheduleService.addServiceSchedule(
+      final schedule = ServiceSchedule(
+        id: '',
         pelayaniId: pelayaniId,
         pelayaniName: pelayaniName,
         pelayaniPosition: pelayaniPosition,
@@ -88,20 +109,21 @@ class ServiceScheduleProvider extends ChangeNotifier {
         isRecurring: isRecurring,
         recurringPattern: recurringPattern,
         notes: notes,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
-
-      _allSchedules.add(newSchedule);
-      _filteredSchedules = _allSchedules;
+      final result = await _service.addSchedule(schedule.toSupabaseJson());
+      _allSchedules.add(ServiceSchedule.fromJson(result));
+      _filteredSchedules = List.from(_allSchedules);
       notifyListeners();
-
       return true;
     } catch (e) {
-      debugPrint('Error adding service schedule: $e');
+      _error = e.toString();
+      debugPrint('Error adding schedule: $e');
       return false;
     }
   }
 
-  /// Update service schedule
   Future<bool> updateServiceSchedule(
     String id, {
     DateTime? serviceDate,
@@ -113,88 +135,81 @@ class ServiceScheduleProvider extends ChangeNotifier {
     String? notes,
   }) async {
     try {
-      final updated = await _serviceScheduleService.updateServiceSchedule(
-        id,
-        serviceDate: serviceDate,
-        startTime: startTime,
-        endTime: endTime,
-        serviceType: serviceType,
-        isRecurring: isRecurring,
-        recurringPattern: recurringPattern,
-        notes: notes,
-      );
+      final updates = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (serviceDate != null) updates['service_date'] = serviceDate.toIso8601String();
+      if (startTime != null) updates['start_time'] = startTime;
+      if (endTime != null) updates['end_time'] = endTime;
+      if (serviceType != null) updates['service_type'] = serviceType;
+      if (isRecurring != null) updates['is_recurring'] = isRecurring;
+      if (recurringPattern != null) updates['recurring_pattern'] = recurringPattern;
+      if (notes != null) updates['notes'] = notes;
 
-      if (updated != null) {
-        int index = _allSchedules.indexWhere((s) => s.id == id);
-        if (index != -1) {
-          _allSchedules[index] = updated;
-          _filteredSchedules = _allSchedules;
-          notifyListeners();
-        }
-        return true;
+      await _service.updateSchedule(id, updates);
+
+      final idx = _allSchedules.indexWhere((s) => s.id == id);
+      if (idx != -1) {
+        _allSchedules[idx] = _allSchedules[idx].copyWith(
+          serviceDate: serviceDate,
+          startTime: startTime,
+          endTime: endTime,
+          serviceType: serviceType,
+          isRecurring: isRecurring,
+          recurringPattern: recurringPattern,
+          notes: notes,
+          updatedAt: DateTime.now(),
+        );
+        _filteredSchedules = List.from(_allSchedules);
       }
-      return false;
+      notifyListeners();
+      return true;
     } catch (e) {
-      debugPrint('Error updating service schedule: $e');
+      _error = e.toString();
+      debugPrint('Error updating schedule: $e');
       return false;
     }
   }
 
-  /// Delete service schedule
   Future<bool> deleteServiceSchedule(String id) async {
     try {
-      final success = await _serviceScheduleService.deleteServiceSchedule(id);
-      if (success) {
-        _allSchedules.removeWhere((s) => s.id == id);
-        _filteredSchedules = _allSchedules;
-        notifyListeners();
-      }
-      return success;
+      await _service.deleteSchedule(id);
+      _allSchedules.removeWhere((s) => s.id == id);
+      _filteredSchedules = List.from(_allSchedules);
+      notifyListeners();
+      return true;
     } catch (e) {
-      debugPrint('Error deleting service schedule: $e');
+      _error = e.toString();
+      debugPrint('Error deleting schedule: $e');
       return false;
     }
   }
 
-  /// Get schedules for date range
-  Future<void> loadSchedulesByDateRange(DateTime startDate, DateTime endDate) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      _filteredSchedules =
-          await _serviceScheduleService.getSchedulesByDateRange(startDate, endDate);
-    } catch (e) {
-      debugPrint('Error loading schedules by date range: $e');
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  /// Get schedules for specific date
-  Future<void> loadSchedulesByDate(DateTime date) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      _filteredSchedules = await _serviceScheduleService.getSchedulesByDate(date);
-    } catch (e) {
-      debugPrint('Error loading schedules by date: $e');
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  /// Filter schedules by service type
   void filterByServiceType(String serviceType) {
     if (serviceType.isEmpty) {
-      _filteredSchedules = _allSchedules;
+      _filteredSchedules = List.from(_allSchedules);
     } else {
-      _filteredSchedules =
-          _allSchedules.where((s) => s.serviceType.toLowerCase() == serviceType.toLowerCase()).toList();
+      _filteredSchedules = _allSchedules
+          .where((s) => s.serviceType.toLowerCase() == serviceType.toLowerCase())
+          .toList();
     }
     notifyListeners();
+  }
+
+  void subscribeToRealtime() {
+    _subscription = _service.subscribeToSchedules((_) => loadAllSchedules());
+  }
+
+  void unsubscribeFromRealtime() {
+    if (_subscription != null) {
+      _service.unsubscribeChannel(_subscription!);
+      _subscription = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    unsubscribeFromRealtime();
+    super.dispose();
   }
 }

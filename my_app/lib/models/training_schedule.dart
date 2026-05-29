@@ -2,11 +2,11 @@ class TrainingSchedule {
   final String id;
   final String nama;
   final DateTime trainingDate;
-  final String startTime; // Format: "HH:mm"
-  final String endTime; // Format: "HH:mm"
+  final String startTime;
+  final String endTime;
   final String deskripsi;
-  final List<String> pelayaniIds; // List of Pelayan IDs yang mengikuti latihan ini
-  final String lokasi; // Location of training
+  final List<String> pelayaniIds;
+  final String lokasi;
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -25,41 +25,59 @@ class TrainingSchedule {
     required this.updatedAt,
   });
 
-  /// Convert to JSON
+  factory TrainingSchedule.fromJson(Map<String, dynamic> json) {
+    return TrainingSchedule(
+      id: json['id'] as String,
+      nama: (json['nama'] ?? '') as String,
+      trainingDate: DateTime.parse((json['training_date'] ?? json['trainingDate']) as String),
+      startTime: (json['start_time'] ?? json['startTime'] ?? '') as String,
+      endTime: (json['end_time'] ?? json['endTime'] ?? '') as String,
+      deskripsi: (json['deskripsi'] ?? '') as String,
+      pelayaniIds: json['pelayan_ids'] != null
+          ? List<String>.from(json['pelayan_ids'] as List)
+          : (json['pelayaniIds'] != null
+              ? List<String>.from(json['pelayaniIds'] as List)
+              : []),
+      lokasi: (json['lokasi'] ?? '') as String,
+      notes: json['notes'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : DateTime.now()),
+    );
+  }
+
+  Map<String, dynamic> toSupabaseJson() {
+    return {
+      'nama': nama,
+      'training_date': trainingDate.toIso8601String(),
+      'start_time': startTime,
+      'end_time': endTime,
+      'deskripsi': deskripsi,
+      'pelayan_ids': pelayaniIds,
+      'lokasi': lokasi,
+      'notes': notes,
+    };
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'nama': nama,
-      'trainingDate': trainingDate.toIso8601String(),
-      'startTime': startTime,
-      'endTime': endTime,
+      'training_date': trainingDate.toIso8601String(),
+      'start_time': startTime,
+      'end_time': endTime,
       'deskripsi': deskripsi,
-      'pelayaniIds': pelayaniIds,
+      'pelayan_ids': pelayaniIds,
       'lokasi': lokasi,
       'notes': notes,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
-  /// Create from JSON
-  factory TrainingSchedule.fromJson(Map<String, dynamic> json) {
-    return TrainingSchedule(
-      id: json['id'] as String,
-      nama: json['nama'] as String,
-      trainingDate: DateTime.parse(json['trainingDate'] as String),
-      startTime: json['startTime'] as String,
-      endTime: json['endTime'] as String,
-      deskripsi: json['deskripsi'] as String,
-      pelayaniIds: List<String>.from(json['pelayaniIds'] as List),
-      lokasi: json['lokasi'] as String,
-      notes: json['notes'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-    );
-  }
-
-  /// Copy with modifications
   TrainingSchedule copyWith({
     String? id,
     String? nama,

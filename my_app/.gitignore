@@ -1,4 +1,57 @@
-# Miscellaneous
+# ─────────────────────────────────────────────
+# SENSITIVE — never commit these
+# ─────────────────────────────────────────────
+*.sql
+.env
+.env.*
+!.env.example
+google-services.json
+GoogleService-Info.plist
+key.properties
+*.jks
+*.keystore
+
+# ─────────────────────────────────────────────
+# Flutter / Dart / Pub
+# ─────────────────────────────────────────────
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# ─────────────────────────────────────────────
+# Android
+# ─────────────────────────────────────────────
+/android/app/debug
+/android/app/profile
+/android/app/release
+**/android/gradle-wrapper/gradle-wrapper.jar
+**/android/*.iml
+**/android/captures/
+**/android/local.properties
+
+# ─────────────────────────────────────────────
+# iOS / macOS
+# ─────────────────────────────────────────────
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# ─────────────────────────────────────────────
+# IDE / OS
+# ─────────────────────────────────────────────
 *.class
 *.log
 *.pyc
@@ -11,35 +64,13 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-
-# IntelliJ related
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
-
-# Symbolication related
+# ─────────────────────────────────────────────
+# Build artefacts
+# ─────────────────────────────────────────────
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release

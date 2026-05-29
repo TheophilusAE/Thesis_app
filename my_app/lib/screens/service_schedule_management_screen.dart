@@ -7,7 +7,7 @@ import '../providers/pelayan_provider.dart';
 import 'add_edit_service_schedule_screen.dart';
 
 class ServiceScheduleManagementScreen extends StatefulWidget {
-  const ServiceScheduleManagementScreen({Key? key}) : super(key: key);
+  const ServiceScheduleManagementScreen({super.key});
 
   @override
   State<ServiceScheduleManagementScreen> createState() =>
@@ -133,7 +133,7 @@ class _ServiceScheduleManagementScreenState
           ),
         )
         .then((_) {
-          context.read<ServiceScheduleProvider>().loadAllSchedules();
+          if (mounted) context.read<ServiceScheduleProvider>().loadAllSchedules();
         });
   }
 
@@ -145,30 +145,31 @@ class _ServiceScheduleManagementScreenState
           ),
         )
         .then((_) {
-          context.read<ServiceScheduleProvider>().loadAllSchedules();
+          if (mounted) context.read<ServiceScheduleProvider>().loadAllSchedules();
         });
   }
 
   void _deleteSchedule(ServiceSchedule schedule) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Hapus Jadwal?'),
         content: Text(
           'Apakah Anda yakin ingin menghapus jadwal ${schedule.pelayaniName} pada ${DateFormat('dd/MM/yyyy').format(schedule.serviceDate)}?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogCtx);
               final success = await context
                   .read<ServiceScheduleProvider>()
                   .deleteServiceSchedule(schedule.id);
-              if (success && mounted) {
+              if (!mounted) return;
+              if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Jadwal berhasil dihapus')),
                 );
@@ -188,11 +189,10 @@ class _ServiceScheduleCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   const _ServiceScheduleCard({
-    Key? key,
     required this.schedule,
     required this.onEdit,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

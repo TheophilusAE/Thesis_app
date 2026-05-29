@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqflite_ffi;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/bible_provider.dart';
@@ -15,6 +17,7 @@ import 'providers/training_schedule_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/substitution_request_provider.dart';
 import 'providers/attendance_confirmation_provider.dart';
+import 'providers/event_provider.dart';
 import 'services/pelayan_service.dart';
 import 'services/attendance_confirmation_service.dart';
 import 'services/service_schedule_service.dart';
@@ -37,6 +40,24 @@ late AttendanceConfirmationService _attendanceConfirmationService;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Lock to portrait, make status bar transparent on both platforms
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarBrightness: Brightness.light, // iOS
+    statusBarIconBrightness: Brightness.dark, // Android (overridden per-screen by gradient AppBars)
+  ));
+
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: 'https://fbsjdlsrxkcucspaqgfm.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZic2pkbHNyeGtjdWNzcGFxZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MzE0NTEsImV4cCI6MjA5NTMwNzQ1MX0.pX9LhGIOYL1lmL3iwYC7-y4vMY9sLucXJb0Nv7W5Xi0',
+  );
+  
   await _initializeDatabaseFactory();
   await _initializeServices();
   runApp(const MyApp());
@@ -82,45 +103,27 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => BibleProvider()),
-        ChangeNotifierProvider(create: (_) => QuestProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => FeedbackProvider()),
-        // Pelayan management providers with initialized services
-        ChangeNotifierProvider(
-          create: (_) => PelayaniProvider(
-            pelayaniService: _pelayaniService,
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => ServiceScheduleProvider(
-            serviceScheduleService: _serviceScheduleService,
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => TrainingScheduleProvider(
-            trainingScheduleService: _trainingScheduleService,
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => NotificationProvider(
-            notificationService: _notificationService,
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => SubstitutionRequestProvider(
-            service: _substitutionRequestService,
-            notificationService: _notificationService,
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => AttendanceConfirmationProvider(
-            service: _attendanceConfirmationService,
-          ),
-        ),
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider(
+        create: (_) {
+          final authProvider = AuthProvider();
+          authProvider.init();
+          return authProvider;
+        },
+      ),
+      ChangeNotifierProvider(create: (_) => BibleProvider()),
+      ChangeNotifierProvider(create: (_) => QuestProvider()),
+      ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ChangeNotifierProvider(create: (_) => FeedbackProvider()),
+        // Pelayan management providers - now using SupabaseService
+        ChangeNotifierProvider(create: (_) => PelayaniProvider()),
+        ChangeNotifierProvider(create: (_) => ServiceScheduleProvider()),
+        ChangeNotifierProvider(create: (_) => TrainingScheduleProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => SubstitutionRequestProvider()),
+        ChangeNotifierProvider(create: (_) => AttendanceConfirmationProvider()),
+        ChangeNotifierProvider(create: (_) => EventProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -165,7 +168,7 @@ class _AuthGateState extends State<_AuthGate> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        if (authProvider.isLoading) {
+        if (authProvider.isInitializing) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );

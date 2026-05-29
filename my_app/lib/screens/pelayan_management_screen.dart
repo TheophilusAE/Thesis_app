@@ -5,7 +5,7 @@ import '../providers/pelayan_provider.dart';
 import 'add_edit_pelayan_screen.dart';
 
 class PelayaniManagementScreen extends StatefulWidget {
-  const PelayaniManagementScreen({Key? key}) : super(key: key);
+  const PelayaniManagementScreen({super.key});
 
   @override
   State<PelayaniManagementScreen> createState() => _PelayaniManagementScreenState();
@@ -176,7 +176,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
         builder: (context) => const AddEditPelayaniScreen(),
       ),
     ).then((_) {
-      context.read<PelayaniProvider>().loadAllPelayan();
+      if (mounted) context.read<PelayaniProvider>().loadAllPelayan();
     });
   }
 
@@ -186,26 +186,27 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
         builder: (context) => AddEditPelayaniScreen(pelayan: pelayan),
       ),
     ).then((_) {
-      context.read<PelayaniProvider>().loadAllPelayan();
+      if (mounted) context.read<PelayaniProvider>().loadAllPelayan();
     });
   }
 
   void _deletePelayan(Pelayan pelayan) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Hapus Pelayan?'),
         content: Text('Apakah Anda yakin ingin menghapus ${pelayan.nama}?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogCtx);
               final success = await context.read<PelayaniProvider>().deletePelayan(pelayan.id);
-              if (success && mounted) {
+              if (!mounted) return;
+              if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Pelayan berhasil dihapus')),
                 );
@@ -225,11 +226,10 @@ class _PelayaniCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   const _PelayaniCard({
-    Key? key,
     required this.pelayan,
     required this.onEdit,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -282,8 +282,8 @@ class _PelayaniCard extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: pelayan.isAktif
-                                  ? Colors.green.withOpacity(0.2)
-                                  : Colors.red.withOpacity(0.2),
+                                  ? Colors.green.withValues(alpha: 0.2)
+                                  : Colors.red.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
