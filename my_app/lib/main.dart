@@ -18,25 +18,14 @@ import 'providers/notification_provider.dart';
 import 'providers/substitution_request_provider.dart';
 import 'providers/attendance_confirmation_provider.dart';
 import 'providers/event_provider.dart';
-import 'services/pelayan_service.dart';
-import 'services/attendance_confirmation_service.dart';
-import 'services/service_schedule_service.dart';
-import 'services/training_schedule_service.dart';
-import 'services/notification_service.dart';
-import 'services/notification_scheduler.dart';
-import 'services/substitution_request_service.dart';
+import 'providers/komsel_provider.dart';
+import 'providers/prayer_request_provider.dart';
+import 'providers/sermon_provider.dart';
+import 'services/local_notification_service.dart';
 import 'utils/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
-
-// Global instances for service initialization
-late PelayaniService _pelayaniService;
-late ServiceScheduleService _serviceScheduleService;
-late TrainingScheduleService _trainingScheduleService;
-late NotificationService _notificationService;
-late NotificationScheduler _notificationScheduler;
-late SubstitutionRequestService _substitutionRequestService;
-late AttendanceConfirmationService _attendanceConfirmationService;
+import 'screens/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,35 +43,13 @@ Future<void> main() async {
 
   // Initialize Supabase
   await Supabase.initialize(
-    url: 'https://fbsjdlsrxkcucspaqgfm.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZic2pkbHNyeGtjdWNzcGFxZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MzE0NTEsImV4cCI6MjA5NTMwNzQ1MX0.pX9LhGIOYL1lmL3iwYC7-y4vMY9sLucXJb0Nv7W5Xi0',
+    url: 'https://nwqgbklaxjsijyzjooaf.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53cWdia2xheGpzaWp5empvb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMzI5NzMsImV4cCI6MjEwNDYwODk3M30.zt3r-By6ENX3nJ4PnTQy8BxybOZaMQmsLbTQqZWxMJA',
   );
   
   await _initializeDatabaseFactory();
-  await _initializeServices();
+  await LocalNotificationService().init();
   runApp(const MyApp());
-}
-
-Future<void> _initializeServices() async {
-  _pelayaniService = PelayaniService();
-  _serviceScheduleService = ServiceScheduleService();
-  _trainingScheduleService = TrainingScheduleService();
-  _notificationService = NotificationService();
-  _substitutionRequestService = SubstitutionRequestService();
-  _attendanceConfirmationService = AttendanceConfirmationService();
-  _notificationScheduler = NotificationScheduler(
-    serviceScheduleService: _serviceScheduleService,
-    trainingScheduleService: _trainingScheduleService,
-    notificationService: _notificationService,
-  );
-
-  await _pelayaniService.init();
-  await _serviceScheduleService.init();
-  await _trainingScheduleService.init();
-  await _notificationService.init();
-  await _substitutionRequestService.init();
-  await _attendanceConfirmationService.init();
-  await _notificationScheduler.init();
 }
 
 Future<void> _initializeDatabaseFactory() async {
@@ -124,6 +91,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SubstitutionRequestProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceConfirmationProvider()),
         ChangeNotifierProvider(create: (_) => EventProvider()),
+        ChangeNotifierProvider(create: (_) => PrayerRequestProvider()),
+        ChangeNotifierProvider(create: (_) => KomselProvider()),
+        ChangeNotifierProvider(create: (_) => SermonProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -133,6 +103,17 @@ class MyApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,
+            builder: (context, child) {
+              final mediaQuery = MediaQuery.of(context);
+              final baseScale = mediaQuery.textScaler.scale(1.0);
+              final effectiveScale = (baseScale * themeProvider.fontSizeFactor).clamp(0.85, 2.0);
+              return MediaQuery(
+                data: mediaQuery.copyWith(
+                  textScaler: TextScaler.linear(effectiveScale),
+                ),
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
             routes: {
               '/login': (context) => const LoginScreen(),
               '/home': (context) => const HomeScreen(),
@@ -153,9 +134,17 @@ class _AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<_AuthGate> {
+  // Keep the splash visible for at least this long so it never just
+  // flashes by on fast devices / warm starts.
+  static const _minSplashDuration = Duration(milliseconds: 1400);
+  bool _minDurationElapsed = false;
+
   @override
   void initState() {
     super.initState();
+    Future.delayed(_minSplashDuration, () {
+      if (mounted) setState(() => _minDurationElapsed = true);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -168,10 +157,8 @@ class _AuthGateState extends State<_AuthGate> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        if (authProvider.isInitializing) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+        if (authProvider.isInitializing || !_minDurationElapsed) {
+          return const SplashScreen();
         }
 
         if (authProvider.isLoggedIn) {

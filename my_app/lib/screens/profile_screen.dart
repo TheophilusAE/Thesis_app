@@ -33,14 +33,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: Text(
+          'Profil',
+          style: TextStyle(
+            color: theme.colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        foregroundColor: theme.colorScheme.onSurface,
+        elevation: 0,
         actions: [
           Consumer<ThemeProvider>(
             builder: (context, tp, _) => IconButton(
               icon: Icon(
                 tp.themeMode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                color: theme.colorScheme.onSurface,
               ),
               tooltip: 'Ganti tema',
               onPressed: tp.toggleTheme,
@@ -51,7 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               final user = auth.currentUser;
               if (user == null) return const SizedBox.shrink();
               return IconButton(
-                icon: const Icon(Icons.edit_rounded),
+                icon: Icon(Icons.edit_rounded, color: theme.colorScheme.onSurface),
                 tooltip: 'Edit profil',
                 onPressed: () => _showEditSheet(context, user),
               );
@@ -156,7 +170,7 @@ class _ProfileBody extends StatelessWidget {
                   icon: Icons.logout_rounded,
                   label: 'Keluar',
                   color: AppTheme.errorColor,
-                  outlined: false,
+                  outlined: true,
                   onTap: () => _confirmLogout(context),
                 ),
               ],
@@ -172,27 +186,46 @@ class _ProfileBody extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Konfirmasi Keluar'),
+        title: const Text('Konfirmasi Keluar', style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final auth = context.read<AuthProvider>();
-              await auth.logout();
-              if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
-              }
-            },
-            child: const Text('Keluar'),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.darkCharcoal,
+                    side: const BorderSide(color: AppTheme.neutralBorder),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Batal'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.errorColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final auth = context.read<AuthProvider>();
+                    await auth.logout();
+                    if (context.mounted) {
+                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+                    }
+                  },
+                  child: const Text('Keluar'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -245,77 +278,123 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final initials = user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U';
 
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(gradient: AppTheme.purpleBlueGradient),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      child: Column(
+      color: theme.colorScheme.surface,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
+      child: Stack(
         children: [
-          // Avatar
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: CircleAvatar(
-              radius: 42,
-              backgroundColor: Colors.white.withValues(alpha: 0.25),
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  fontSize: 34,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          Positioned(
+            right: -50,
+            top: -50,
+            child: IgnorePointer(
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppTheme.secondary.withValues(alpha: 0.16),
+                      AppTheme.secondary.withValues(alpha: 0),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            user.name,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          Positioned(
+            left: -40,
+            bottom: -30,
+            child: IgnorePointer(
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppTheme.primary.withValues(alpha: 0.08),
+                      AppTheme.primary.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 3),
-          Text(
-            user.email,
-            style: const TextStyle(color: Colors.white70, fontSize: 12.5),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            alignment: WrapAlignment.center,
+          Column(
             children: [
-              ...user.roles.map(
-                (r) => _HeaderChip(
-                  label: _roleLabel(r),
-                  icon: r == 'admin'
-                      ? Icons.shield_rounded
-                      : r == 'pelayan'
-                          ? Icons.church_rounded
-                          : Icons.person_rounded,
-                  color: Colors.white,
+              // Avatar with warm gold ring
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppTheme.goldGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.gold.withValues(alpha: 0.25),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 42,
+                  backgroundColor: theme.colorScheme.surface,
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      fontSize: 32,
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
-              _HeaderChip(
-                label: _statusLabel(user.membershipStatus),
-                icon: Icons.verified_rounded,
-                color: _statusColor(user.membershipStatus),
+              const SizedBox(height: 12),
+              Text(
+                user.name,
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                user.email,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                alignment: WrapAlignment.center,
+                children: [
+                  ...user.roles.map(
+                    (r) => _HeaderChip(
+                      label: _roleLabel(r),
+                      icon: r == 'admin'
+                          ? Icons.shield_rounded
+                          : r == 'pelayan'
+                              ? Icons.church_rounded
+                              : Icons.person_rounded,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                  _HeaderChip(
+                    label: _statusLabel(user.membershipStatus),
+                    icon: Icons.verified_rounded,
+                    color: _statusColor(user.membershipStatus),
+                  ),
+                ],
               ),
             ],
           ),
@@ -335,23 +414,26 @@ class _HeaderChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: color.withValues(alpha: 0.25),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 13),
+          Icon(icon, color: color, size: 14),
           const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
               color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -375,17 +457,7 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color ?? Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: AppTheme.subtleCardDecoration(radius: BorderRadius.circular(16)),
       child: Column(
         children: [
           Padding(

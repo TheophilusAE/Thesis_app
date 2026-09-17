@@ -153,15 +153,17 @@ class EventService {
     }
   }
 
-  /// Returns total attendees (sum of total_count) already registered for event.
+  /// Returns total attendees (sum of total_count) already registered for
+  /// event. Goes through a SECURITY DEFINER RPC so every jemaat can see
+  /// the aggregate capacity count even though row-level access to other
+  /// users' registrations is restricted.
   Future<int> getRegisteredCount(String eventId) async {
     try {
-      final data = await _db
-          .from('event_registrations')
-          .select('total_count')
-          .eq('event_id', eventId);
-      return (data as List).fold<int>(
-          0, (sum, e) => sum + ((e['total_count'] as int?) ?? 1));
+      final result = await _db.rpc(
+        'get_event_registration_count',
+        params: {'p_event_id': eventId},
+      );
+      return (result as num?)?.toInt() ?? 0;
     } catch (e) {
       debugPrint('getRegisteredCount error: $e');
       return 0;
@@ -174,7 +176,7 @@ class EventService {
     try {
       final data = await _db
           .from('event_registrations')
-          .select('*, users(name, email)')
+          .select('*, users(nama, email)')
           .eq('event_id', eventId)
           .order('registered_at');
       return (data as List)

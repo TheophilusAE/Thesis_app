@@ -30,10 +30,12 @@ key.properties
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/build/
 **/android/gradle-wrapper/gradle-wrapper.jar
 **/android/*.iml
 **/android/captures/
 **/android/local.properties
+packages/sign_in_with_apple/example/android/.gradle/
 
 # ─────────────────────────────────────────────
 # iOS / macOS

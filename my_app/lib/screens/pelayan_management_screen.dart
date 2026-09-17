@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../models/pelayan.dart';
 import '../providers/pelayan_provider.dart';
+import '../utils/app_theme.dart';
+import '../widgets/common/app_card.dart';
+import '../widgets/common/app_empty_state.dart';
+import '../widgets/common/app_status_badge.dart';
 import 'add_edit_pelayan_screen.dart';
 
 class PelayaniManagementScreen extends StatefulWidget {
@@ -12,7 +17,7 @@ class PelayaniManagementScreen extends StatefulWidget {
 }
 
 class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
-  late TextEditingController _searchController;
+  late final TextEditingController _searchController;
   String _selectedFilter = 'all'; // all, active, inactive
 
   @override
@@ -33,82 +38,79 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text('Manajemen Pelayan'),
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primaryContainer,
-              ],
-            ),
+        title: const Text(
+          'Manajemen Pelayan',
+          style: TextStyle(
+            color: AppTheme.darkCharcoal,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
         ),
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.darkCharcoal,
+        elevation: 0,
       ),
       body: Column(
         children: [
           // Search and filter section
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            color: Colors.white,
             child: Column(
               children: [
                 // Search field
                 TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Cari Pelayan...',
-                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'Cari nama atau posisi pelayan...',
+                    hintStyle: TextStyle(
+                      color: AppTheme.neutralMuted.withValues(alpha: 0.8),
+                      fontSize: 13.5,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppTheme.primary,
+                      size: 22,
+                    ),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear),
+                            icon: const Icon(Icons.clear_rounded, size: 20),
                             onPressed: () {
                               _searchController.clear();
                               context.read<PelayaniProvider>().searchPelayan('');
                             },
                           )
                         : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    filled: true,
+                    fillColor: AppTheme.warmIvory,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                    ),
                   ),
                   onChanged: (value) {
                     setState(() {});
                     context.read<PelayaniProvider>().searchPelayan(value);
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 // Filter chips
                 Row(
                   children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            FilterChip(
-                              label: const Text('Semua'),
-                              selected: _selectedFilter == 'all',
-                              onSelected: (selected) {
-                                setState(() => _selectedFilter = 'all');
-                                context.read<PelayaniProvider>().loadAllPelayan();
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            FilterChip(
-                              label: const Text('Aktif'),
-                              selected: _selectedFilter == 'active',
-                              onSelected: (selected) {
-                                setState(() => _selectedFilter = 'active');
-                                context.read<PelayaniProvider>().loadActivePelayan();
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    _filterChip('all', 'Semua'),
+                    const SizedBox(width: 8),
+                    _filterChip('active', 'Aktif'),
                   ],
                 ),
               ],
@@ -119,41 +121,35 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
             child: Consumer<PelayaniProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary),
+                  );
                 }
 
                 if (provider.filteredPelayan.isEmpty) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.person_off_outlined,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Tidak ada data Pelayan',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
+                    child: AppEmptyState(
+                      icon: Icons.person_off_rounded,
+                      title: 'Tidak Ada Data Pelayan',
+                      description: 'Belum ada data pelayan yang sesuai dengan pencarian atau filter.',
+                      actionLabel: 'Tambah Pelayan',
+                      onAction: _addNewPelayan,
                     ),
                   );
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.all(16),
                   itemCount: provider.filteredPelayan.length,
                   itemBuilder: (context, index) {
                     final pelayan = provider.filteredPelayan[index];
-                    return _PelayaniCard(
-                      pelayan: pelayan,
-                      onEdit: () => _editPelayan(pelayan),
-                      onDelete: () => _deletePelayan(pelayan),
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _PelayaniCard(
+                        pelayan: pelayan,
+                        onEdit: () => _editPelayan(pelayan),
+                        onDelete: () => _deletePelayan(pelayan),
+                      ),
                     );
                   },
                 );
@@ -162,11 +158,44 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addNewPelayan(),
-        tooltip: 'Tambah Pelayan',
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _addNewPelayan,
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 3,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text(
+          'Tambah Pelayan',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
+    );
+  }
+
+  Widget _filterChip(String value, String label) {
+    final isSelected = _selectedFilter == value;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() => _selectedFilter = value);
+        if (value == 'all') {
+          context.read<PelayaniProvider>().loadAllPelayan();
+        } else {
+          context.read<PelayaniProvider>().loadActivePelayan();
+        }
+      },
+      labelStyle: TextStyle(
+        fontSize: 12.5,
+        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        color: isSelected ? AppTheme.primary : AppTheme.darkCharcoal,
+      ),
+      backgroundColor: Colors.white,
+      selectedColor: AppTheme.primaryLight,
+      side: BorderSide(
+        color: isSelected ? AppTheme.primary : AppTheme.neutralBorder,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 
@@ -194,6 +223,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus Pelayan?'),
         content: Text('Apakah Anda yakin ingin menghapus ${pelayan.nama}?'),
         actions: [
@@ -212,7 +242,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
                 );
               }
             },
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            child: const Text('Hapus', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),
@@ -233,102 +263,114 @@ class _PelayaniCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        pelayan.nama,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              pelayan.posisi,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: pelayan.isAktif
-                                  ? Colors.green.withValues(alpha: 0.2)
-                                  : Colors.red.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              pelayan.isAktif ? 'Aktif' : 'Nonaktif',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: pelayan.isAktif ? Colors.green : Colors.red,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Column(
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: AppTheme.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: onEdit,
-                      tooltip: 'Edit',
+                    Text(
+                      pelayan.nama,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.darkCharcoal,
+                      ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: onDelete,
-                      tooltip: 'Hapus',
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.warmIvory,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppTheme.neutralBorder),
+                          ),
+                          child: Text(
+                            pelayan.posisi,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppTheme.darkCharcoal,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        AppStatusBadge(
+                          label: pelayan.isAktif ? 'Aktif' : 'Nonaktif',
+                          type: pelayan.isAktif
+                              ? AppStatusBadgeType.success
+                              : AppStatusBadgeType.neutral,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
+                    onPressed: onEdit,
+                    tooltip: 'Edit',
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: EdgeInsets.zero,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
+                    onPressed: onDelete,
+                    tooltip: 'Hapus',
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (pelayan.noTelepon.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: AppTheme.neutralBorder),
+            const SizedBox(height: 10),
             Row(
               children: [
-                Icon(Icons.phone, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 8),
+                const Icon(Icons.phone_rounded, size: 14, color: AppTheme.neutralMuted),
+                const SizedBox(width: 6),
                 Text(
                   pelayan.noTelepon,
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppTheme.neutralMedium,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
           ],
-        ),
+        ],
       ),
     );
   }

@@ -5,18 +5,12 @@ import '../models/event.dart';
 import '../models/event_registration.dart';
 import '../providers/auth_provider.dart';
 import '../providers/event_provider.dart';
-
-// ── Palette ──────────────────────────────────────────────
-const _navy      = Color(0xFF1E3A5F);
-const _navyLight = Color(0xFF2C5282);
-const _gold      = Color(0xFFD4A017);
-const _teal      = Color(0xFF0D9488);
-const _slate     = Color(0xFF1F2937);
-const _muted     = Color(0xFF6B7280);
-
-// ─────────────────────────────────────────────────────────
-// Entry point — for Jemaat (browse + register)
-// ─────────────────────────────────────────────────────────
+import '../utils/app_theme.dart';
+import '../widgets/common/app_button.dart';
+import '../widgets/common/app_card.dart';
+import '../widgets/common/app_empty_state.dart';
+import '../widgets/common/app_skeleton.dart';
+import '../widgets/common/app_status_badge.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});
@@ -37,39 +31,30 @@ class _EventListScreenState extends State<EventListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
-          'Event Gereja',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [_navy, _navyLight],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
+        title: const Text('Event & Kegiatan Gereja'),
       ),
       body: Consumer<EventProvider>(
         builder: (_, provider, _) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return _buildLoadingSkeleton();
           }
           final events = provider.activeEvents;
           if (events.isEmpty) {
-            return _EmptyEvents();
+            return const AppEmptyState(
+              icon: Icons.event_busy_rounded,
+              title: 'Belum Ada Event Aktif',
+              description: 'Jadwal kegiatan dan seminar gereja akan diumumkan di sini. Nantikan informasi selanjutnya!',
+            );
           }
           return RefreshIndicator(
+            color: AppTheme.primary,
             onRefresh: () => provider.loadActiveEvents(),
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
               itemCount: events.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 14),
+              separatorBuilder: (_, _) => const SizedBox(height: 16),
               itemBuilder: (_, i) => _EventCard(event: events[i]),
             ),
           );
@@ -77,11 +62,20 @@ class _EventListScreenState extends State<EventListScreen> {
       ),
     );
   }
-}
 
-// ─────────────────────────────────────────────────────────
-// Event card
-// ─────────────────────────────────────────────────────────
+  Widget _buildLoadingSkeleton() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: const [
+          AppSkeleton(height: 200, borderRadius: BorderRadius.all(Radius.circular(20))),
+          SizedBox(height: 16),
+          AppSkeleton(height: 200, borderRadius: BorderRadius.all(Radius.circular(20))),
+        ],
+      ),
+    );
+  }
+}
 
 class _EventCard extends StatefulWidget {
   final ChurchEvent event;
@@ -125,139 +119,162 @@ class _EventCardState extends State<_EventCard> {
       widget.event.maxCapacity != null &&
       _registeredCount >= widget.event.maxCapacity!;
 
-  int get _spotsLeft =>
-      widget.event.maxCapacity == null
-          ? -1
-          : widget.event.maxCapacity! - _registeredCount;
-
-  static const _gradients = [
-    LinearGradient(colors: [Color(0xFF1E3A5F), Color(0xFF2C5282)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-    LinearGradient(colors: [Color(0xFF0D9488), Color(0xFF0F766E)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-    LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-    LinearGradient(colors: [Color(0xFFD4A017), Color(0xFFB8860B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-  ];
-
-  LinearGradient _gradient(int index) => _gradients[index % _gradients.length];
+  int get _spotsLeft => widget.event.maxCapacity == null
+      ? -1
+      : widget.event.maxCapacity! - _registeredCount;
 
   @override
   Widget build(BuildContext context) {
-    final idx = widget.event.id.hashCode;
-    final dateStr = DateFormat('EEE, d MMM yyyy').format(widget.event.date);
+    final dateStr = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(widget.event.date);
     final timeStr = DateFormat('HH:mm').format(widget.event.date);
     final registered = _myReg != null;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return AppCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Gradient banner
+          // Card Header Banner
           Container(
-            height: 110,
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: _gradient(idx),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.primary,
+                  AppTheme.burgundy,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
-            child: Stack(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Positioned(
-                  right: -20, top: -20,
-                  child: Container(
-                    width: 110, height: 110,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.07),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Status chips
-                      Row(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Date badge box
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
                         children: [
-                          if (registered) ...[
-                            _Chip(
-                              label: 'Sudah Terdaftar ✓',
-                              bg: Colors.white.withValues(alpha: 0.25),
-                              textColor: Colors.white,
+                          Text(
+                            DateFormat('d', 'id_ID').format(widget.event.date),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(width: 6),
-                          ],
-                          if (_isFull && !registered)
-                            _Chip(
-                              label: 'Penuh',
-                              bg: Colors.red.withValues(alpha: 0.25),
-                              textColor: Colors.white,
+                          ),
+                          Text(
+                            DateFormat('MMM', 'id_ID').format(widget.event.date).toUpperCase(),
+                            style: const TextStyle(
+                              color: AppTheme.goldLight,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
                             ),
-                          if (!_isFull && _spotsLeft > 0 && _spotsLeft <= 20)
-                            _Chip(
-                              label: '$_spotsLeft slot tersisa',
-                              bg: _gold.withValues(alpha: 0.3),
-                              textColor: Colors.white,
-                            ),
+                          ),
                         ],
                       ),
-                      // Title
-                      Text(
-                        widget.event.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          height: 1.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.event.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              height: 1.25,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time_rounded, size: 14, color: AppTheme.goldLight),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$timeStr WIB',
+                                style: const TextStyle(
+                                  color: AppTheme.goldLight,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
+                    ),
+                  ],
+                ),
+                if (registered || _isFull || (_spotsLeft > 0 && _spotsLeft <= 20)) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      if (registered)
+                        const AppStatusBadge(
+                          label: 'Anda Sudah Terdaftar',
+                          status: 'completed',
+                        ),
+                      if (_isFull && !registered)
+                        const AppStatusBadge(
+                          label: 'Kuota Penuh',
+                          status: 'rejected',
+                        ),
+                      if (!_isFull && _spotsLeft > 0 && _spotsLeft <= 20)
+                        AppStatusBadge(
+                          label: 'Sisa $_spotsLeft slot',
+                          status: 'warning',
+                        ),
                     ],
                   ),
-                ),
+                ],
               ],
             ),
           ),
 
-          // Details
+          // Card Body
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Date & time row
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today_rounded, size: 14, color: _muted),
-                    const SizedBox(width: 5),
-                    Text(dateStr, style: const TextStyle(fontSize: 12.5, color: _muted, fontWeight: FontWeight.w500)),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.access_time_rounded, size: 14, color: _muted),
-                    const SizedBox(width: 5),
-                    Text(timeStr, style: const TextStyle(fontSize: 12.5, color: _gold, fontWeight: FontWeight.w700)),
+                    const Icon(Icons.calendar_month_outlined, size: 16, color: AppTheme.neutralMedium),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        dateStr,
+                        style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal, fontWeight: FontWeight.w500),
+                      ),
+                    ),
                   ],
                 ),
                 if (widget.event.location.isNotEmpty) ...[
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_rounded, size: 14, color: _muted),
-                      const SizedBox(width: 5),
+                      const Icon(Icons.location_on_outlined, size: 16, color: AppTheme.neutralMedium),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           widget.event.location,
-                          style: const TextStyle(fontSize: 12.5, color: _muted),
+                          style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -266,34 +283,34 @@ class _EventCardState extends State<_EventCard> {
                   ),
                 ],
                 if (widget.event.description.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Text(
                     widget.event.description,
-                    style: const TextStyle(fontSize: 13, color: _slate, height: 1.45),
+                    style: const TextStyle(fontSize: 13, color: AppTheme.neutralMedium, height: 1.45),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
                 if (widget.event.maxCapacity != null && !_loadingReg) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
-                      const Icon(Icons.people_rounded, size: 14, color: _muted),
-                      const SizedBox(width: 5),
+                      const Icon(Icons.people_outline_rounded, size: 16, color: AppTheme.neutralMedium),
+                      const SizedBox(width: 6),
                       Text(
-                        '$_registeredCount / ${widget.event.maxCapacity} peserta',
-                        style: const TextStyle(fontSize: 12, color: _muted, fontWeight: FontWeight.w500),
+                        '$_registeredCount / ${widget.event.maxCapacity} Peserta',
+                        style: const TextStyle(fontSize: 12, color: AppTheme.neutralMedium, fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: _registeredCount / widget.event.maxCapacity!,
-                            minHeight: 5,
-                            backgroundColor: const Color(0xFFE2E8F0),
-                            valueColor: AlwaysStoppedAnimation(
-                              _isFull ? Colors.red : _navy,
+                            value: (_registeredCount / widget.event.maxCapacity!).clamp(0.0, 1.0),
+                            minHeight: 6,
+                            backgroundColor: AppTheme.neutralLight,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _isFull ? AppTheme.primary : AppTheme.gold,
                             ),
                           ),
                         ),
@@ -301,14 +318,17 @@ class _EventCardState extends State<_EventCard> {
                     ],
                   ),
                 ],
+
+                const SizedBox(height: 16),
+                const Divider(height: 1),
                 const SizedBox(height: 14),
 
-                // Action buttons
+                // Action Area
                 _loadingReg
                     ? const Center(
                         child: SizedBox(
-                          height: 20,
-                          width: 20,
+                          height: 24,
+                          width: 24,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
@@ -318,23 +338,10 @@ class _EventCardState extends State<_EventCard> {
                             registration: _myReg!,
                             onChanged: _loadRegistrationInfo,
                           )
-                        : SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.app_registration_rounded, size: 18),
-                              label: const Text('Daftar Sekarang'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _isFull ? Colors.grey : _navy,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 13),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                              onPressed: _isFull
-                                  ? null
-                                  : () => _showRegistrationSheet(context),
-                            ),
+                        : AppButton(
+                            label: _isFull ? 'Pendaftaran Ditutup (Penuh)' : 'Daftar Sekarang',
+                            icon: Icons.app_registration_rounded,
+                            onPressed: _isFull ? null : () => _showRegistrationSheet(context),
                           ),
               ],
             ),
@@ -365,10 +372,6 @@ class _EventCardState extends State<_EventCard> {
   }
 }
 
-// ─────────────────────────────────────────────────────────
-// Registered state — shows summary + edit/cancel buttons
-// ─────────────────────────────────────────────────────────
-
 class _RegisteredActions extends StatelessWidget {
   final ChurchEvent event;
   final EventRegistration registration;
@@ -388,32 +391,32 @@ class _RegisteredActions extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: _teal.withValues(alpha: 0.07),
+            color: const Color(0xFFF0FDF4),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _teal.withValues(alpha: 0.25)),
+            border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded, color: _teal, size: 16),
-                  const SizedBox(width: 6),
+                  const Icon(Icons.check_circle_rounded, color: AppTheme.emerald, size: 18),
+                  const SizedBox(width: 8),
                   const Text(
-                    'Anda terdaftar',
+                    'Anda Telah Terdaftar',
                     style: TextStyle(
-                      color: _teal,
-                      fontWeight: FontWeight.w700,
+                      color: AppTheme.emerald,
+                      fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
                   ),
                   const Spacer(),
                   Text(
-                    '${registration.totalCount} peserta',
+                    '${registration.totalCount} Orang',
                     style: const TextStyle(
-                      color: _teal,
+                      color: AppTheme.darkCharcoal,
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
@@ -421,8 +424,8 @@ class _RegisteredActions extends StatelessWidget {
               if (registration.familyMembers.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Anggota keluarga: ${registration.familyMembers.map((m) => m.name).join(', ')}',
-                  style: const TextStyle(color: _muted, fontSize: 12),
+                  'Anggota: ${registration.familyMembers.map((m) => m.name).join(', ')}',
+                  style: const TextStyle(color: AppTheme.neutralMedium, fontSize: 12),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -430,36 +433,27 @@ class _RegisteredActions extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.edit_rounded, size: 16),
-                label: const Text('Ubah Pendaftaran'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _navy,
-                  side: const BorderSide(color: _navy),
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+              child: AppButton(
+                label: 'Ubah Data',
+                icon: Icons.edit_outlined,
+                variant: AppButtonVariant.outline,
                 onPressed: () => _showRegistrationSheet(context),
               ),
             ),
             const SizedBox(width: 8),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red),
-                padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            IconButton(
+              tooltip: 'Batalkan Pendaftaran',
+              style: IconButton.styleFrom(
+                side: const BorderSide(color: Color(0xFFEF4444)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                minimumSize: const Size(48, 48),
               ),
+              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444)),
               onPressed: () => _confirmCancel(context),
-              child: const Icon(Icons.cancel_outlined, size: 18),
             ),
           ],
         ),
@@ -491,39 +485,34 @@ class _RegisteredActions extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('Batalkan Pendaftaran?'),
         content: Text(
-          'Apakah Anda yakin ingin membatalkan pendaftaran untuk "${event.title}"?',
+          'Apakah Anda yakin ingin membatalkan pendaftaran untuk kegiatan "${event.title}"?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tidak'),
+            child: const Text('Tidak, Tetap Ikut', style: TextStyle(color: AppTheme.neutralMedium)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () async {
               Navigator.pop(ctx);
               final uid = context.read<AuthProvider>().user?.id;
               if (uid == null) return;
-              final ok = await context
-                  .read<EventProvider>()
-                  .cancelRegistration(event.id, uid);
+              final ok = await context.read<EventProvider>().cancelRegistration(event.id, uid);
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(ok
-                      ? 'Pendaftaran berhasil dibatalkan.'
-                      : 'Gagal membatalkan pendaftaran.'),
-                  backgroundColor: ok ? _teal : Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  content: Text(
+                    ok ? 'Pendaftaran berhasil dibatalkan.' : 'Gagal membatalkan pendaftaran.',
                   ),
+                  backgroundColor: ok ? AppTheme.primary : Colors.red,
                 ),
               );
               if (ok) onChanged();
@@ -535,10 +524,6 @@ class _RegisteredActions extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────
-// Registration bottom sheet
-// ─────────────────────────────────────────────────────────
 
 class _RegistrationSheet extends StatefulWidget {
   final ChurchEvent event;
@@ -595,14 +580,10 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
   int get _totalPeople => 1 + _familyRows.length;
 
   Future<void> _submit() async {
-    // Validate all family member names filled
     for (final row in _familyRows) {
       if (row.nameCtrl.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lengkapi nama semua anggota keluarga.'),
-            behavior: SnackBarBehavior.floating,
-          ),
+          const SnackBar(content: Text('Lengkapi nama semua anggota keluarga.')),
         );
         return;
       }
@@ -637,21 +618,15 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
       widget.onSuccess();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Pendaftaran berhasil! $_totalPeople peserta terdaftar.',
-          ),
-          backgroundColor: _teal,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text('Pendaftaran berhasil! $_totalPeople peserta terdaftar.'),
+          backgroundColor: AppTheme.emerald,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Gagal mendaftar. Coba lagi.'),
+          content: Text('Gagal mendaftar. Silakan coba kembali.'),
           backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -661,13 +636,12 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
   Widget build(BuildContext context) {
     final auth = context.read<AuthProvider>();
     final myName = auth.currentUser?.name ?? 'Anda';
-    final dateStr =
-        DateFormat('EEE, d MMM yyyy • HH:mm').format(widget.event.date);
+    final dateStr = DateFormat('EEEE, d MMMM yyyy • HH:mm', 'id_ID').format(widget.event.date);
     final isEdit = widget.existingRegistration != null;
 
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.75,
+      initialChildSize: 0.78,
       maxChildSize: 0.95,
       minChildSize: 0.5,
       builder: (ctx, scroll) => Padding(
@@ -676,32 +650,32 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
         ),
         child: Column(
           children: [
-            // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isEdit ? 'Ubah Pendaftaran' : 'Daftar Event',
+                    isEdit ? 'Ubah Data Pendaftaran' : 'Formulir Pendaftaran Event',
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: _slate,
+                      color: AppTheme.darkCharcoal,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     widget.event.title,
                     style: const TextStyle(
-                        fontSize: 13.5,
-                        color: _navy,
-                        fontWeight: FontWeight.w600),
+                      fontSize: 14,
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     dateStr,
-                    style: const TextStyle(fontSize: 12, color: _muted),
+                    style: const TextStyle(fontSize: 12, color: AppTheme.neutralMedium),
                   ),
                 ],
               ),
@@ -710,213 +684,170 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
             Expanded(
               child: ListView(
                 controller: scroll,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                 children: [
-                  // Registrant (self) — read-only
-                  _SheetSection(
-                    title: 'Pendaftar Utama',
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _navy.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: _navy.withValues(alpha: 0.18)),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor:
-                                _navy.withValues(alpha: 0.15),
-                            child: Text(
-                              myName.isNotEmpty
-                                  ? myName[0].toUpperCase()
-                                  : 'A',
-                              style: const TextStyle(
-                                  color: _navy, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(myName,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
-                                        color: _slate)),
-                                const Text('Pendaftar',
-                                    style: TextStyle(
-                                        fontSize: 12, color: _muted)),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.lock_outline_rounded,
-                              size: 16, color: _muted),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Family members
-                  _SheetSection(
-                    title: 'Anggota Keluarga',
-                    trailing: Text(
-                      '${_familyRows.length} ditambahkan',
-                      style: const TextStyle(
-                          fontSize: 12,
-                          color: _muted,
-                          fontWeight: FontWeight.w500),
-                    ),
-                    child: Column(
-                      children: [
-                        ..._familyRows.asMap().entries.map((entry) {
-                          final i = entry.key;
-                          final row = entry.value;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 5,
-                                  child: TextField(
-                                    controller: row.nameCtrl,
-                                    decoration: InputDecoration(
-                                      labelText: 'Nama',
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 12),
-                                      border: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      filled: true,
-                                      fillColor: const Color(0xFFF1F5F9),
-                                    ),
-                                    textCapitalization:
-                                        TextCapitalization.words,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 4,
-                                  child: DropdownButtonFormField<String>(
-                                    initialValue: row.relationship,
-                                    items: _relationships
-                                        .map((r) => DropdownMenuItem(
-                                            value: r,
-                                            child: Text(r,
-                                                style: const TextStyle(
-                                                    fontSize: 12.5))))
-                                        .toList(),
-                                    onChanged: (v) => setState(
-                                        () => row.relationship = v!),
-                                    decoration: InputDecoration(
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 12),
-                                      border: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      filled: true,
-                                      fillColor: const Color(0xFFF1F5F9),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                IconButton(
-                                  icon: const Icon(Icons.remove_circle_outline_rounded,
-                                      color: Colors.red, size: 22),
-                                  onPressed: () {
-                                    setState(() {
-                                      row.nameCtrl.dispose();
-                                      _familyRows.removeAt(i);
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                        const SizedBox(height: 4),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.add_rounded, size: 18),
-                            label: const Text('Tambah Anggota Keluarga'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: _navy,
-                              side: const BorderSide(
-                                  color: _navy, width: 1.5),
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () => setState(() {
-                              _familyRows.add(_FamilyRow(
-                                nameCtrl: TextEditingController(),
-                                relationship: _relationships.first,
-                              ));
-                            }),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Notes
-                  _SheetSection(
-                    title: 'Catatan (opsional)',
-                    child: TextField(
-                      controller: _notesCtrl,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText:
-                            'Contoh: butuh kursi roda, vegetarian, dll.',
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFFF1F5F9),
-                      ),
-                    ),
-                  ),
+                  // Main Registrant
+                  _buildSectionTitle('Pendaftar Utama'),
                   const SizedBox(height: 8),
-
-                  // Summary chip
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: _gold.withValues(alpha: 0.1),
+                      color: AppTheme.primaryLight,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: _gold.withValues(alpha: 0.3)),
+                      border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.people_rounded,
-                            color: _gold, size: 16),
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
+                          child: Text(
+                            myName.isNotEmpty ? myName[0].toUpperCase() : 'A',
+                            style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                myName,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              const Text('Pendaftar Utama (Terdaftar)', style: TextStyle(fontSize: 12, color: AppTheme.neutralMedium)),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.lock_outline_rounded, size: 16, color: AppTheme.neutralMedium),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Family Members Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle('Anggota Keluarga / Tambahan'),
+                      Text(
+                        '${_familyRows.length} ditambahkan',
+                        style: const TextStyle(fontSize: 12, color: AppTheme.neutralMedium, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  ..._familyRows.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final row = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: TextField(
+                              controller: row.nameCtrl,
+                              style: const TextStyle(fontSize: 13),
+                              decoration: InputDecoration(
+                                labelText: 'Nama Lengkap',
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                filled: true,
+                                fillColor: AppTheme.warmIvory,
+                              ),
+                              textCapitalization: TextCapitalization.words,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 4,
+                            child: DropdownButtonFormField<String>(
+                              initialValue: row.relationship,
+                              items: _relationships
+                                  .map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 12))))
+                                  .toList(),
+                              onChanged: (v) => setState(() => row.relationship = v!),
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                filled: true,
+                                fillColor: AppTheme.warmIvory,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline_rounded, color: Colors.red, size: 22),
+                            onPressed: () {
+                              setState(() {
+                                row.nameCtrl.dispose();
+                                _familyRows.removeAt(i);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.person_add_outlined, size: 18),
+                    label: const Text('Tambah Anggota Keluarga'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      side: const BorderSide(color: AppTheme.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => setState(() {
+                      _familyRows.add(_FamilyRow(
+                        nameCtrl: TextEditingController(),
+                        relationship: _relationships.first,
+                      ));
+                    }),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Notes
+                  _buildSectionTitle('Catatan Khusus (Opsional)'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _notesCtrl,
+                    maxLines: 3,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: butuh tempat duduk khusus lansia / kursi roda...',
+                      hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 12),
+                      contentPadding: const EdgeInsets.all(12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: AppTheme.warmIvory,
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Summary Notice
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.goldLight.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, color: AppTheme.goldDark, size: 18),
                         const SizedBox(width: 8),
                         Text(
-                          'Total peserta yang didaftarkan: $_totalPeople orang',
+                          'Total peserta: $_totalPeople orang',
                           style: const TextStyle(
-                            color: _gold,
+                            color: AppTheme.goldDark,
                             fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
@@ -925,43 +856,16 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                 ],
               ),
             ),
-            // Submit button
+
             SafeArea(
               top: false,
               child: Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _saving ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _navy,
-                      foregroundColor: Colors.white,
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation(
-                                  Colors.white),
-                            ),
-                          )
-                        : Text(
-                            isEdit
-                                ? 'Simpan Perubahan'
-                                : 'Konfirmasi Pendaftaran ($_totalPeople peserta)',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14.5),
-                          ),
-                  ),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: AppButton(
+                  label: isEdit ? 'Simpan Perubahan' : 'Konfirmasi Pendaftaran ($_totalPeople Orang)',
+                  icon: Icons.check_circle_outline_rounded,
+                  isLoading: _saving,
+                  onPressed: _submit,
                 ),
               ),
             ),
@@ -970,112 +874,21 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
       ),
     );
   }
-}
 
-// ─────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 13.5,
+        fontWeight: FontWeight.bold,
+        color: AppTheme.darkCharcoal,
+      ),
+    );
+  }
+}
 
 class _FamilyRow {
   TextEditingController nameCtrl;
   String relationship;
   _FamilyRow({required this.nameCtrl, required this.relationship});
-}
-
-class _SheetSection extends StatelessWidget {
-  final String title;
-  final Widget child;
-  final Widget? trailing;
-
-  const _SheetSection(
-      {required this.title, required this.child, this.trailing});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: _slate)),
-            if (trailing != null) ...[
-              const Spacer(),
-              trailing!,
-            ],
-          ],
-        ),
-        const SizedBox(height: 8),
-        child,
-      ],
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  final String label;
-  final Color bg;
-  final Color textColor;
-
-  const _Chip(
-      {required this.label, required this.bg, required this.textColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(label,
-          style: TextStyle(
-              color: textColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w600)),
-    );
-  }
-}
-
-class _EmptyEvents extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: _navy.withValues(alpha: 0.07),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.event_busy_rounded,
-                  size: 44, color: _navy),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Belum Ada Event',
-              style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: _slate),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Event gereja akan muncul di sini.\nNantikan pengumuman selanjutnya!',
-              style: TextStyle(color: _muted, fontSize: 13.5, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

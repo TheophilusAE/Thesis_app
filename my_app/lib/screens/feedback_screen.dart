@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
-import '../models/feedback.dart' as fb;
 import '../models/event.dart';
 import '../providers/auth_provider.dart';
-import '../services/feedback_service.dart';
+import '../providers/feedback_provider.dart';
+import '../utils/app_theme.dart';
+import '../widgets/common/app_button.dart';
+import '../widgets/common/app_card.dart';
 
 class FeedbackScreen extends StatefulWidget {
   final ChurchEvent? event;
@@ -21,9 +22,8 @@ class FeedbackScreen extends StatefulWidget {
 }
 
 class _FeedbackScreenState extends State<FeedbackScreen> {
-  final FeedbackService _feedbackService = FeedbackService();
   final TextEditingController _messageController = TextEditingController();
-  int _rating = 4;
+  int _rating = 5;
   bool _isAnonymous = false;
   bool _isLoading = false;
 
@@ -34,9 +34,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   }
 
   void _submitFeedback() async {
-    if (_messageController.text.trim().isEmpty) {
+    final message = _messageController.text.trim();
+    if (message.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mohon isi pesan feedback')),
+        const SnackBar(content: Text('Mohon tuliskan pesan feedback Anda')),
       );
       return;
     }
@@ -46,60 +47,50 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User tidak teridentifikasi')),
+        const SnackBar(content: Text('Sesi pengguna tidak valid')),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      final feedback = fb.UserFeedback(
-        id: const Uuid().v4(),
-        userId: user.id,
-        userName: _isAnonymous ? 'Anonymous' : user.name,
-        feedbackType: widget.feedbackType,
-        eventId: widget.event?.id,
-        eventName: widget.event?.title,
-        rating: _rating,
-        message: _messageController.text.trim(),
-        createdAt: DateTime.now(),
-        isAnonymous: _isAnonymous,
-      );
-
-      final success = await _feedbackService.submitFeedback(feedback);
+      final success = await context.read<FeedbackProvider>().submitFeedback(
+            userId: user.id,
+            userName: user.name,
+            feedbackType: widget.feedbackType,
+            eventId: widget.event?.id,
+            eventName: widget.event?.title,
+            rating: _rating,
+            message: message,
+            isAnonymous: _isAnonymous,
+          );
 
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
 
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Terima kasih! Feedback berhasil dikirim'),
-              backgroundColor: Colors.green,
+              content: Text('Terima kasih! Masukan Anda sangat berharga bagi kemajuan pelayanan gereja.'),
+              backgroundColor: AppTheme.emerald,
             ),
           );
           Navigator.of(context).pop(true);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Gagal mengirim feedback'),
-              backgroundColor: Colors.red,
+              content: Text('Gagal mengirim feedback. Silakan coba lagi.'),
+              backgroundColor: AppTheme.primary,
             ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Terjadi kesalahan: $e')),
         );
       }
     }
@@ -108,154 +99,239 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   String _getFeedbackTitle() {
     switch (widget.feedbackType) {
       case 'event':
-        return 'Feedback Event: ${widget.event?.title}';
+        return widget.event?.title != null
+            ? 'Feedback: ${widget.event!.title}'
+            : 'Feedback Kegiatan';
       case 'facility':
-        return 'Feedback Fasilitas Gereja';
+        return 'Saran & Fasilitas Gereja';
       case 'hospitality':
-        return 'Feedback Hospitality Gereja';
+        return 'Layanan Penyambutan & Usher';
       default:
-        return 'Feedback';
+        return 'Kritik & Saran Membangun';
     }
   }
 
   String _getFeedbackSubtitle() {
     switch (widget.feedbackType) {
       case 'event':
-        return 'Bagikan pengalaman Anda tentang event ini';
+        return 'Bagikan pengalaman dan kesan Anda selama mengikuti kegiatan ini untuk evaluasi kami.';
       case 'facility':
-        return 'Bagikan saran untuk perbaikan fasilitas gereja';
+        return 'Bantu kami meningkatkan kenyamanan fasilitas ibadah (sound system, AC, kebersihan, dll).';
       case 'hospitality':
-        return 'Bagikan pengalaman Anda tentang layanan hospitality';
+        return 'Ceritakan pengalaman penyambutan dan keramahan pelayan jemaat saat Anda hadir.';
       default:
-        return 'Bagikan feedback Anda';
+        return 'Suara dan aspirasi Anda sangat berarti demi pertumbuhan jemaat GPDI.';
+    }
+  }
+
+  String _getRatingSentiment(int rating) {
+    switch (rating) {
+      case 1:
+        return 'Sangat Perlu Ditingkatkan';
+      case 2:
+        return 'Kurang Memuaskan';
+      case 3:
+        return 'Cukup Baik';
+      case 4:
+        return 'Baik & Memberkati';
+      case 5:
+        return 'Luar Biasa & Sangat Memberkati!';
+      default:
+        return '';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
         title: Text(_getFeedbackTitle()),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Subtitle
-            Text(
-              _getFeedbackSubtitle(),
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-            ),
-            const SizedBox(height: 24),
-
-            // Rating Section
-            Text(
-              'Rating',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+            // Intro Banner
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryLight,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                for (int i = 1; i <= 5; i++)
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _rating = i;
-                      });
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        _rating >= i ? Icons.star : Icons.star_border,
-                        color: _rating >= i ? Colors.amber : Colors.grey,
-                        size: 32,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.rate_review_outlined, color: AppTheme.primary, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      _getFeedbackSubtitle(),
+                      style: const TextStyle(
+                        color: AppTheme.primaryDark,
+                        fontSize: 13,
+                        height: 1.4,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
 
-            // Message Section
-            Text(
-              'Pesan Feedback',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _messageController,
-              maxLines: 6,
-              decoration: InputDecoration(
-                hintText: 'Tulis feedback Anda di sini...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-              ),
-            ),
             const SizedBox(height: 16),
 
-            // Anonymous Option
-            CheckboxListTile(
-              title: const Text('Kirim sebagai Anonymous'),
-              subtitle: const Text('Identitas Anda tidak akan ditampilkan'),
-              value: _isAnonymous,
-              onChanged: (value) {
-                setState(() {
-                  _isAnonymous = value ?? false;
-                });
-              },
-              controlAffinity: ListTileControlAffinity.leading,
-            ),
-            const SizedBox(height: 24),
-
-            // Submit Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _submitFeedback,
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // Form Card
+            AppCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Bagaimana Penilaian Anda?',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppTheme.darkCharcoal,
+                    ),
                   ),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
+                  const SizedBox(height: 14),
+
+                  // Rating Stars Row
+                  Center(
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            for (int i = 1; i <= 5; i++)
+                              IconButton(
+                                iconSize: 38,
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () {
+                                  setState(() => _rating = i);
+                                },
+                                icon: Icon(
+                                  _rating >= i ? Icons.star_rounded : Icons.star_outline_rounded,
+                                  color: _rating >= i ? AppTheme.goldDark : AppTheme.neutralMedium,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.goldLight.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _getRatingSentiment(_rating),
+                            style: const TextStyle(
+                              color: AppTheme.goldDark,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      )
-                    : const Text(
-                        'Kirim Feedback',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Message Input
+                  const Text(
+                    'Saran & Masukan',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: AppTheme.neutralMedium,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _messageController,
+                    maxLines: 5,
+                    style: const TextStyle(fontSize: 14, color: AppTheme.darkCharcoal),
+                    decoration: InputDecoration(
+                      hintText: 'Tuliskan tanggapan, kritik membangun, atau apresiasi Anda...',
+                      hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
+                      filled: true,
+                      fillColor: AppTheme.warmIvory,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.neutralBorder),
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.all(14),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Anonymous Toggle
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warmIvory,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.neutralBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.visibility_off_outlined, color: AppTheme.neutralMedium, size: 20),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Kirim sebagai Anonim',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                              Text(
+                                'Identitas Anda tidak akan ditampilkan ke pengurus',
+                                style: TextStyle(color: AppTheme.neutralMedium, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch.adaptive(
+                          value: _isAnonymous,
+                          activeTrackColor: AppTheme.primary,
+                          onChanged: (val) => setState(() => _isAnonymous = val),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Submit Button
+                  AppButton(
+                    label: 'Kirim Feedback',
+                    icon: Icons.send_rounded,
+                    isLoading: _isLoading,
+                    onPressed: _submitFeedback,
+                  ),
+                ],
               ),
             ),
           ],
@@ -280,9 +356,8 @@ class FeedbackDialog extends StatefulWidget {
 }
 
 class _FeedbackDialogState extends State<FeedbackDialog> {
-  final FeedbackService _feedbackService = FeedbackService();
   final TextEditingController _messageController = TextEditingController();
-  int _rating = 4;
+  int _rating = 5;
   bool _isAnonymous = false;
   bool _isLoading = false;
 
@@ -293,7 +368,8 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
   }
 
   void _submitFeedback() async {
-    if (_messageController.text.trim().isEmpty) {
+    final message = _messageController.text.trim();
+    if (message.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Mohon isi pesan feedback')),
       );
@@ -308,40 +384,29 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      final feedback = fb.UserFeedback(
-        id: const Uuid().v4(),
-        userId: user.id,
-        userName: _isAnonymous ? 'Anonymous' : user.name,
-        feedbackType: widget.feedbackType,
-        eventId: widget.event?.id,
-        eventName: widget.event?.title,
-        rating: _rating,
-        message: _messageController.text.trim(),
-        createdAt: DateTime.now(),
-        isAnonymous: _isAnonymous,
-      );
-
-      final success = await _feedbackService.submitFeedback(feedback);
+      final success = await context.read<FeedbackProvider>().submitFeedback(
+            userId: user.id,
+            userName: user.name,
+            feedbackType: widget.feedbackType,
+            eventId: widget.event?.id,
+            eventName: widget.event?.title,
+            rating: _rating,
+            message: message,
+            isAnonymous: _isAnonymous,
+          );
 
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
+        setState(() => _isLoading = false);
         if (success) {
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -349,97 +414,106 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(22),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Berikan Feedback',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Rating:',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
               Row(
                 children: [
-                  for (int i = 1; i <= 5; i++)
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _rating = i;
-                        });
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Icon(
-                          _rating >= i ? Icons.star : Icons.star_border,
-                          color: _rating >= i ? Colors.amber : Colors.grey,
-                          size: 28,
-                        ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryLight,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.rate_review_outlined, color: AppTheme.primary, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Berikan Masukan',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.darkCharcoal,
                       ),
                     ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (int i = 1; i <= 5; i++)
+                      IconButton(
+                        iconSize: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => setState(() => _rating = i),
+                        icon: Icon(
+                          _rating >= i ? Icons.star_rounded : Icons.star_outline_rounded,
+                          color: _rating >= i ? AppTheme.goldDark : AppTheme.neutralMedium,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
               TextField(
                 controller: _messageController,
                 maxLines: 4,
+                style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Tulis feedback Anda...',
+                  hintText: 'Tulis saran atau evaluasi Anda...',
+                  hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
+                  filled: true,
+                  fillColor: AppTheme.warmIvory,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-              CheckboxListTile(
-                title: const Text('Anonymous'),
-                value: _isAnonymous,
-                onChanged: (value) {
-                  setState(() {
-                    _isAnonymous = value ?? false;
-                  });
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
+              Row(
+                children: [
+                  Checkbox(
+                    value: _isAnonymous,
+                    activeColor: AppTheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    onChanged: (v) => setState(() => _isAnonymous = v ?? false),
+                  ),
+                  const Text('Kirim Anonim', style: TextStyle(fontSize: 13)),
+                ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    child: const Text('Batal'),
+                    child: const Text('Batal', style: TextStyle(color: AppTheme.neutralMedium)),
                   ),
                   const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _submitFeedback,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                        : const Text('Kirim'),
+                  AppButton(
+                    label: 'Kirim',
+                    isLoading: _isLoading,
+                    onPressed: _submitFeedback,
                   ),
                 ],
               ),

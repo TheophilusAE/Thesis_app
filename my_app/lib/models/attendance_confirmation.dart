@@ -7,6 +7,8 @@ class AttendanceConfirmation {
   final bool confirmed;
   final DateTime? confirmedAt;
   final String? notes;
+  final String checkInMethod; // 'manual' or 'qr'
+  final String? checkedInBy; // user id of the pelayan who scanned, if any
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -19,6 +21,8 @@ class AttendanceConfirmation {
     required this.confirmed,
     this.confirmedAt,
     this.notes,
+    this.checkInMethod = 'manual',
+    this.checkedInBy,
     required this.createdAt,
     this.updatedAt,
   });
@@ -35,6 +39,8 @@ class AttendanceConfirmation {
           ? DateTime.parse((json['confirmed_at'] ?? json['confirmedAt']) as String)
           : null,
       notes: json['notes'] as String?,
+      checkInMethod: (json['check_in_method'] ?? json['checkInMethod'] ?? 'manual') as String,
+      checkedInBy: (json['checked_in_by'] ?? json['checkedInBy']) as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
@@ -53,6 +59,8 @@ class AttendanceConfirmation {
       'confirmed': confirmed,
       'confirmed_at': confirmedAt?.toIso8601String(),
       'notes': notes,
+      'check_in_method': checkInMethod,
+      'checked_in_by': checkedInBy,
     };
   }
 
@@ -66,6 +74,8 @@ class AttendanceConfirmation {
       'confirmed': confirmed,
       'confirmed_at': confirmedAt?.toIso8601String(),
       'notes': notes,
+      'check_in_method': checkInMethod,
+      'checked_in_by': checkedInBy,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -80,6 +90,8 @@ class AttendanceConfirmation {
     bool? confirmed,
     DateTime? confirmedAt,
     String? notes,
+    String? checkInMethod,
+    String? checkedInBy,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -92,6 +104,8 @@ class AttendanceConfirmation {
       confirmed: confirmed ?? this.confirmed,
       confirmedAt: confirmedAt ?? this.confirmedAt,
       notes: notes ?? this.notes,
+      checkInMethod: checkInMethod ?? this.checkInMethod,
+      checkedInBy: checkedInBy ?? this.checkedInBy,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

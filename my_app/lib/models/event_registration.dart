@@ -54,7 +54,7 @@ class EventRegistration {
       totalCount: (json['total_count'] as int?) ?? (1 + members.length),
       notes: json['notes'] as String?,
       registeredAt: DateTime.parse(json['registered_at'] as String).toLocal(),
-      userName: userMap is Map ? userMap['name'] as String? : null,
+      userName: userMap is Map ? userMap['nama'] as String? : null,
       userEmail: userMap is Map ? userMap['email'] as String? : null,
     );
   }

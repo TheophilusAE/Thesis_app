@@ -11,6 +11,7 @@ class AuthProvider with ChangeNotifier {
   bool _isInitializing = true;
   String? _lastMessage;
   late String _currentDisplayRole = 'jemaat';
+  bool _suppressAuthEvents = false;
 
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _isLoggedIn;
@@ -54,6 +55,7 @@ class AuthProvider with ChangeNotifier {
 
   void init() {
     _supabaseService.onAuthStateChange().listen((data) {
+      if (_suppressAuthEvents) return;
       final event = data.event;
       final session = data.session;
 
@@ -312,24 +314,34 @@ class AuthProvider with ChangeNotifier {
   Future<List<User>> getAllUsers() async {
     try {
       final data = await _supabaseService.getAllUsers();
-      return data
-          .map((p) => User(
-                id: p['id'] ?? '',
-                name: p['nama'] ?? '',
-                email: p['email'] ?? '',
-                phone: p['phone'] ?? '',
-                roles: List<String>.from(p['roles'] ?? ['jemaat']),
-                membershipStatus: p['membership_status'] ?? 'pending',
-                identityNumber: p['identity_number'],
-                familyGroup: p['family_group'],
-                memberCardNumber: p['member_card_number'],
-                memberSince: p['member_since'],
-                address: p['address'],
-                baptismDate: p['baptism_date'],
-              ))
-          .toList();
+      _lastMessage = null;
+      debugPrint('getAllUsers: fetched ${data.length} row(s)');
+      final users = <User>[];
+      for (final p in data) {
+        try {
+          users.add(User(
+            id: p['id'] ?? '',
+            name: p['nama'] ?? '',
+            email: p['email'] ?? '',
+            phone: p['phone'] ?? '',
+            roles: List<String>.from(p['roles'] ?? ['jemaat']),
+            membershipStatus: p['membership_status'] ?? 'pending',
+            identityNumber: p['identity_number'],
+            familyGroup: p['family_group'],
+            memberCardNumber: p['member_card_number'],
+            memberSince: p['member_since'],
+            address: p['address'],
+            baptismDate: p['baptism_date'],
+          ));
+        } catch (e) {
+          // Don't let one malformed row take down the entire admin user list.
+          debugPrint('getAllUsers: skipped malformed row ${p['id']}: $e');
+        }
+      }
+      return users;
     } catch (e) {
       _lastMessage = e.toString();
+      debugPrint('getAllUsers error: $e');
       return [];
     }
   }
@@ -374,6 +386,13 @@ class AuthProvider with ChangeNotifier {
     String? baptismDate,
     String? membershipStatus,
   }) async {
+    final supabase = Supabase.instance.client;
+    final adminRefreshToken = supabase.auth.currentSession?.refreshToken;
+    final adminUserId = supabase.auth.currentUser?.id;
+
+    // Suppress auth state events while we create the new user so the admin's
+    // UI state is not replaced by the new (unverified) user's session.
+    _suppressAuthEvents = true;
     try {
       final response = await _supabaseService.signUp(
         email: email,
@@ -381,22 +400,56 @@ class AuthProvider with ChangeNotifier {
         nama: name,
         phone: phone,
       );
-      if (response.user != null) {
-        await _supabaseService.updateUserProfile(response.user!.id, {
-          'roles': roles,
-          'identity_number': identityNumber,
-          'family_group': familyGroup,
-          'address': address,
-          'member_card_number': memberCardNumber,
-          'member_since': memberSince,
-          'baptism_date': baptismDate,
-          'membership_status': membershipStatus ?? 'active',
-        });
+
+      if (response.user == null) {
+        _lastMessage = 'Gagal membuat akun pengguna.';
+        return false;
       }
+
+      // If email confirmation is disabled Supabase auto-signs in the new user,
+      // replacing the admin's session. Restore it before updating the profile.
+      final nowUserId = supabase.auth.currentUser?.id;
+      if (adminUserId != null &&
+          nowUserId != adminUserId &&
+          adminRefreshToken != null) {
+        try {
+          await supabase.auth.setSession(adminRefreshToken);
+          await _loadUserData(adminUserId);
+        } catch (e) {
+          debugPrint('Admin session restore failed: $e');
+          _lastMessage = 'Sesi admin tidak dapat dipulihkan. Silakan login ulang.';
+          return false;
+        }
+      }
+
+      await _supabaseService.updateUserProfile(response.user!.id, {
+        'roles': roles,
+        'identity_number': identityNumber,
+        'family_group': familyGroup,
+        'address': address,
+        'member_card_number': memberCardNumber,
+        'member_since': memberSince,
+        'baptism_date': baptismDate,
+        'membership_status': membershipStatus ?? 'active',
+        'membership_type': membershipType,
+      });
+
       return true;
     } catch (e) {
       _lastMessage = e.toString();
+      // Attempt to restore admin session even on error.
+      final nowUserId = supabase.auth.currentUser?.id;
+      if (adminUserId != null &&
+          nowUserId != adminUserId &&
+          adminRefreshToken != null) {
+        try {
+          await supabase.auth.setSession(adminRefreshToken);
+          await _loadUserData(adminUserId);
+        } catch (_) {}
+      }
       return false;
+    } finally {
+      _suppressAuthEvents = false;
     }
   }
 
@@ -413,6 +466,7 @@ class AuthProvider with ChangeNotifier {
         'address': updatedUser.address,
         'baptism_date': updatedUser.baptismDate,
         'membership_status': updatedUser.membershipStatus,
+        'membership_type': updatedUser.membershipType,
       });
       if (_currentUser?.id == updatedUser.id) {
         _currentUser = updatedUser;

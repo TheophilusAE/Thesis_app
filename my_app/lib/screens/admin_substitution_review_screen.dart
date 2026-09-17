@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import '../models/service_schedule.dart';
 import '../models/substitution_request.dart';
 import '../providers/service_schedule_provider.dart';
 import '../providers/substitution_request_provider.dart';
+import '../utils/app_theme.dart';
+import '../widgets/common/app_card.dart';
+import '../widgets/common/app_empty_state.dart';
+import '../widgets/common/app_status_badge.dart';
 
 class AdminSubstitutionReviewScreen extends StatefulWidget {
   const AdminSubstitutionReviewScreen({super.key});
@@ -44,34 +49,49 @@ class _AdminSubstitutionReviewScreenState
 
     return showDialog<void>(
       context: context,
-      builder: (BuildContext dialogContext) {
+      builder: (dialogCtx) {
         return AlertDialog(
-          title: const Text('Setujui Permintaan Substitusi'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            'Setujui Permintaan Penggantian',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Diminta oleh: ${request.requestedByName}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  'Pemohon: ${request.requestedByName}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
-                Text('Alasan: ${request.reason}'),
-                if (request.replacementName != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child:
-                        Text('Pengganti yang disarankan: ${request.replacementName}'),
+                Text(
+                  'Alasan: ${request.reason}',
+                  style: const TextStyle(fontSize: 13, color: AppTheme.neutralMedium),
+                ),
+                if (request.replacementName != null &&
+                    request.replacementName!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pengganti yang diajukan: ${request.replacementName}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF92400E),
+                    ),
                   ),
+                ],
                 const SizedBox(height: 16),
                 TextField(
                   controller: replacementNameController,
                   decoration: InputDecoration(
-                    labelText: 'Pengganti yang Disetujui (required)',
-                    hintText: 'Nama pelayan pengganti',
+                    labelText: 'Nama Pelayan Pengganti *',
+                    hintText: 'Masukkan nama pelayan pengganti',
+                    filled: true,
+                    fillColor: AppTheme.warmIvory,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -80,8 +100,10 @@ class _AdminSubstitutionReviewScreenState
                   controller: adminNotesController,
                   decoration: InputDecoration(
                     labelText: 'Catatan Admin (opsional)',
+                    filled: true,
+                    fillColor: AppTheme.warmIvory,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   maxLines: 2,
@@ -91,31 +113,36 @@ class _AdminSubstitutionReviewScreenState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
+              onPressed: () => Navigator.of(dialogCtx).pop(),
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              onPressed: replacementNameController.text.trim().isEmpty
-                  ? null
-                  : () async {
-                      await _substitutionProvider.approveRequest(
-                        requestId: request.id,
-                        replacementUserId: request.requestedByUserId,
-                        replacementName: replacementNameController.text.trim(),
-                        adminNotes: adminNotesController.text.trim().isEmpty
-                            ? null
-                            : adminNotesController.text.trim(),
-                      );
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.success,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final replacementName = replacementNameController.text.trim();
+                if (replacementName.isEmpty) return;
 
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Permintaan disetujui'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                    },
+                await _substitutionProvider.approveRequest(
+                  requestId: request.id,
+                  replacementUserId: request.requestedByUserId,
+                  replacementName: replacementName,
+                  adminNotes: adminNotesController.text.trim().isEmpty
+                      ? null
+                      : adminNotesController.text.trim(),
+                );
+
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Permintaan penggantian disetujui'),
+                  ),
+                );
+                if (dialogCtx.mounted) Navigator.of(dialogCtx).pop();
+              },
               child: const Text('Setujui'),
             ),
           ],
@@ -129,28 +156,37 @@ class _AdminSubstitutionReviewScreenState
 
     return showDialog<void>(
       context: context,
-      builder: (BuildContext dialogContext) {
+      builder: (dialogCtx) {
         return AlertDialog(
-          title: const Text('Tolak Permintaan Substitusi'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            'Tolak Permintaan Penggantian',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Diminta oleh: ${request.requestedByName}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  'Pemohon: ${request.requestedByName}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
-                Text('Alasan: ${request.reason}'),
+                Text(
+                  'Alasan: ${request.reason}',
+                  style: const TextStyle(fontSize: 13, color: AppTheme.neutralMedium),
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: reasonController,
                   decoration: InputDecoration(
-                    labelText: 'Alasan Penolakan (required)',
+                    labelText: 'Alasan Penolakan *',
                     hintText: 'Jelaskan mengapa permintaan ditolak',
+                    filled: true,
+                    fillColor: AppTheme.warmIvory,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   maxLines: 3,
@@ -160,33 +196,51 @@ class _AdminSubstitutionReviewScreenState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
+              onPressed: () => Navigator.of(dialogCtx).pop(),
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              onPressed: reasonController.text.trim().isEmpty
-                  ? null
-                  : () async {
-                      await _substitutionProvider.rejectRequest(
-                        requestId: request.id,
-                        adminNotes: reasonController.text.trim(),
-                      );
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.error,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final reason = reasonController.text.trim();
+                if (reason.isEmpty) return;
 
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Permintaan ditolak'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                    },
+                await _substitutionProvider.rejectRequest(
+                  requestId: request.id,
+                  adminNotes: reason,
+                );
+
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Permintaan ditolak'),
+                  ),
+                );
+                if (dialogCtx.mounted) Navigator.of(dialogCtx).pop();
+              },
               child: const Text('Tolak'),
             ),
           ],
         );
       },
     );
+  }
+
+  AppStatusBadgeType _getBadgeType(String status) {
+    switch (status) {
+      case 'approved':
+        return AppStatusBadgeType.success;
+      case 'rejected':
+        return AppStatusBadgeType.error;
+      case 'completed':
+        return AppStatusBadgeType.info;
+      default:
+        return AppStatusBadgeType.warning;
+    }
   }
 
   String _getStatusLabel(String status) {
@@ -204,51 +258,41 @@ class _AdminSubstitutionReviewScreenState
     }
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.orange;
-      case 'approved':
-        return Colors.green;
-      case 'rejected':
-        return Colors.red;
-      case 'completed':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text('Review Permintaan Substitusi'),
-        centerTitle: true,
+        title: const Text(
+          'Review Penggantian Tugas',
+          style: TextStyle(
+            color: AppTheme.darkCharcoal,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.darkCharcoal,
+        elevation: 0,
       ),
       body: Column(
         children: [
-          Padding(
+          Container(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'pending', label: Text('Menunggu')),
-                      ButtonSegment(value: 'approved', label: Text('Disetujui')),
-                      ButtonSegment(value: 'rejected', label: Text('Ditolak')),
-                      ButtonSegment(value: 'all', label: Text('Semua')),
-                    ],
-                    selected: <String>{_statusFilter},
-                    onSelectionChanged: (Set<String> newSelection) {
-                      setState(() {
-                        _statusFilter = newSelection.first;
-                      });
-                    },
-                  ),
-                ),
-              ],
+            color: Colors.white,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _statusFilterChip('pending', 'Menunggu'),
+                  const SizedBox(width: 8),
+                  _statusFilterChip('approved', 'Disetujui'),
+                  const SizedBox(width: 8),
+                  _statusFilterChip('rejected', 'Ditolak'),
+                  const SizedBox(width: 8),
+                  _statusFilterChip('all', 'Semua'),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -257,9 +301,11 @@ class _AdminSubstitutionReviewScreenState
                 final filtered = _filteredRequests;
                 if (filtered.isEmpty) {
                   return Center(
-                    child: Text(
-                      'Tidak ada permintaan ${_getStatusLabel(_statusFilter).toLowerCase()}',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    child: AppEmptyState(
+                      icon: Icons.swap_horizontal_circle_outlined,
+                      title: 'Tidak Ada Permintaan',
+                      description:
+                          'Tidak ada pengajuan penggantian dengan status "${_getStatusLabel(_statusFilter)}".',
                     ),
                   );
                 }
@@ -269,121 +315,192 @@ class _AdminSubstitutionReviewScreenState
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final request = filtered[index];
-                  final schedule = _scheduleProvider.allSchedules
-                      .firstWhere(
-                        (s) => s.id == request.serviceScheduleId,
-                        orElse: () => ServiceSchedule(
-                          id: '',
-                          serviceType: 'Unknown',
-                          serviceDate: DateTime.now(),
-                          pelayaniId: '',
-                          pelayaniName: '',
-                          pelayaniPosition: '',
-                          startTime: '',
-                          endTime: '',
-                          isRecurring: false,
-                          recurringPattern: '',
-                          createdAt: DateTime.now(),
-                          updatedAt: DateTime.now(),
-                        ),
-                      );
+                    final schedule = _scheduleProvider.allSchedules.firstWhere(
+                      (s) => s.id == request.serviceScheduleId,
+                      orElse: () => ServiceSchedule(
+                        id: '',
+                        serviceType: 'Ibadah',
+                        serviceDate: DateTime.now(),
+                        pelayaniId: '',
+                        pelayaniName: '',
+                        pelayaniPosition: '',
+                        startTime: '',
+                        endTime: '',
+                        isRecurring: false,
+                        recurringPattern: '',
+                        createdAt: DateTime.now(),
+                        updatedAt: DateTime.now(),
+                      ),
+                    );
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: AppCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.goldLight,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.swap_horiz_rounded,
+                                    color: Color(0xFF92400E),
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         request.requestedByName,
                                         style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w700,
                                           fontSize: 16,
+                                          color: AppTheme.darkCharcoal,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 2),
                                       Text(
                                         schedule.serviceType,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppTheme.neutralMuted,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Chip(
-                                  label: Text(
-                                    _getStatusLabel(request.status),
-                                    style:
-                                        const TextStyle(color: Colors.white),
-                                  ),
-                                  backgroundColor:
-                                      _getStatusColor(request.status),
+                                AppStatusBadge(
+                                  label: _getStatusLabel(request.status),
+                                  type: _getBadgeType(request.status),
                                 ),
                               ],
                             ),
-                            const Divider(height: 12),
-                            Text(
-                              'Jadwal: ${DateFormat('EEEE, dd MMM yyyy pukul HH:mm', 'id_ID').format(schedule.serviceDate)}',
-                            ),
-                            const SizedBox(height: 4),
-                            Text('Alasan: ${request.reason}'),
-                            if (request.replacementName != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  'Pengganti: ${request.replacementName}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            if (request.adminNotes != null &&
-                                request.adminNotes!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
+
+                            const SizedBox(height: 12),
+                            const Divider(height: 1, color: AppTheme.neutralBorder),
+                            const SizedBox(height: 12),
+
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.neutralMuted),
+                                const SizedBox(width: 6),
+                                Expanded(
                                   child: Text(
-                                    'Catatan: ${request.adminNotes}',
-                                    style: const TextStyle(fontSize: 12),
+                                    DateFormat('EEEE, dd MMM yyyy • HH:mm', 'id_ID').format(schedule.serviceDate),
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: AppTheme.darkCharcoal,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.notes_rounded, size: 14, color: AppTheme.neutralMuted),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Alasan: ${request.reason}',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: AppTheme.neutralMedium,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            if (request.replacementName != null &&
+                                request.replacementName!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.person_outline_rounded, size: 14, color: Color(0xFF92400E)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Pengganti: ${request.replacementName}',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF92400E),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+
+                            if (request.adminNotes != null &&
+                                request.adminNotes!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.warmIvory,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppTheme.neutralBorder),
+                                ),
+                                child: Text(
+                                  'Catatan Admin: ${request.adminNotes}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.neutralMedium,
+                                    fontStyle: FontStyle.italic,
                                   ),
                                 ),
                               ),
-                            if (request.status == 'pending')
-                              Padding(
-                                padding: const EdgeInsets.only(top: 12),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    OutlinedButton(
-                                      onPressed: () =>
-                                          _showRejectionDialog(request),
+                            ],
+
+                            if (request.status == 'pending') ...[
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppTheme.error,
+                                        side: const BorderSide(color: AppTheme.error),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                      ),
+                                      onPressed: () => _showRejectionDialog(request),
                                       child: const Text('Tolak'),
                                     ),
-                                    ElevatedButton(
-                                      onPressed: () =>
-                                          _showApprovalDialog(request),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.success,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                      ),
+                                      onPressed: () => _showApprovalDialog(request),
                                       child: const Text('Setujui'),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
+                            ],
                           ],
                         ),
                       ),
@@ -395,6 +512,27 @@ class _AdminSubstitutionReviewScreenState
           ),
         ],
       ),
+    );
+  }
+
+  Widget _statusFilterChip(String value, String label) {
+    final isSelected = _statusFilter == value;
+
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _statusFilter = value),
+      labelStyle: TextStyle(
+        fontSize: 12.5,
+        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        color: isSelected ? AppTheme.primary : AppTheme.darkCharcoal,
+      ),
+      backgroundColor: Colors.white,
+      selectedColor: AppTheme.primaryLight,
+      side: BorderSide(
+        color: isSelected ? AppTheme.primary : AppTheme.neutralBorder,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 }

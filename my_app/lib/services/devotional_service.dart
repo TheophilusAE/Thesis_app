@@ -1,36 +1,17 @@
-import '../models/devotional.dart';
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/devotional.dart';
+
+/// Devotionals are admin-authored content meant to be shared with every
+/// jemaat. They live in the `devotionals` Supabase table; a local cache is
+/// kept only so the last-fetched devotionals remain readable offline.
 class DevotionalService {
-  static const _devotionalsKey = 'devotionals_data';
-
-  Future<List<Devotional>> _loadAll() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_devotionalsKey);
-    if (raw == null || raw.isEmpty) {
-      return _defaultDevotionals();
-    }
-
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded
-        .map((item) => Devotional.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
-  }
-
-  List<Devotional> _sortDevotionals(List<Devotional> devotionals) {
-    final sorted = List<Devotional>.from(devotionals);
-    sorted.sort((a, b) => b.date.compareTo(a.date));
-    return sorted;
-  }
-
-  Future<void> _saveAll(List<Devotional> devotionals) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _devotionalsKey,
-      jsonEncode(devotionals.map((d) => d.toJson()).toList()),
-    );
-  }
+  static final SupabaseClient _db = Supabase.instance.client;
+  static const _cacheKey = 'devotionals_cache';
 
   Future<Devotional> getTodaysDevotional() async {
     final all = await getAllDevotionals();
@@ -43,21 +24,24 @@ class DevotionalService {
   }
 
   Future<List<Devotional>> getAllDevotionals() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_devotionalsKey);
-
-    if (raw == null || raw.isEmpty) {
-      return _defaultDevotionals();
+    try {
+      final data = await _db
+          .from('devotionals')
+          .select()
+          .order('devotional_date', ascending: false);
+      final devotionals =
+          (data as List).map((e) => _fromRow(e as Map<String, dynamic>)).toList();
+      if (devotionals.isNotEmpty) {
+        await _cache(devotionals);
+        return devotionals;
+      }
+    } catch (e) {
+      debugPrint('getAllDevotionals (Supabase) error: $e');
     }
-
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    final devotionals = decoded
-        .map((item) => Devotional.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
-    return _sortDevotionals(devotionals);
+    return _loadCacheOrDefaults();
   }
 
-  Future<void> addDevotional({
+  Future<bool> addDevotional({
     required String title,
     required String content,
     required String verse,
@@ -65,44 +49,79 @@ class DevotionalService {
     required DateTime date,
     required String author,
   }) async {
-    final all = await _loadAll();
-    all.add(
-      Devotional(
-        id: 'dev-${DateTime.now().millisecondsSinceEpoch}',
-        title: title,
-        content: content,
-        verse: verse,
-        verseReference: verseReference,
-        date: date,
-        author: author,
-      ),
-    );
-    await _saveAll(_sortDevotionals(all));
+    try {
+      await _db.from('devotionals').insert({
+        'id': 'dev-${DateTime.now().millisecondsSinceEpoch}',
+        'title': title,
+        'content': content,
+        'verse': verse,
+        'verse_reference': verseReference,
+        'devotional_date': date.toIso8601String(),
+        'author': author,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('addDevotional error: $e');
+      return false;
+    }
   }
 
   Future<bool> updateDevotional(Devotional updatedDevotional) async {
-    final all = await _loadAll();
-    final index = all.indexWhere((devotional) => devotional.id == updatedDevotional.id);
-    if (index == -1) {
+    try {
+      await _db.from('devotionals').update({
+        'title': updatedDevotional.title,
+        'content': updatedDevotional.content,
+        'verse': updatedDevotional.verse,
+        'verse_reference': updatedDevotional.verseReference,
+        'devotional_date': updatedDevotional.date.toIso8601String(),
+        'author': updatedDevotional.author,
+      }).eq('id', updatedDevotional.id);
+      return true;
+    } catch (e) {
+      debugPrint('updateDevotional error: $e');
       return false;
     }
-
-    all[index] = updatedDevotional;
-    await _saveAll(_sortDevotionals(all));
-    return true;
   }
 
   Future<bool> deleteDevotional(String devotionalId) async {
-    final all = await _loadAll();
-    final before = all.length;
-    all.removeWhere((devotional) => devotional.id == devotionalId);
-    final removed = all.length < before;
-    if (!removed) {
+    try {
+      await _db.from('devotionals').delete().eq('id', devotionalId);
+      return true;
+    } catch (e) {
+      debugPrint('deleteDevotional error: $e');
       return false;
     }
+  }
 
-    await _saveAll(_sortDevotionals(all));
-    return true;
+  Devotional _fromRow(Map<String, dynamic> row) => Devotional(
+        id: row['id'] as String,
+        title: row['title'] as String,
+        content: row['content'] as String,
+        verse: row['verse'] as String,
+        verseReference: row['verse_reference'] as String,
+        date: DateTime.parse(row['devotional_date'] as String),
+        author: row['author'] as String?,
+      );
+
+  Future<void> _cache(List<Devotional> devotionals) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _cacheKey,
+      jsonEncode(devotionals.map((d) => d.toJson()).toList()),
+    );
+  }
+
+  Future<List<Devotional>> _loadCacheOrDefaults() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cacheKey);
+    if (raw == null || raw.isEmpty) {
+      return _defaultDevotionals();
+    }
+
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map((item) => Devotional.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
   }
 
   List<Devotional> _defaultDevotionals() {

@@ -5,6 +5,7 @@ import '../models/service_schedule.dart';
 import '../models/pelayan.dart';
 import '../providers/service_schedule_provider.dart';
 import '../providers/pelayan_provider.dart';
+import '../utils/app_theme.dart';
 
 class AddEditServiceScheduleScreen extends StatefulWidget {
   final ServiceSchedule? schedule;
@@ -77,19 +78,19 @@ class _AddEditServiceScheduleScreenState
     final isEditing = widget.schedule != null;
 
     return Scaffold(
+      backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Jadwal' : 'Tambah Jadwal'),
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primaryContainer,
-              ],
-            ),
+        title: Text(
+          isEditing ? 'Edit Jadwal' : 'Tambah Jadwal',
+          style: const TextStyle(
+            color: AppTheme.darkCharcoal,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
         ),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.darkCharcoal,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

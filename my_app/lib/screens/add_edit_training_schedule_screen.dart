@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/training_schedule.dart';
 import '../providers/training_schedule_provider.dart';
 import '../providers/pelayan_provider.dart';
+import '../utils/app_theme.dart';
 
 class AddEditTrainingScheduleScreen extends StatefulWidget {
   final TrainingSchedule? schedule;
@@ -67,19 +68,19 @@ class _AddEditTrainingScheduleScreenState
     final isEditing = widget.schedule != null;
 
     return Scaffold(
+      backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Jadwal Latihan' : 'Tambah Jadwal Latihan'),
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primaryContainer,
-              ],
-            ),
+        title: Text(
+          isEditing ? 'Edit Jadwal Latihan' : 'Tambah Jadwal Latihan',
+          style: const TextStyle(
+            color: AppTheme.darkCharcoal,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
         ),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.darkCharcoal,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

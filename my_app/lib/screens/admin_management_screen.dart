@@ -17,6 +17,7 @@ import 'pelayan_management_screen.dart';
 import 'role_management_screen.dart';
 import 'service_schedule_management_screen.dart';
 import 'training_schedule_management_screen.dart';
+import '../utils/app_theme.dart';
 
 class AdminManagementScreen extends StatefulWidget {
   const AdminManagementScreen({super.key});
@@ -71,7 +72,6 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
 
   Future<void> _bootstrap() async {
     final authProvider = context.read<AuthProvider>();
-    await authProvider.loadPendingUsers();
     final loadedUsers = await authProvider.getAllUsers();
     final loadedDevotionals = await _devotionalService.getAllDevotionals();
     final loadedQuests = await _questService.getManagedPlan();
@@ -88,11 +88,14 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
       _dailyTargetController.text = target.toString();
       _loading = false;
     });
+
+    if (loadedUsers.isEmpty && authProvider.lastMessage != null) {
+      _showLoadError(authProvider.lastMessage!);
+    }
   }
 
   Future<void> _reloadAll() async {
     final authProvider = context.read<AuthProvider>();
-    await authProvider.loadPendingUsers();
     final loadedUsers = await authProvider.getAllUsers();
     final loadedDevotionals = await _devotionalService.getAllDevotionals();
     final loadedQuests = await _questService.getManagedPlan();
@@ -108,6 +111,20 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
       _quests = loadedQuests;
       _dailyTargetController.text = target.toString();
     });
+
+    if (loadedUsers.isEmpty && authProvider.lastMessage != null) {
+      _showLoadError(authProvider.lastMessage!);
+    }
+  }
+
+  void _showLoadError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Gagal memuat data pengguna: $message'),
+        backgroundColor: Colors.red.shade700,
+        duration: const Duration(seconds: 6),
+      ),
+    );
   }
 
   List<User> get _filteredUsers {
@@ -211,7 +228,9 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     final memberSinceController = TextEditingController(text: existingUser?.memberSince ?? '');
     final baptismController = TextEditingController(text: existingUser?.baptismDate ?? '');
     List<String> selectedRoles = existingUser?.roles ?? ['jemaat'];
-    String membershipStatus = existingUser?.membershipStatus ?? 'pending';
+    // Normalize legacy 'verified' value (DB uses 'active')
+    final rawStatus = existingUser?.membershipStatus ?? 'pending';
+    String membershipStatus = rawStatus == 'verified' ? 'active' : rawStatus;
     final isMobile = MediaQuery.of(context).size.width < 700;
 
     Widget formFields(void Function(VoidCallback fn) setDialogState) {
@@ -284,7 +303,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             value: membershipStatus,
             items: const [
               DropdownMenuItem(value: 'pending', child: Text('Pending')),
-              DropdownMenuItem(value: 'verified', child: Text('Verified')),
+              DropdownMenuItem(value: 'active', child: Text('Active')),
               DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
             ],
             onChanged: (value) {
@@ -489,8 +508,11 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
       return;
     }
 
+    final errMsg = authProvider.lastMessage;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? 'Data user tersimpan.' : 'Gagal menyimpan user.')),
+      SnackBar(content: Text(success
+          ? 'Data user tersimpan.'
+          : 'Gagal menyimpan user.${errMsg != null ? " ($errMsg)" : ""}')),
     );
   }
 
@@ -662,7 +684,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             verseReference: result.verseReference,
             date: result.date,
             author: result.author ?? 'Admin',
-          ).then((_) => true)
+          )
         : await _devotionalService.updateDevotional(result);
 
     if (success) {
@@ -888,41 +910,38 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     return DefaultTabController(
       length: 11,
       child: Scaffold(
+        backgroundColor: AppTheme.warmIvory,
         appBar: AppBar(
           title: const Text(
             'Kelola Data',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1E3A5F), Color(0xFF2C5282)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+            style: TextStyle(
+              color: AppTheme.darkCharcoal,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
           ),
+          backgroundColor: Colors.white,
+          foregroundColor: AppTheme.darkCharcoal,
+          elevation: 0,
           bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white54,
+            labelColor: AppTheme.primary,
+            unselectedLabelColor: AppTheme.neutralMedium,
             labelStyle: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               fontWeight: FontWeight.w700,
             ),
             unselectedLabelStyle: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
             indicator: const UnderlineTabIndicator(
-              borderSide: BorderSide(color: Color(0xFFD4A017), width: 3),
+              borderSide: BorderSide(color: AppTheme.primary, width: 3),
               insets: EdgeInsets.symmetric(horizontal: 8),
             ),
             indicatorSize: TabBarIndicatorSize.label,
-            dividerColor: Colors.white12,
+            dividerColor: AppTheme.neutralBorder,
             padding: const EdgeInsets.only(bottom: 2),
             tabs: const [
               Tab(text: 'User'),
@@ -942,7 +961,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             IconButton(
               tooltip: 'Muat ulang',
               onPressed: _reloadAll,
-              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              icon: const Icon(Icons.refresh_rounded, color: AppTheme.darkCharcoal),
             ),
           ],
         ),
@@ -978,14 +997,19 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
+          Row(
             children: [
-              _summaryCard('Total User', _users.length, Icons.groups),
-              _summaryCard('Pending', pendingCount, Icons.pending_actions),
-              _summaryCard('Verified', verifiedCount, Icons.verified),
-              _summaryCard('Admin', adminCount, Icons.admin_panel_settings),
+              Expanded(child: _summaryCard('Total User', _users.length, Icons.groups_rounded, const Color(0xFF3B82F6))),
+              const SizedBox(width: 12),
+              Expanded(child: _summaryCard('Pending', pendingCount, Icons.pending_actions_rounded, const Color(0xFFF59E0B))),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _summaryCard('Verified', verifiedCount, Icons.verified_rounded, const Color(0xFF10B981))),
+              const SizedBox(width: 12),
+              Expanded(child: _summaryCard('Admin', adminCount, Icons.admin_panel_settings_rounded, AppTheme.primary)),
             ],
           ),
           const SizedBox(height: 16),
@@ -1520,51 +1544,47 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     );
   }
 
-  Widget _summaryCard(String label, int value, IconData icon) {
-    const color = Color(0xFF1E3A5F);
-    return SizedBox(
-      width: 160,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+  Widget _summaryCard(String label, int value, IconData icon, [Color color = const Color(0xFF1E3A8A)]) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value.toString(),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-            const SizedBox(height: 10),
-            Text(
-              value.toString(),
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+          ),
+        ],
       ),
     );
   }
@@ -1748,7 +1768,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
             icon: const Icon(Icons.add_rounded),
             label: const Text('Buat Event Baru'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A5F),
+              backgroundColor: const Color(0xFF1E3A8A),
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 48),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -1885,7 +1905,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E3A5F),
+                          backgroundColor: const Color(0xFF1E3A8A),
                           foregroundColor: Colors.white,
                         ),
                         onPressed: () => Navigator.pop(ctx, true),
@@ -1929,7 +1949,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(ok ? 'Event tersimpan.' : 'Gagal menyimpan event.'),
-        backgroundColor: ok ? const Color(0xFF0D9488) : Colors.red,
+        backgroundColor: ok ? const Color(0xFF2563EB) : Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
@@ -1962,7 +1982,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(deleted ? 'Event dihapus.' : 'Gagal menghapus event.'),
-        backgroundColor: deleted ? const Color(0xFF0D9488) : Colors.red,
+        backgroundColor: deleted ? const Color(0xFF2563EB) : Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
@@ -2014,13 +2034,13 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E3A5F).withValues(alpha: 0.1),
+                      color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       '${regs.fold<int>(0, (s, r) => s + r.totalCount)} peserta',
                       style: const TextStyle(
-                          color: Color(0xFF1E3A5F),
+                          color: Color(0xFF1E3A8A),
                           fontWeight: FontWeight.w700,
                           fontSize: 13),
                     ),
@@ -2057,12 +2077,12 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                                 children: [
                                   CircleAvatar(
                                     radius: 16,
-                                    backgroundColor: const Color(0xFF1E3A5F)
+                                    backgroundColor: const Color(0xFF1E3A8A)
                                         .withValues(alpha: 0.12),
                                     child: Text(
                                       (r.userName ?? '?')[0].toUpperCase(),
                                       style: const TextStyle(
-                                          color: Color(0xFF1E3A5F),
+                                          color: Color(0xFF1E3A8A),
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12),
                                     ),
@@ -2090,7 +2110,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFD4A017)
+                                      color: const Color(0xFFFBBF24)
                                           .withValues(alpha: 0.12),
                                       borderRadius:
                                           BorderRadius.circular(8),
@@ -2098,7 +2118,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                                     child: Text(
                                       '${r.totalCount} peserta',
                                       style: const TextStyle(
-                                          color: Color(0xFFD4A017),
+                                          color: Color(0xFFFBBF24),
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700),
                                     ),
@@ -2203,7 +2223,7 @@ class _AdminEventCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
             color: event.isActive
-                ? const Color(0xFF1E3A5F).withValues(alpha: 0.2)
+                ? const Color(0xFF1E3A8A).withValues(alpha: 0.2)
                 : const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
@@ -2310,7 +2330,7 @@ class _AdminEventCard extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: event.isActive
-                      ? const Color(0xFF0D9488).withValues(alpha: 0.1)
+                      ? const Color(0xFF2563EB).withValues(alpha: 0.1)
                       : const Color(0xFF6B7280).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -2318,7 +2338,7 @@ class _AdminEventCard extends StatelessWidget {
                   event.isActive ? 'Aktif' : 'Nonaktif',
                   style: TextStyle(
                       color: event.isActive
-                          ? const Color(0xFF0D9488)
+                          ? const Color(0xFF2563EB)
                           : const Color(0xFF6B7280),
                       fontSize: 11,
                       fontWeight: FontWeight.w700),
@@ -2330,13 +2350,13 @@ class _AdminEventCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E3A5F).withValues(alpha: 0.08),
+                    color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     'Maks. ${event.maxCapacity} peserta',
                     style: const TextStyle(
-                        color: Color(0xFF1E3A5F),
+                        color: Color(0xFF1E3A8A),
                         fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
@@ -2347,7 +2367,7 @@ class _AdminEventCard extends StatelessWidget {
                 icon: const Icon(Icons.people_rounded, size: 15),
                 label: const Text('Peserta', style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF1E3A5F),
+                    foregroundColor: const Color(0xFF1E3A8A),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     minimumSize: Size.zero,

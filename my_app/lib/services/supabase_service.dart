@@ -4,6 +4,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseService {
   static final SupabaseClient _client = Supabase.instance.client;
 
+  // Postgrest sometimes hands back a result whose static/runtime list type
+  // doesn't satisfy `List<Map<String, dynamic>>` directly (each element IS
+  // a Map, but the wrapping List's type doesn't unify), which throws a
+  // "List<dynamic> is not a subtype of List<Map<String, dynamic>>" cast
+  // error at the `return` boundary of an `async` function with a strict
+  // return type. Funneling every list result through this helper avoids
+  // that — this was previously silently breaking almost every screen that
+  // reads from Supabase (admin user list, schedules, attendance,
+  // notifications, feedback, pelayans, substitution requests, bible...).
+  static List<Map<String, dynamic>> _asMapList(dynamic data) {
+    return List<Map<String, dynamic>>.from(
+      (data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
   // ============== AUTH ==============
   Future<AuthResponse> signUp({
     required String email,
@@ -51,7 +66,8 @@ class SupabaseService {
   // ============== USERS ==============
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     try {
-      return await _client.from('users').select().eq('id', userId).single();
+      final data = await _client.from('users').select().eq('id', userId).single();
+      return Map<String, dynamic>.from(data);
     } catch (e) {
       debugPrint('Error fetching user: $e');
       return null;
@@ -63,15 +79,17 @@ class SupabaseService {
   }
 
   Future<List<Map<String, dynamic>>> getAllUsers() async {
-    return await _client.from('users').select().order('nama');
+    final data = await _client.from('users').select().order('nama');
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getPendingUsers() async {
-    return await _client
+    final data = await _client
         .from('users')
         .select()
         .eq('membership_status', 'pending')
         .order('nama');
+    return _asMapList(data);
   }
 
   Future<void> verifyUser(String userId, {required bool approved}) async {
@@ -90,16 +108,18 @@ class SupabaseService {
 
   // ============== PELAYANS ==============
   Future<List<Map<String, dynamic>>> getPelayans() async {
-    return await _client.from('pelayans').select().order('nama');
+    final data = await _client.from('pelayans').select().order('nama');
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getActivePelayans() async {
-    return await _client.from('pelayans').select().eq('is_aktif', true).order('nama');
+    final data = await _client.from('pelayans').select().eq('is_aktif', true).order('nama');
+    return _asMapList(data);
   }
 
   Future<Map<String, dynamic>> addPelayan(Map<String, dynamic> data) async {
     final response = await _client.from('pelayans').insert(data).select();
-    return response.first;
+    return Map<String, dynamic>.from(_asMapList(response).first);
   }
 
   Future<void> updatePelayan(String id, Map<String, dynamic> data) async {
@@ -111,45 +131,50 @@ class SupabaseService {
   }
 
   Future<List<Map<String, dynamic>>> searchPelayans(String query) async {
-    return await _client.from('pelayans').select().ilike('nama', '%$query%').order('nama');
+    final data = await _client.from('pelayans').select().ilike('nama', '%$query%').order('nama');
+    return _asMapList(data);
   }
 
   // ============== SERVICE SCHEDULES ==============
   Future<List<Map<String, dynamic>>> getSchedules() async {
-    return await _client.from('schedules').select().order('service_date');
+    final data = await _client.from('schedules').select().order('service_date');
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getSchedulesByPelayan(String pelayananId) async {
-    return await _client
+    final data = await _client
         .from('schedules')
         .select()
         .eq('pelayan_id', pelayananId)
         .order('service_date');
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getUpcomingSchedulesByPelayan(String pelayananId) async {
     final now = DateTime.now().toIso8601String();
-    return await _client
+    final data = await _client
         .from('schedules')
         .select()
         .eq('pelayan_id', pelayananId)
         .gte('service_date', now)
         .order('service_date');
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getSchedulesByDateRange(
       DateTime start, DateTime end) async {
-    return await _client
+    final data = await _client
         .from('schedules')
         .select()
         .gte('service_date', start.toIso8601String())
         .lte('service_date', end.toIso8601String())
         .order('service_date');
+    return _asMapList(data);
   }
 
   Future<Map<String, dynamic>> addSchedule(Map<String, dynamic> data) async {
     final response = await _client.from('schedules').insert(data).select();
-    return response.first;
+    return Map<String, dynamic>.from(_asMapList(response).first);
   }
 
   Future<void> updateSchedule(String id, Map<String, dynamic> data) async {
@@ -162,30 +187,33 @@ class SupabaseService {
 
   // ============== TRAINING SCHEDULES ==============
   Future<List<Map<String, dynamic>>> getTrainingSchedules() async {
-    return await _client.from('training_schedules').select().order('training_date');
+    final data = await _client.from('training_schedules').select().order('training_date');
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getTrainingSchedulesForPelayan(String pelayananId) async {
-    return await _client
+    final data = await _client
         .from('training_schedules')
         .select()
         .contains('pelayan_ids', [pelayananId])
         .order('training_date');
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getUpcomingTrainingSchedules(String pelayananId) async {
     final now = DateTime.now().toIso8601String();
-    return await _client
+    final data = await _client
         .from('training_schedules')
         .select()
         .contains('pelayan_ids', [pelayananId])
         .gte('training_date', now)
         .order('training_date');
+    return _asMapList(data);
   }
 
   Future<Map<String, dynamic>> addTrainingSchedule(Map<String, dynamic> data) async {
     final response = await _client.from('training_schedules').insert(data).select();
-    return response.first;
+    return Map<String, dynamic>.from(_asMapList(response).first);
   }
 
   Future<void> updateTrainingSchedule(String id, Map<String, dynamic> data) async {
@@ -198,31 +226,34 @@ class SupabaseService {
 
   // ============== SUBSTITUTION REQUESTS ==============
   Future<List<Map<String, dynamic>>> getSubstitutionRequests() async {
-    return await _client
+    final data = await _client
         .from('substitution_requests')
         .select()
         .order('created_at', ascending: false);
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getPendingSubstitutionRequests() async {
-    return await _client
+    final data = await _client
         .from('substitution_requests')
         .select()
         .eq('status', 'pending')
         .order('created_at', ascending: false);
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getSubstitutionRequestsByUser(String userId) async {
-    return await _client
+    final data = await _client
         .from('substitution_requests')
         .select()
         .eq('requested_by_user_id', userId)
         .order('created_at', ascending: false);
+    return _asMapList(data);
   }
 
   Future<Map<String, dynamic>> addSubstitutionRequest(Map<String, dynamic> data) async {
     final response = await _client.from('substitution_requests').insert(data).select();
-    return response.first;
+    return Map<String, dynamic>.from(_asMapList(response).first);
   }
 
   Future<void> updateSubstitutionRequest(String id, Map<String, dynamic> data) async {
@@ -235,23 +266,26 @@ class SupabaseService {
 
   // ============== ATTENDANCE ==============
   Future<List<Map<String, dynamic>>> getAllAttendance() async {
-    return await _client.from('attendance').select().order('schedule_date', ascending: false);
+    final data = await _client.from('attendance').select().order('schedule_date', ascending: false);
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getAttendanceByUser(String userId) async {
-    return await _client
+    final data = await _client
         .from('attendance')
         .select()
         .eq('user_id', userId)
         .order('schedule_date', ascending: false);
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getAttendanceBySchedule(String scheduleId) async {
-    return await _client
+    final data = await _client
         .from('attendance')
         .select()
         .eq('service_schedule_id', scheduleId)
         .order('schedule_date');
+    return _asMapList(data);
   }
 
   Future<Map<String, dynamic>?> getAttendanceByUserAndSchedule(
@@ -263,7 +297,7 @@ class SupabaseService {
           .eq('user_id', userId)
           .eq('service_schedule_id', scheduleId)
           .maybeSingle();
-      return result;
+      return result == null ? null : Map<String, dynamic>.from(result);
     } catch (e) {
       debugPrint('Error fetching attendance: $e');
       return null;
@@ -275,7 +309,7 @@ class SupabaseService {
         .from('attendance')
         .upsert(data, onConflict: 'user_id,service_schedule_id')
         .select();
-    return response.first;
+    return Map<String, dynamic>.from(_asMapList(response).first);
   }
 
   Future<void> updateAttendance(String id, Map<String, dynamic> data) async {
@@ -288,16 +322,17 @@ class SupabaseService {
 
   // ============== NOTIFICATIONS ==============
   Future<List<Map<String, dynamic>>> getNotifications(String userId) async {
-    return await _client
+    final data = await _client
         .from('notifications')
         .select()
         .eq('user_id', userId)
         .order('created_at', ascending: false);
+    return _asMapList(data);
   }
 
   Future<Map<String, dynamic>> addNotification(Map<String, dynamic> data) async {
     final response = await _client.from('notifications').insert(data).select();
-    return response.first;
+    return Map<String, dynamic>.from(_asMapList(response).first);
   }
 
   Future<void> markNotificationAsRead(String id) async {
@@ -328,33 +363,36 @@ class SupabaseService {
         .select()
         .eq('user_id', userId)
         .eq('is_read', false);
-    return (result as List).length;
+    return _asMapList(result).length;
   }
 
   // ============== FEEDBACK ==============
   Future<List<Map<String, dynamic>>> getAllFeedback() async {
-    return await _client.from('feedback').select().order('created_at', ascending: false);
+    final data = await _client.from('feedback').select().order('created_at', ascending: false);
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getFeedbackByUser(String userId) async {
-    return await _client
+    final data = await _client
         .from('feedback')
         .select()
         .eq('user_id', userId)
         .order('created_at', ascending: false);
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> getFeedbackByType(String feedbackType) async {
-    return await _client
+    final data = await _client
         .from('feedback')
         .select()
         .eq('feedback_type', feedbackType)
         .order('created_at', ascending: false);
+    return _asMapList(data);
   }
 
   Future<Map<String, dynamic>> addFeedback(Map<String, dynamic> data) async {
     final response = await _client.from('feedback').insert(data).select();
-    return response.first;
+    return Map<String, dynamic>.from(_asMapList(response).first);
   }
 
   Future<void> deleteFeedback(String id) async {
@@ -372,22 +410,105 @@ class SupabaseService {
     );
   }
 
+  // ============== PRAYER REQUESTS ==============
+  Future<List<Map<String, dynamic>>> getMyPrayerRequests(String userId) async {
+    final data = await _client
+        .from('prayer_requests')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return _asMapList(data);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPrayerRequests() async {
+    final data =
+        await _client.from('prayer_requests').select().order('created_at', ascending: false);
+    return _asMapList(data);
+  }
+
+  Future<Map<String, dynamic>> addPrayerRequest(Map<String, dynamic> data) async {
+    final response = await _client.from('prayer_requests').insert(data).select();
+    return Map<String, dynamic>.from(_asMapList(response).first);
+  }
+
+  Future<void> updatePrayerRequest(String id, Map<String, dynamic> data) async {
+    await _client.from('prayer_requests').update(data).eq('id', id);
+  }
+
+  Future<void> deletePrayerRequest(String id) async {
+    await _client.from('prayer_requests').delete().eq('id', id);
+  }
+
+  // ============== KOMSEL (SMALL GROUPS) ==============
+  Future<List<Map<String, dynamic>>> getKomsels() async {
+    final data = await _client.from('komsels').select().order('nama');
+    return _asMapList(data);
+  }
+
+  Future<List<Map<String, dynamic>>> getActiveKomsels() async {
+    final data = await _client.from('komsels').select().eq('is_active', true).order('nama');
+    return _asMapList(data);
+  }
+
+  Future<Map<String, dynamic>> addKomsel(Map<String, dynamic> data) async {
+    final response = await _client.from('komsels').insert(data).select();
+    return Map<String, dynamic>.from(_asMapList(response).first);
+  }
+
+  Future<void> updateKomsel(String id, Map<String, dynamic> data) async {
+    await _client.from('komsels').update(data).eq('id', id);
+  }
+
+  Future<void> deleteKomsel(String id) async {
+    await _client.from('komsels').delete().eq('id', id);
+  }
+
+  // ============== SERMONS / MEDIA LIBRARY ==============
+  Future<List<Map<String, dynamic>>> getSermons() async {
+    final data = await _client.from('sermons').select().order('sermon_date', ascending: false);
+    return _asMapList(data);
+  }
+
+  Future<List<Map<String, dynamic>>> getActiveSermons() async {
+    final data = await _client
+        .from('sermons')
+        .select()
+        .eq('is_active', true)
+        .order('sermon_date', ascending: false);
+    return _asMapList(data);
+  }
+
+  Future<Map<String, dynamic>> addSermon(Map<String, dynamic> data) async {
+    final response = await _client.from('sermons').insert(data).select();
+    return Map<String, dynamic>.from(_asMapList(response).first);
+  }
+
+  Future<void> updateSermon(String id, Map<String, dynamic> data) async {
+    await _client.from('sermons').update(data).eq('id', id);
+  }
+
+  Future<void> deleteSermon(String id) async {
+    await _client.from('sermons').delete().eq('id', id);
+  }
+
   // ============== BIBLE ==============
   Future<List<Map<String, dynamic>>> getBibleVerses(String book, int chapter) async {
-    return await _client
+    final data = await _client
         .from('bible_verses')
         .select()
         .eq('book', book)
         .eq('chapter', chapter)
         .order('verse');
+    return _asMapList(data);
   }
 
   Future<List<Map<String, dynamic>>> searchBibleVerses(String query) async {
-    return await _client
+    final data = await _client
         .from('bible_verses')
         .select()
         .or('text.ilike.%$query%,book.ilike.%$query%')
         .limit(50);
+    return _asMapList(data);
   }
 
   // ============== REAL-TIME ==============

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/pelayan.dart';
 import '../providers/pelayan_provider.dart';
+import '../utils/app_theme.dart';
 
 class AddEditPelayaniScreen extends StatefulWidget {
   final Pelayan? pelayan;
@@ -49,24 +50,48 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
     super.dispose();
   }
 
+  InputDecoration _inputDecoration({required String label, String? hint, Widget? prefixIcon}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixIcon: prefixIcon,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.pelayan != null;
 
     return Scaffold(
+      backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Pelayan' : 'Tambah Pelayan'),
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primaryContainer,
-              ],
-            ),
+        title: Text(
+          isEditing ? 'Edit Pelayan' : 'Tambah Pelayan',
+          style: const TextStyle(
+            color: AppTheme.darkCharcoal,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
         ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.darkCharcoal,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -78,13 +103,10 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
               // Nama field
               TextFormField(
                 controller: _namaController,
-                decoration: InputDecoration(
-                  labelText: 'Nama Pelayan',
-                  hintText: 'Masukkan nama pelayan',
-                  prefixIcon: const Icon(Icons.person),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                decoration: _inputDecoration(
+                  label: 'Nama Pelayan',
+                  hint: 'Masukkan nama pelayan',
+                  prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.primary),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -101,13 +123,10 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
               // No Telepon field
               TextFormField(
                 controller: _noTeleponController,
-                decoration: InputDecoration(
-                  labelText: 'Nomor Telepon',
-                  hintText: 'Contoh: 081234567890',
-                  prefixIcon: const Icon(Icons.phone),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                decoration: _inputDecoration(
+                  label: 'Nomor Telepon',
+                  hint: 'Contoh: 081234567890',
+                  prefixIcon: const Icon(Icons.phone_outlined, color: AppTheme.primary),
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
@@ -125,12 +144,9 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
               // Posisi field (dropdown)
               DropdownButtonFormField<String>(
                 initialValue: _posisiController.text.isNotEmpty ? _posisiController.text : null,
-                decoration: InputDecoration(
-                  labelText: 'Posisi Pelayanan',
-                  prefixIcon: const Icon(Icons.work),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                decoration: _inputDecoration(
+                  label: 'Posisi Pelayanan',
+                  prefixIcon: const Icon(Icons.work_outline_rounded, color: AppTheme.primary),
                 ),
                 items: positions.map((position) {
                   return DropdownMenuItem(
@@ -153,24 +169,38 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
               const SizedBox(height: 16),
 
               // Status Aktif toggle
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Status Pelayan',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                      ),
-                      Switch(
-                        value: _isAktif,
-                        onChanged: (value) {
-                          setState(() => _isAktif = value);
-                        },
-                      ),
-                    ],
-                  ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.neutralBorder),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Status Pelayan',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Aktif dalam penugasan jadwal',
+                          style: TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
+                        ),
+                      ],
+                    ),
+                    Switch.adaptive(
+                      value: _isAktif,
+                      activeTrackColor: AppTheme.primary,
+                      onChanged: (value) {
+                        setState(() => _isAktif = value);
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 32),
@@ -178,16 +208,25 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
               // Submit button
               SizedBox(
                 width: double.infinity,
-                height: 48,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submitForm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
                   child: _isLoading
                       ? const SizedBox(
                           height: 24,
                           width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : Text(isEditing ? 'Simpan Perubahan' : 'Tambah Pelayan'),
+                      : Text(
+                          isEditing ? 'Simpan Perubahan' : 'Tambah Pelayan',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
                 ),
               ),
             ],

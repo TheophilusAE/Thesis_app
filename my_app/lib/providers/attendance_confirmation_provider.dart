@@ -4,7 +4,10 @@ import '../models/attendance_confirmation.dart';
 import '../services/supabase_service.dart';
 
 class AttendanceConfirmationProvider extends ChangeNotifier {
-  final SupabaseService _service = SupabaseService();
+  AttendanceConfirmationProvider({SupabaseService? service})
+      : _service = service ?? SupabaseService();
+
+  final SupabaseService _service;
 
   List<AttendanceConfirmation> _allConfirmations = [];
   List<AttendanceConfirmation> _userConfirmations = [];

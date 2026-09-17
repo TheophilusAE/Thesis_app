@@ -1,30 +1,17 @@
-import '../models/playlist.dart';
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/playlist.dart';
+
+/// "Today's playlist" is admin-published worship content meant to be seen
+/// by every jemaat. It lives in the `playlists` Supabase table; a local
+/// cache is kept only so the last-fetched playlist stays readable offline.
 class PlaylistService {
-  static const _playlistsKey = 'playlists_data';
-
-  Future<List<Playlist>> _loadAll() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_playlistsKey);
-    if (raw == null || raw.isEmpty) {
-      return _defaultPlaylists();
-    }
-
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded
-        .map((item) => Playlist.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
-  }
-
-  Future<void> _saveAll(List<Playlist> playlists) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _playlistsKey,
-      jsonEncode(playlists.map((p) => p.toJson()).toList()),
-    );
-  }
+  static final SupabaseClient _db = Supabase.instance.client;
+  static const _cacheKey = 'playlists_cache';
 
   Future<Playlist> getTodaysPlaylist() async {
     final all = await _loadAll();
@@ -38,22 +25,67 @@ class PlaylistService {
     return all.skip(1).toList();
   }
 
-  Future<void> addPlaylist({
+  Future<bool> addPlaylist({
     required String title,
     required String description,
     required List<Song> songs,
   }) async {
-    final all = await _loadAll();
-    all.add(
-      Playlist(
-        id: 'pl-${DateTime.now().millisecondsSinceEpoch}',
-        title: title,
-        description: description,
-        date: DateTime.now(),
-        songs: songs,
-      ),
-    );
-    await _saveAll(all);
+    try {
+      await _db.from('playlists').insert({
+        'id': 'pl-${DateTime.now().millisecondsSinceEpoch}',
+        'title': title,
+        'description': description,
+        'songs': songs.map((s) => s.toJson()).toList(),
+        'playlist_date': DateTime.now().toIso8601String(),
+      });
+      return true;
+    } catch (e) {
+      debugPrint('addPlaylist error: $e');
+      return false;
+    }
+  }
+
+  Future<List<Playlist>> _loadAll() async {
+    try {
+      final data = await _db.from('playlists').select().order('playlist_date', ascending: false);
+      final playlists = (data as List).map((e) => _fromRow(e as Map<String, dynamic>)).toList();
+      if (playlists.isNotEmpty) {
+        await _cache(playlists);
+        return playlists;
+      }
+    } catch (e) {
+      debugPrint('_loadAll playlists (Supabase) error: $e');
+    }
+    return _loadCacheOrDefaults();
+  }
+
+  Playlist _fromRow(Map<String, dynamic> row) => Playlist(
+        id: row['id'] as String,
+        title: row['title'] as String,
+        description: row['description'] as String,
+        songs: ((row['songs'] as List?) ?? [])
+            .map((s) => Song.fromJson(Map<String, dynamic>.from(s as Map)))
+            .toList(),
+        date: DateTime.parse(row['playlist_date'] as String),
+        coverImage: row['cover_image'] as String?,
+      );
+
+  Future<void> _cache(List<Playlist> playlists) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cacheKey, jsonEncode(playlists.map((p) => p.toJson()).toList()));
+  }
+
+  Future<List<Playlist>> _loadCacheOrDefaults() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_cacheKey);
+    if (raw == null || raw.isEmpty) {
+      return _defaultPlaylists();
+    }
+
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map((item) => Playlist.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
   }
 
   List<Playlist> _defaultPlaylists() {
