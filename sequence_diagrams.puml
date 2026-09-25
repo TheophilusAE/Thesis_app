@@ -1,0 +1,710 @@
+@startuml 01_Ajukan_Penggantian_Tugas
+title Sequence Diagram — Ajukan Penggantian Tugas
+
+actor "Pelayan" as Pelayan
+participant "Aplikasi" as App
+database "Database" as DB
+
+Pelayan -> App : Buka halaman Penggantian Tugas
+App -> DB : Ambil daftar jadwal pelayanan milik pelayan ini
+DB --> App : Kembalikan daftar jadwal
+App --> Pelayan : Tampilkan daftar jadwal pelayanan mendatang
+
+Pelayan -> App : Pilih jadwal yang ingin diganti,\ntulis alasan, dan pilih pelayan pengganti
+App -> DB : Simpan permintaan penggantian\ndengan status "menunggu"
+DB --> App : Permintaan tersimpan
+App -> DB : Simpan notifikasi untuk admin
+DB --> App : Notifikasi tersimpan
+App --> Pelayan : Tampilkan pesan:\n"Permintaan berhasil dikirim.\nSilakan tunggu persetujuan admin."
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 02_Baca_Alkitab
+title Sequence Diagram — Baca Alkitab
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Buka fitur Baca Alkitab
+App -> DB : Ambil daftar semua kitab yang tersedia
+DB --> App : Kembalikan daftar kitab
+App --> Jemaat : Tampilkan semua pilihan kitab
+
+Jemaat -> App : Pilih sebuah kitab
+App -> DB : Ambil daftar pasal dari kitab yang dipilih
+DB --> App : Kembalikan daftar pasal
+App --> Jemaat : Tampilkan semua pasal dalam kitab tersebut
+
+Jemaat -> App : Pilih sebuah pasal
+App -> DB : Ambil semua ayat dari pasal yang dipilih
+DB --> App : Kembalikan semua ayat
+App --> Jemaat : Tampilkan semua ayat dalam pasal tersebut
+
+Jemaat -> App : Salin atau bagikan sebuah ayat
+App --> Jemaat : Salin ayat ke clipboard,\natau buka menu bagikan
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 03_Daftar_Akun
+title Sequence Diagram — Daftar Akun
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Isi formulir pendaftaran\n(nama, email, kata sandi, nomor telepon)
+App -> DB : Buat akun pengguna baru
+DB --> App : Akun berhasil dibuat
+App -> DB : Simpan profil pengguna\ndengan peran "jemaat" dan status "menunggu verifikasi"
+DB --> App : Profil tersimpan
+App -> App : Keluar otomatis dari akun\nsampai admin menyetujui pendaftaran
+App --> Jemaat : Tampilkan pesan:\n"Pendaftaran berhasil!\nSilakan tunggu persetujuan admin."
+App --> Jemaat : Arahkan ke halaman Login
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 04_Daftar_Event
+title Sequence Diagram — Daftar Event
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Buka halaman Daftar Event
+App -> DB : Ambil semua event yang sedang aktif
+DB --> App : Kembalikan daftar event aktif
+App --> Jemaat : Tampilkan daftar event yang tersedia
+
+Jemaat -> App : Pilih event dan tekan tombol Daftar
+App -> DB : Periksa jumlah pendaftar saat ini
+DB --> App : Kembalikan jumlah pendaftar
+
+alt Tempat masih tersedia
+    App -> DB : Simpan data pendaftaran
+    DB --> App : Pendaftaran tersimpan
+    App --> Jemaat : Tampilkan konfirmasi pendaftaran berhasil
+else Event sudah penuh
+    App --> Jemaat : Tampilkan pesan:\n"Maaf, event ini sudah penuh."
+end
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 05_Edit_Data_Pengguna
+title Sequence Diagram — Edit Data Pengguna (Admin)
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Pilih pengguna dan tekan tombol Edit
+App --> Admin : Tampilkan formulir edit\nyang sudah terisi data pengguna saat ini
+Admin -> App : Ubah data pengguna dan tekan Simpan
+App -> DB : Perbarui profil pengguna di database
+DB --> App : Profil berhasil diperbarui
+App --> Admin : Tampilkan pesan "Data berhasil diperbarui"\ndan segarkan daftar pengguna
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 06_Edit_Profil
+title Sequence Diagram — Edit Profil
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Buka halaman Profil
+App -> DB : Ambil data profil pengguna yang sedang login
+DB --> App : Kembalikan data profil
+App --> Jemaat : Tampilkan profil pengguna\n(nama, email, nomor telepon, alamat)
+
+Jemaat -> App : Ubah data profil dan tekan Simpan
+App -> DB : Perbarui profil di database
+
+alt Berhasil
+    DB --> App : Profil berhasil diperbarui
+    App --> Jemaat : Tampilkan pesan "Profil berhasil diperbarui"
+else Gagal
+    DB --> App : Terjadi kesalahan
+    App --> Jemaat : Tampilkan pesan kesalahan
+end
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 07_Lupa_Kata_Sandi
+title Sequence Diagram — Lupa Kata Sandi
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Tekan tombol "Lupa Kata Sandi" di halaman Login
+App --> Jemaat : Tampilkan dialog untuk memasukkan email
+Jemaat -> App : Masukkan email yang terdaftar
+App -> DB : Cari akun dengan email tersebut
+DB --> App : Akun ditemukan
+App -> App : Kirim tautan reset kata sandi\nke email pengguna
+App --> Jemaat : Tampilkan pesan:\n"Tautan reset telah dikirim ke email Anda."
+
+Jemaat -> App : Klik tautan reset dari email
+App --> Jemaat : Buka halaman untuk memasukkan kata sandi baru
+Jemaat -> App : Masukkan dan konfirmasi kata sandi baru
+App -> DB : Perbarui kata sandi di database
+DB --> App : Kata sandi berhasil diperbarui
+App --> Jemaat : Tampilkan pesan "Kata sandi berhasil diperbarui"
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 08_Hapus_Pengguna
+title Sequence Diagram — Hapus Pengguna
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Pilih pengguna dan tekan tombol Hapus
+App --> Admin : Tampilkan dialog konfirmasi penghapusan
+Admin -> App : Konfirmasi penghapusan
+App -> DB : Hapus akun pengguna beserta semua data terkait
+DB --> App : Pengguna berhasil dihapus
+App --> Admin : Tampilkan pesan "Pengguna berhasil dihapus"\ndan segarkan daftar pengguna
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 09_Kelola_Data_Pelayan
+title Sequence Diagram — Kelola Data Pelayan
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Buka halaman Manajemen Pelayan
+App -> DB : Ambil daftar semua pelayan gereja
+DB --> App : Kembalikan daftar pelayan
+App --> Admin : Tampilkan daftar pelayan
+
+Admin -> App : Pilih aksi\n(Tambah / Edit / Hapus / Ubah Status)
+
+alt Tambah pelayan baru
+    Admin -> App : Isi formulir data pelayan baru dan tekan Simpan
+    App -> DB : Simpan data pelayan baru
+    DB --> App : Data tersimpan
+    App --> Admin : Tampilkan pesan "Pelayan berhasil ditambahkan"
+else Edit pelayan
+    Admin -> App : Ubah data pelayan dan tekan Simpan
+    App -> DB : Perbarui data pelayan di database
+    DB --> App : Data berhasil diperbarui
+    App --> Admin : Tampilkan pesan "Data pelayan berhasil diperbarui"
+else Hapus pelayan
+    Admin -> App : Konfirmasi penghapusan
+    App -> DB : Hapus data pelayan
+    DB --> App : Data berhasil dihapus
+    App --> Admin : Tampilkan pesan "Pelayan berhasil dihapus"
+else Ubah status aktif
+    Admin -> App : Tekan tombol aktif/nonaktif
+    App -> DB : Ubah status aktif pelayan di database
+    DB --> App : Status berhasil diperbarui
+    App --> Admin : Tampilkan pesan "Status berhasil diperbarui"
+end
+
+App --> Admin : Segarkan daftar pelayan
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 10_Kelola_Jadwal_Latihan
+title Sequence Diagram — Kelola Jadwal Latihan
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Buka halaman Manajemen Jadwal Latihan
+App -> DB : Ambil semua jadwal latihan
+DB --> App : Kembalikan daftar jadwal latihan
+App --> Admin : Tampilkan daftar jadwal latihan
+
+Admin -> App : Pilih aksi (Tambah / Edit / Hapus)
+
+alt Tambah jadwal latihan baru
+    Admin -> App : Isi formulir jadwal latihan dan tekan Simpan
+    App -> DB : Simpan jadwal latihan baru
+    DB --> App : Jadwal tersimpan
+    App -> DB : Simpan notifikasi untuk setiap pelayan yang ditugaskan
+    DB --> App : Notifikasi tersimpan
+    App --> Admin : Tampilkan pesan "Jadwal latihan berhasil dibuat"
+else Edit jadwal latihan
+    Admin -> App : Ubah data jadwal latihan dan tekan Simpan
+    App -> DB : Perbarui jadwal latihan di database
+    DB --> App : Jadwal berhasil diperbarui
+    App --> Admin : Tampilkan pesan "Jadwal latihan berhasil diperbarui"
+else Hapus jadwal latihan
+    Admin -> App : Konfirmasi penghapusan
+    App -> DB : Hapus jadwal latihan
+    DB --> App : Jadwal berhasil dihapus
+    App --> Admin : Tampilkan pesan "Jadwal latihan berhasil dihapus"
+end
+
+App --> Admin : Segarkan daftar jadwal
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 11_Kelola_Jadwal_Pelayanan
+title Sequence Diagram — Kelola Jadwal Pelayanan
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Buka halaman Manajemen Jadwal Pelayanan
+App -> DB : Ambil semua jadwal pelayanan beserta nama pelayan
+DB --> App : Kembalikan daftar jadwal
+App --> Admin : Tampilkan daftar jadwal pelayanan
+
+Admin -> App : Pilih aksi (Tambah / Edit / Hapus)
+
+alt Tambah jadwal baru
+    Admin -> App : Isi formulir jadwal baru dan tekan Simpan
+    App -> DB : Simpan jadwal pelayanan baru
+    DB --> App : Jadwal tersimpan
+    App -> DB : Simpan notifikasi "Jadwal Baru"\nuntuk pelayan yang ditugaskan
+    DB --> App : Notifikasi tersimpan
+    App --> Admin : Tampilkan pesan "Jadwal berhasil dibuat"
+else Edit jadwal
+    Admin -> App : Ubah data jadwal dan tekan Simpan
+    App -> DB : Perbarui jadwal pelayanan di database
+    DB --> App : Jadwal berhasil diperbarui
+    App -> DB : Simpan notifikasi "Jadwal Diperbarui"\nuntuk pelayan yang ditugaskan
+    DB --> App : Notifikasi tersimpan
+    App --> Admin : Tampilkan pesan "Jadwal berhasil diperbarui"
+else Hapus jadwal
+    Admin -> App : Konfirmasi penghapusan
+    App -> DB : Hapus jadwal beserta semua data terkait
+    DB --> App : Jadwal berhasil dihapus
+    App --> Admin : Tampilkan pesan "Jadwal berhasil dihapus"
+end
+
+App --> Admin : Segarkan daftar jadwal
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 12_Kelola_Role_Pengguna
+title Sequence Diagram — Kelola Role Pengguna
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Buka halaman Manajemen Role
+App -> DB : Ambil semua pengguna beserta role mereka saat ini
+DB --> App : Kembalikan daftar pengguna dengan role
+App --> Admin : Tampilkan daftar pengguna dan role mereka
+
+Admin -> App : Pilih pengguna dan ubah role-nya
+App -> DB : Perbarui role pengguna di database
+DB --> App : Role berhasil diperbarui
+App --> Admin : Tampilkan pesan "Role berhasil diperbarui"\ndan segarkan daftar pengguna
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 13_Kirim_Feedback
+title Sequence Diagram — Kirim Feedback
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Buka menu Kirim Feedback
+App --> Jemaat : Tampilkan formulir feedback
+
+Jemaat -> App : Pilih jenis feedback (Acara atau Umum)
+Jemaat -> App : Tulis pesan dan beri penilaian bintang (1 sampai 5)
+Jemaat -> App : Aktifkan opsi anonim jika diinginkan
+Jemaat -> App : Tekan tombol Kirim
+
+App -> App : Periksa bahwa pesan tidak kosong\ndan penilaian lebih dari nol
+
+alt Feedback valid
+    App -> DB : Simpan data feedback
+    DB --> App : Feedback tersimpan
+    App --> Jemaat : Tampilkan pesan "Feedback berhasil dikirim"\ndan kembali ke halaman sebelumnya
+else Feedback tidak valid
+    App --> Jemaat : Tampilkan pesan kesalahan\n(contoh: "Pesan tidak boleh kosong")
+end
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 14_Kirim_Permintaan_Doa
+title Sequence Diagram — Kirim Permintaan Doa
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Tekan tombol Doa di halaman Beranda
+App --> Jemaat : Tampilkan formulir Permintaan Doa
+
+Jemaat -> App : Tulis pokok doa
+Jemaat -> App : Tekan tombol Kirim
+
+alt Pokok doa sudah diisi
+    App -> DB : Simpan permintaan doa
+    DB --> App : Permintaan doa tersimpan
+    App --> Jemaat : Tampilkan pesan:\n"Permintaan doa diterima.\nTuhan memberkati!"
+else Pokok doa masih kosong
+    App --> Jemaat : Tampilkan pesan:\n"Isi pokok doa terlebih dahulu."
+end
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 15_Konfirmasi_Kehadiran
+title Sequence Diagram — Konfirmasi Kehadiran
+
+actor "Pelayan" as Pelayan
+participant "Aplikasi" as App
+database "Database" as DB
+
+Pelayan -> App : Buka halaman Konfirmasi Kehadiran
+App -> DB : Ambil jadwal mendatang beserta status kehadiran pelayan ini
+DB --> App : Kembalikan jadwal beserta status kehadiran
+App --> Pelayan : Tampilkan jadwal mendatang\nbeserta status kehadiran saat ini
+
+Pelayan -> App : Pilih status kehadiran pada sebuah jadwal
+
+alt Konfirmasi Hadir
+    App -> DB : Simpan atau perbarui catatan kehadiran sebagai "hadir"
+    DB --> App : Kehadiran tersimpan
+    App --> Pelayan : Tampilkan status "Kehadiran Terkonfirmasi" pada jadwal tersebut
+else Tidak Dapat Hadir
+    Pelayan -> App : Isi alasan ketidakhadiran
+    App -> DB : Simpan catatan ketidakhadiran beserta alasan
+    DB --> App : Ketidakhadiran tersimpan
+    App --> Pelayan : Tampilkan status "Ketidakhadiran Tercatat" pada jadwal tersebut
+end
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 16_Lihat_Info_Persembahan
+title Sequence Diagram — Lihat Info Persembahan
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Tekan tombol Persembahan di halaman Beranda
+App --> Jemaat : Tampilkan pilihan metode persembahan
+
+alt Persembahan via QRIS
+    Jemaat -> App : Pilih QRIS
+    App --> Jemaat : Tampilkan kode QR untuk dipindai
+else Persembahan via Transfer Bank
+    Jemaat -> App : Pilih Transfer Bank
+    App -> DB : Ambil data rekening bank gereja
+    DB --> App : Kembalikan nomor rekening dan nama pemilik rekening
+    App --> Jemaat : Tampilkan nomor rekening\ndan nama pemilik rekening
+else Persembahan Langsung
+    Jemaat -> App : Pilih Langsung
+    App -> DB : Ambil jadwal ibadah terdekat
+    DB --> App : Kembalikan jadwal ibadah
+    App --> Jemaat : Tampilkan jadwal ibadah\nuntuk membawa persembahan secara langsung
+end
+
+Jemaat -> App : Tutup panel persembahan
+App --> Jemaat : Kembali ke halaman Beranda
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 17_Lihat_Jadwal_Pelayanan
+title Sequence Diagram — Lihat Jadwal Pelayanan
+
+actor "Pelayan" as Pelayan
+participant "Aplikasi" as App
+database "Database" as DB
+
+Pelayan -> App : Buka halaman Jadwal Pelayanan
+App -> DB : Ambil semua jadwal pelayanan milik pelayan ini
+DB --> App : Kembalikan daftar jadwal
+App --> Pelayan : Tampilkan daftar jadwal\n(tanggal, waktu, jenis ibadah, dan posisi)
+
+Pelayan -> App : Pilih sebuah jadwal untuk melihat detailnya
+App --> Pelayan : Tampilkan detail lengkap jadwal\n(lokasi, catatan, dan pelayan lain yang bertugas)
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 18_Lihat_Kartu_Jemaat
+title Sequence Diagram — Lihat Kartu Jemaat
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Buka halaman Kartu Jemaat
+App -> DB : Ambil data profil jemaat ini
+DB --> App : Kembalikan data profil
+
+alt Profil sudah lengkap
+    App -> App : Buat kode QR\ndari ID pengguna dan nomor kartu jemaat
+    App --> Jemaat : Tampilkan kartu jemaat digital\n(nama, nomor kartu, kode QR, status keanggotaan)
+    Jemaat -> App : Tekan tombol "Bagikan Kartu"
+    App -> App : Ubah tampilan kartu menjadi gambar
+    App --> Jemaat : Buka menu bagikan sistem\nuntuk berbagi gambar kartu
+else Profil belum lengkap
+    App --> Jemaat : Tampilkan pesan:\n"Lengkapi profil Anda terlebih dahulu."
+end
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 19_Lihat_Semua_Feedback
+title Sequence Diagram — Lihat Semua Feedback (Admin)
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Buka halaman Manajemen Feedback
+App -> DB : Ambil semua data feedback beserta nama pengirim
+DB --> App : Kembalikan semua feedback
+App --> Admin : Tampilkan semua feedback\n(penilaian, jenis, pesan, dan pengirim)
+
+Admin -> App : Terapkan filter berdasarkan jenis atau penilaian
+App -> DB : Ambil feedback yang sesuai dengan filter
+DB --> App : Kembalikan feedback yang terfilter
+App --> Admin : Tampilkan hasil filter
+
+Admin -> App : Tekan Hapus pada feedback yang tidak relevan
+App -> DB : Hapus data feedback tersebut
+DB --> App : Feedback berhasil dihapus
+App --> Admin : Segarkan daftar feedback
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 20_Login
+title Sequence Diagram — Login
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Masukkan email dan kata sandi, lalu tekan Login
+App -> DB : Verifikasi email dan kata sandi
+DB --> App : Kredensial benar
+App -> DB : Ambil profil pengguna\n(role dan status akun)
+DB --> App : Kembalikan data profil
+
+alt Status akun masih "menunggu verifikasi"
+    App --> Jemaat : Tampilkan pesan:\n"Akun Anda belum disetujui oleh admin."
+else Login berhasil
+    App --> Jemaat : Tampilkan pesan "Login berhasil"
+    App --> Jemaat : Arahkan ke halaman utama\nsesuai role pengguna
+end
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 21_Logout
+title Sequence Diagram — Logout
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Tekan tombol Keluar
+App --> Jemaat : Tampilkan dialog konfirmasi keluar
+Jemaat -> App : Konfirmasi keluar
+App -> DB : Akhiri sesi login\ndan hapus token yang aktif
+DB --> App : Sesi berhasil diakhiri
+App -> App : Bersihkan semua data pengguna\ndari memori aplikasi
+App --> Jemaat : Arahkan ke halaman Login
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 22_Monitor_Kehadiran
+title Sequence Diagram — Monitor Kehadiran (Admin)
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Buka halaman Monitoring Kehadiran
+App -> DB : Ambil semua catatan kehadiran\nbeserta nama pelayan dan info jadwal
+DB --> App : Kembalikan semua catatan kehadiran
+App --> Admin : Tampilkan rekap kehadiran\n(total hadir, tidak hadir, dan persentase)
+
+Admin -> App : Terapkan filter berdasarkan rentang tanggal atau pelayan tertentu
+App -> DB : Ambil catatan kehadiran yang sesuai filter
+DB --> App : Kembalikan data yang terfilter
+App --> Admin : Tampilkan data kehadiran yang terfilter
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 23_Notifikasi_Jadwal_Otomatis
+title Sequence Diagram — Notifikasi Jadwal Otomatis
+
+participant "Aplikasi" as App
+database "Database" as DB
+actor "Pelayan" as Pelayan
+
+App -> App : Aplikasi dibuka
+App -> DB : Ambil semua jadwal pelayanan\ndan latihan yang akan datang
+DB --> App : Kembalikan daftar jadwal mendatang
+
+loop Untuk setiap jadwal yang akan datang
+    App -> DB : Simpan notifikasi pengingat untuk pelayan\n(dikirim 1 hari sebelum jadwal)
+    DB --> App : Notifikasi tersimpan
+    App -> Pelayan : Kirim notifikasi:\n"Pengingat: Anda memiliki jadwal pelayanan besok."
+end
+
+Pelayan -> App : Ketuk notifikasi
+App --> Pelayan : Buka halaman detail jadwal
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 24_Quest_Baca_Alkitab
+title Sequence Diagram — Quest Baca Alkitab
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Buka halaman Quest
+App -> DB : Ambil semua quest yang tersedia\nbeserta progres jemaat ini
+DB --> App : Kembalikan daftar quest dengan status progres
+App --> Jemaat : Tampilkan daftar quest\n(status dan poin hadiah)
+
+Jemaat -> App : Pilih sebuah quest dan tekan Ikuti atau Selesaikan
+App -> DB : Simpan atau perbarui progres quest\nJika sudah diikuti, tandai sebagai selesai
+DB --> App : Progres tersimpan
+App --> Jemaat : Tampilkan status quest yang diperbarui\ndan jumlah poin yang diperoleh
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 25_Renungan_Harian
+title Sequence Diagram — Renungan Harian
+
+actor "Jemaat" as Jemaat
+participant "Aplikasi" as App
+database "Database" as DB
+
+Jemaat -> App : Buka fitur Renungan Harian
+App -> DB : Ambil renungan untuk hari ini
+DB --> App : Kembalikan hasilnya
+
+alt Renungan tersedia
+    App --> Jemaat : Tampilkan renungan hari ini\n(judul, isi, dan referensi ayat Alkitab)
+    Jemaat -> App : Gulir untuk membaca semua konten
+    App --> Jemaat : Tampilkan teks lengkap dan ayat referensi
+else Renungan tidak tersedia
+    App --> Jemaat : Tampilkan pesan:\n"Tidak ada renungan untuk hari ini."
+end
+
+App -> DB : Ambil semua renungan sebelumnya untuk arsip
+DB --> App : Kembalikan daftar arsip renungan
+App --> Jemaat : Tampilkan daftar renungan sebelumnya
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 26_Tambah_Pengguna_Baru
+title Sequence Diagram — Tambah Pengguna Baru (Admin)
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Isi formulir pengguna baru\n(nama, email, kata sandi, dan role)
+App -> DB : Buat akun baru untuk pengguna tersebut
+DB --> App : Akun berhasil dibuat
+App -> DB : Simpan profil pengguna\ndengan role yang ditentukan dan status "aktif"
+DB --> App : Profil tersimpan
+App --> Admin : Tampilkan pesan "Pengguna berhasil dibuat"\ndan segarkan daftar pengguna
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 27_Tinjau_Permintaan_Penggantian
+title Sequence Diagram — Tinjau Permintaan Penggantian (Admin)
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Buka halaman Tinjau Penggantian Tugas
+App -> DB : Ambil semua permintaan penggantian yang masih menunggu
+DB --> App : Kembalikan daftar permintaan yang menunggu
+App --> Admin : Tampilkan daftar permintaan yang menunggu keputusan
+
+Admin -> App : Pilih sebuah permintaan dan buat keputusan
+
+alt Setujui penggantian
+    Admin -> App : Tambahkan catatan dan tekan Setujui
+    App -> DB : Perbarui status permintaan menjadi "disetujui"
+    DB --> App : Status berhasil diperbarui
+    App -> DB : Perbarui jadwal pelayanan\ndengan nama pelayan pengganti
+    DB --> App : Jadwal berhasil diperbarui
+    App -> DB : Simpan notifikasi "Penggantian Disetujui"\nuntuk pelayan yang mengajukan
+    DB --> App : Notifikasi tersimpan
+    App --> Admin : Tampilkan pesan "Penggantian disetujui"
+else Tolak penggantian
+    Admin -> App : Tulis alasan penolakan dan tekan Tolak
+    App -> DB : Perbarui status permintaan menjadi "ditolak"
+    DB --> App : Status berhasil diperbarui
+    App -> DB : Simpan notifikasi "Penggantian Ditolak"\nuntuk pelayan yang mengajukan
+    DB --> App : Notifikasi tersimpan
+    App --> Admin : Tampilkan pesan "Penggantian ditolak"
+end
+
+App --> Admin : Segarkan daftar permintaan
+@enduml
+
+'─────────────────────────────────────────────────────────────────────────────
+
+@startuml 28_Verifikasi_Pendaftaran
+title Sequence Diagram — Verifikasi Pendaftaran
+
+actor "Admin" as Admin
+participant "Aplikasi" as App
+database "Database" as DB
+
+Admin -> App : Buka tab Pengguna Menunggu Verifikasi
+App -> DB : Ambil semua pengguna dengan status "menunggu"
+DB --> App : Kembalikan daftar pengguna yang menunggu
+App --> Admin : Tampilkan daftar pengguna yang menunggu persetujuan
+
+Admin -> App : Pilih pengguna dan tekan Setujui atau Tolak
+
+alt Setujui pengguna
+    App -> DB : Perbarui status pengguna menjadi "aktif"
+    DB --> App : Status berhasil diperbarui
+    App -> DB : Simpan notifikasi untuk pengguna:\n"Akun Anda telah disetujui.\nAnda sekarang dapat masuk ke aplikasi."
+    DB --> App : Notifikasi tersimpan
+    App --> Admin : Tampilkan pesan "Pengguna berhasil diverifikasi"
+else Tolak pengguna
+    App -> DB : Perbarui status pengguna menjadi "ditolak"
+    DB --> App : Status berhasil diperbarui
+    App --> Admin : Tampilkan pesan "Pengguna ditolak"
+end
+
+App --> Admin : Segarkan daftar pengguna yang menunggu
+@enduml

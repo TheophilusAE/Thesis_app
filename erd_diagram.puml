@@ -1,0 +1,208 @@
+@startuml ERD_Gereja_App
+!define TABLE(name) class name << (T,#FFAAAA) >>
+hide methods
+hide stereotypes
+
+skinparam class {
+  BackgroundColor White
+  ArrowColor #58A77E
+  BorderColor #58A77E
+}
+
+' ============================================================
+' GPDI / Gereja App — Entity Relationship Diagram
+' Generated from my_app/database_setup.sql
+' ============================================================
+
+entity "auth.users\n(Supabase Auth)" as auth_users {
+  * id : UUID <<PK>>
+  --
+  email : TEXT
+  encrypted_password : TEXT
+  ...
+}
+
+entity "users" as users {
+  * id : UUID <<PK, FK -> auth.users.id>>
+  --
+  email : TEXT <<unique>>
+  nama : TEXT
+  phone : TEXT
+  roles : TEXT[]  (default: {jemaat})
+  membership_status : TEXT
+  identity_number : TEXT
+  family_group : TEXT
+  member_card_number : TEXT
+  member_since : TEXT
+  address : TEXT
+  baptism_date : TEXT
+  membership_type : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "pelayans" as pelayans {
+  * id : UUID <<PK>>
+  --
+  user_id : UUID <<FK -> users.id, NULLable>>
+  nama : TEXT
+  no_telepon : TEXT
+  posisi : TEXT
+  is_aktif : BOOLEAN
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "schedules" as schedules {
+  * id : UUID <<PK>>
+  --
+  pelayan_id : UUID <<FK -> pelayans.id>>
+  pelayan_name : TEXT
+  pelayan_position : TEXT
+  service_date : TIMESTAMPTZ
+  start_time : TEXT
+  end_time : TEXT
+  service_type : TEXT
+  is_recurring : BOOLEAN
+  recurring_pattern : TEXT
+  notes : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "training_schedules" as training_schedules {
+  * id : UUID <<PK>>
+  --
+  nama : TEXT
+  training_date : TIMESTAMPTZ
+  start_time : TEXT
+  end_time : TEXT
+  deskripsi : TEXT
+  pelayan_ids : UUID[]  <<FK[] -> pelayans.id>>
+  lokasi : TEXT
+  notes : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "substitution_requests" as substitution_requests {
+  * id : UUID <<PK>>
+  --
+  service_schedule_id : UUID <<FK -> schedules.id>>
+  requested_by_user_id : UUID <<FK -> users.id>>
+  requested_by_name : TEXT
+  replacement_user_id : UUID <<FK -> users.id, NULLable>>
+  replacement_name : TEXT
+  reason : TEXT
+  status : TEXT (default: pending)
+  admin_notes : TEXT
+  requested_replacement_name : TEXT
+  reviewed_at : TIMESTAMPTZ
+  reviewed_by_admin_id : UUID <<FK -> users.id, NULLable>>
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "attendance" as attendance {
+  * id : UUID <<PK>>
+  --
+  user_id : UUID <<FK -> users.id>>
+  user_name : TEXT
+  service_schedule_id : UUID <<FK -> schedules.id>>
+  schedule_date : TIMESTAMPTZ
+  confirmed : BOOLEAN
+  confirmed_at : TIMESTAMPTZ
+  notes : TEXT
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+  --
+  <<unique (user_id, service_schedule_id)>>
+}
+
+entity "notifications" as notifications {
+  * id : UUID <<PK>>
+  --
+  user_id : UUID <<FK -> users.id>>
+  title : TEXT
+  message : TEXT
+  type : TEXT (default: general)
+  related_schedule_id : UUID
+  is_read : BOOLEAN
+  read_at : TIMESTAMPTZ
+  created_at : TIMESTAMPTZ
+}
+
+entity "feedback" as feedback {
+  * id : UUID <<PK>>
+  --
+  user_id : UUID <<FK -> users.id>>
+  user_name : TEXT
+  feedback_type : TEXT (default: general)
+  event_id : TEXT
+  event_name : TEXT
+  rating : INTEGER  (0-5)
+  message : TEXT
+  is_anonymous : BOOLEAN
+  created_at : TIMESTAMPTZ
+}
+
+entity "bible_verses" as bible_verses {
+  * id : BIGSERIAL <<PK>>
+  --
+  book : TEXT
+  chapter : INTEGER
+  verse : INTEGER
+  text : TEXT
+  --
+  <<unique (book, chapter, verse)>>
+}
+
+entity "church_events" as church_events {
+  * id : UUID <<PK>>
+  --
+  title : TEXT
+  description : TEXT
+  date : TIMESTAMPTZ
+  location : TEXT
+  max_capacity : INT
+  is_active : BOOLEAN
+  created_by : UUID
+  created_at : TIMESTAMPTZ
+}
+
+entity "event_registrations" as event_registrations {
+  * id : UUID <<PK>>
+  --
+  event_id : UUID <<FK -> church_events.id>>
+  user_id : TEXT
+  family_members : JSONB
+  total_count : INT
+  notes : TEXT
+  registered_at : TIMESTAMPTZ
+  --
+  <<unique (event_id, user_id)>>
+}
+
+' ============================================================
+' RELATIONSHIPS
+' ============================================================
+
+auth_users ||--|| users : "1:1\n(id, on sign-up trigger)"
+
+users ||--o{ pelayans : "1:N\n(user_id, optional)"
+users ||--o{ substitution_requests : "1:N\n(requested_by_user_id)"
+users ||--o{ substitution_requests : "1:N\n(replacement_user_id)"
+users ||--o{ substitution_requests : "1:N\n(reviewed_by_admin_id)"
+users ||--o{ attendance : "1:N\n(user_id)"
+users ||--o{ notifications : "1:N\n(user_id)"
+users ||--o{ feedback : "1:N\n(user_id)"
+
+pelayans ||--o{ schedules : "1:N\n(pelayan_id)"
+pelayans }o--o{ training_schedules : "M:N\n(pelayan_ids[])"
+
+schedules ||--o{ substitution_requests : "1:N\n(service_schedule_id)"
+schedules ||--o{ attendance : "1:N\n(service_schedule_id)"
+
+church_events ||--o{ event_registrations : "1:N\n(event_id)"
+
+@enduml

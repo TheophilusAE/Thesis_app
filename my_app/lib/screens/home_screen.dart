@@ -3914,7 +3914,7 @@ class _ProfileTab extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (auth.isAdmin) ...[
+                      if (auth.isAdminMode) ...[
                         const Divider(height: 1, indent: 56, endIndent: 16),
                         _ProfileMenuItem(
                           icon: Icons.manage_accounts_rounded,

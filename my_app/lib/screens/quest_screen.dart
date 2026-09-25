@@ -111,7 +111,7 @@ class _QuestScreenState extends State<QuestScreen> {
   Widget _buildAdminSection(BuildContext context, QuestProvider questProvider) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        if (!authProvider.isAdmin) {
+        if (authProvider.currentDisplayRole != 'admin') {
           return const SizedBox.shrink();
         }
 

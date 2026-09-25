@@ -1,0 +1,104 @@
+@startuml Use_Case_Diagram
+title Use Case Diagram — Sistem Informasi Gereja
+
+left to right direction
+
+skinparam ActorBackgroundColor #D6E8F7
+skinparam ActorBorderColor #2E5D9A
+skinparam ActorFontStyle bold
+skinparam ActorFontSize 12
+skinparam UsecaseBackgroundColor #5B9BD5
+skinparam UsecaseFontColor white
+skinparam UsecaseBorderColor #2E5D9A
+skinparam UsecaseFontSize 11
+skinparam ArrowColor #2E5D9A
+skinparam DefaultFontName Arial
+
+' ─── Aktor ───────────────────────────────────────────────────────────
+actor "Calon Jemaat" as CJ
+actor "Jemaat"       as J
+actor "Admin"        as A
+actor "Pelayan"      as P
+actor "Sistem"       as S
+
+' ─── Batas Sistem ────────────────────────────────────────────────────
+rectangle "Sistem Informasi Gereja" {
+
+  usecase "Daftar Akun"     as UC01
+  usecase "Login"           as UC02
+  usecase "Logout"          as UC03
+  usecase "Lupa Kata Sandi" as UC04
+  usecase "Edit Profil"     as UC05
+
+  usecase "Baca Alkitab"         as UC06
+  usecase "Quest Baca Alkitab"   as UC07
+  usecase "Renungan Harian"      as UC08
+  usecase "Kirim Permintaan Doa" as UC09
+
+  usecase "Lihat Info Persembahan" as UC10
+  usecase "Daftar Event"           as UC11
+  usecase "Lihat Kartu Jemaat"     as UC12
+  usecase "Kirim Feedback"         as UC13
+
+  usecase "Lihat Jadwal Pelayanan"   as UC14
+  usecase "Konfirmasi Kehadiran"     as UC15
+  usecase "Ajukan Penggantian Tugas" as UC16
+
+  usecase "Verifikasi Pendaftaran Anggota" as UC17
+  usecase "Tambah Pengguna Baru"           as UC18
+  usecase "Edit Data Pengguna"             as UC19
+  usecase "Hapus Pengguna"                 as UC20
+  usecase "Kelola Role Pengguna"           as UC21
+
+  usecase "Kelola Data Pelayan"           as UC22
+  usecase "Kelola Jadwal Pelayanan"       as UC23
+  usecase "Kelola Jadwal Latihan"         as UC24
+  usecase "Monitor Kehadiran Pelayan"     as UC25
+  usecase "Tinjau Permintaan Penggantian" as UC26
+
+  usecase "Lihat Semua Feedback"       as UC27
+  usecase "Notifikasi Jadwal Otomatis" as UC28
+}
+
+' ─── Relasi Calon Jemaat ─────────────────────────────────────────────
+CJ --> UC01
+CJ --> UC04
+
+' ─── Relasi Jemaat ───────────────────────────────────────────────────
+J --> UC02
+J --> UC03
+J --> UC04
+J --> UC05
+J --> UC06
+J --> UC07
+J --> UC08
+J --> UC09
+J --> UC10
+J --> UC11
+J --> UC12
+J --> UC13
+
+' ─── Relasi Admin ────────────────────────────────────────────────────
+A --> UC02
+A --> UC03
+A --> UC17
+A --> UC18
+A --> UC19
+A --> UC20
+A --> UC21
+A --> UC22
+A --> UC23
+A --> UC24
+A --> UC25
+A --> UC26
+A --> UC27
+
+' ─── Relasi Pelayan ──────────────────────────────────────────────────
+UC14 --> P
+UC15 --> P
+UC16 --> P
+
+' ─── Relasi Sistem ───────────────────────────────────────────────────
+S --> UC28
+
+@enduml

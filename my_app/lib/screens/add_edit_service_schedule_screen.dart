@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/service_schedule.dart';
 import '../models/pelayan.dart';
 import '../providers/service_schedule_provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/pelayan_provider.dart';
 import '../utils/app_theme.dart';
 
@@ -25,7 +26,7 @@ class _AddEditServiceScheduleScreenState
   late TextEditingController _endTimeController;
   late TextEditingController _notesController;
 
-  late DateTime _selectedDate;
+  DateTime? _selectedDate;
   late Pelayan? _selectedPelayan;
   late bool _isRecurring;
   late String _recurringPattern;
@@ -57,11 +58,17 @@ class _AddEditServiceScheduleScreenState
         TextEditingController(text: widget.schedule?.endTime ?? '12:00');
     _notesController = TextEditingController(text: widget.schedule?.notes ?? '');
 
-    _selectedDate = widget.schedule?.serviceDate ?? DateTime.now();
+    _selectedDate = widget.schedule?.serviceDate;
     _selectedPelayan = null;
     _isRecurring = widget.schedule?.isRecurring ?? false;
     _recurringPattern =
         widget.schedule?.recurringPattern ?? 'WEEKLY';
+
+    if (widget.schedule == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<PelayaniProvider>().loadAllPelayan();
+      });
+    }
   }
 
   @override
@@ -76,6 +83,16 @@ class _AddEditServiceScheduleScreenState
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.schedule != null;
+
+    if (!context.watch<AuthProvider>().isAdminMode) {
+      return Scaffold(
+        backgroundColor: AppTheme.warmIvory,
+        appBar: AppBar(title: const Text('Jadwal')),
+        body: const Center(
+          child: Text('Akses ditolak. Hanya admin yang dapat mengelola jadwal.'),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
@@ -109,12 +126,47 @@ class _AddEditServiceScheduleScreenState
                 Consumer<PelayaniProvider>(
                   builder: (context, provider, _) {
                     if (provider.isLoading) {
-                      return const CircularProgressIndicator();
+                      return const Row(
+                        children: [
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 12),
+                          Text('Memuat daftar pelayan...'),
+                        ],
+                      );
+                    }
+
+                    if (provider.errorMessage != null) {
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              provider.errorMessage!,
+                              style: const TextStyle(color: AppTheme.errorColor),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: provider.loadAllPelayan,
+                            child: const Text('Coba Lagi'),
+                          ),
+                        ],
+                      );
                     }
 
                     final pelayaniList = provider.allPelayan
                         .where((p) => p.isAktif)
                         .toList();
+
+                    if (pelayaniList.isEmpty) {
+                      return const Text(
+                        'Belum ada pelayan yang tersedia. Tambahkan data pelayan aktif '
+                        'terlebih dahulu di menu Kelola Pelayan.',
+                        style: TextStyle(color: AppTheme.mutedCharcoal),
+                      );
+                    }
 
                     return DropdownButtonFormField<Pelayan>(
                       initialValue: _selectedPelayan,
@@ -180,10 +232,13 @@ class _AddEditServiceScheduleScreenState
 
               // Date picker
               TextFormField(
+                key: ValueKey(_selectedDate),
                 readOnly: true,
+                initialValue: _selectedDate == null
+                    ? null
+                    : DateFormat('dd/MM/yyyy').format(_selectedDate!),
                 decoration: InputDecoration(
                   labelText: 'Tanggal',
-                  hintText: DateFormat('dd/MM/yyyy').format(_selectedDate),
                   prefixIcon: const Icon(Icons.calendar_today),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -192,7 +247,7 @@ class _AddEditServiceScheduleScreenState
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
-                    initialDate: _selectedDate,
+                    initialDate: _selectedDate ?? DateTime.now(),
                     firstDate: DateTime(2020),
                     lastDate: DateTime(2030),
                   );
@@ -200,7 +255,8 @@ class _AddEditServiceScheduleScreenState
                     setState(() => _selectedDate = picked);
                   }
                 },
-                validator: (_) => null,
+                validator: (_) =>
+                    _selectedDate == null ? 'Pilih tanggal' : null,
               ),
               const SizedBox(height: 16),
 
@@ -231,6 +287,17 @@ class _AddEditServiceScheduleScreenState
                   ),
                 ),
                 onTap: () => _selectTime(context, false),
+                validator: (_) {
+                  if (_startTimeController.text.isEmpty ||
+                      _endTimeController.text.isEmpty) {
+                    return 'Pilih jam mulai dan jam selesai';
+                  }
+                  if (_toMinutes(_endTimeController.text) <=
+                      _toMinutes(_startTimeController.text)) {
+                    return 'Jam selesai harus setelah jam mulai';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -317,6 +384,11 @@ class _AddEditServiceScheduleScreenState
     );
   }
 
+  int _toMinutes(String hhmm) {
+    final parts = hhmm.split(':');
+    return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+  }
+
   Future<void> _selectTime(BuildContext context, bool isStartTime) async {
     final currentTime =
         isStartTime ? _startTimeController.text : _endTimeController.text;
@@ -356,7 +428,7 @@ class _AddEditServiceScheduleScreenState
       if (isEditing) {
         final success = await provider.updateServiceSchedule(
           widget.schedule!.id,
-          serviceDate: _selectedDate,
+          serviceDate: _selectedDate!,
           startTime: _startTimeController.text,
           endTime: _endTimeController.text,
           serviceType: _namaJenisController.text,
@@ -371,6 +443,14 @@ class _AddEditServiceScheduleScreenState
           );
           Navigator.pop(context);
         }
+
+        if (!success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gagal menyimpan jadwal. Pastikan Anda admin lalu coba lagi.'),
+            ),
+          );
+        }
       } else {
         if (_selectedPelayan == null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -383,7 +463,7 @@ class _AddEditServiceScheduleScreenState
           pelayaniId: _selectedPelayan!.id,
           pelayaniName: _selectedPelayan!.nama,
           pelayaniPosition: _selectedPelayan!.posisi,
-          serviceDate: _selectedDate,
+          serviceDate: _selectedDate!,
           startTime: _startTimeController.text,
           endTime: _endTimeController.text,
           serviceType: _namaJenisController.text,
@@ -398,11 +478,22 @@ class _AddEditServiceScheduleScreenState
           );
           Navigator.pop(context);
         }
+
+        if (!success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gagal menyimpan jadwal. Pastikan Anda admin lalu coba lagi.'),
+            ),
+          );
+        }
       }
     } catch (e) {
+      debugPrint('Error saving service schedule: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          const SnackBar(
+            content: Text('Gagal menyimpan jadwal. Periksa koneksi lalu coba lagi.'),
+          ),
         );
       }
     } finally {

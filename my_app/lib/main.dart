@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart' show Intl;
 import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqflite_ffi;
@@ -25,10 +27,30 @@ import 'services/local_notification_service.dart';
 import 'utils/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/pending_approval_screen.dart';
 import 'screens/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load Indonesian date symbols once, before any DateFormat(..., 'id_ID') runs.
+  await initializeDateFormatting('id_ID');
+  Intl.defaultLocale = 'id_ID';
+
+  // In release builds show a friendly placeholder instead of a raw framework
+  // error; debug builds keep Flutter's red screen so real bugs stay visible.
+  if (kReleaseMode) {
+    ErrorWidget.builder = (details) => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Terjadi kesalahan saat menampilkan halaman ini. Silakan kembali dan coba lagi.',
+              textAlign: TextAlign.center,
+              textDirection: TextDirection.ltr,
+            ),
+          ),
+        );
+  }
 
   // Lock to portrait, make status bar transparent on both platforms
   await SystemChrome.setPreferredOrientations([
@@ -159,6 +181,10 @@ class _AuthGateState extends State<_AuthGate> {
       builder: (context, authProvider, child) {
         if (authProvider.isInitializing || !_minDurationElapsed) {
           return const SplashScreen();
+        }
+
+        if (authProvider.blockedStatus != null) {
+          return const PendingApprovalScreen();
         }
 
         if (authProvider.isLoggedIn) {

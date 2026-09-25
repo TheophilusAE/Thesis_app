@@ -1,0 +1,1063 @@
+flowchart TB
+ subgraph AUTH["AUTHENTICATION"]
+    direction TD
+        L_LOGIN["Login Screen"]
+        ISI_LOGIN[/"Enter email and password"/]
+        V_ISI{"All fields filled?"}
+        E_KOSONG[/"Please fill in all fields"/]
+        V_FORMAT{"Email format correct?"}
+        E_FORMAT[/"Incorrect email format"/]
+        V_PASS{"Password 6 or more characters?"}
+        E_PASS[/"Password must be at least 6 characters"/]
+        AUTH_SVR["Verify email and password with server"]
+        AUTH_OK{"Credentials match?"}
+        E_SALAH[/"Incorrect email or password"/]
+        L_DAFTAR["Registration Screen"]
+        ISI_FORM[/"Fill in name, email, password\nphone, ID number, address"/]
+        V_FORM{"All required fields filled?"}
+        E_FORM[/"Please complete the empty fields"/]
+        V_EMAIL_UNIK{"Email already in use?"}
+        E_EMAIL[/"Email already registered"/]
+        SIMPAN_AKUN["Create new account - status: awaiting approval"]
+        PAKSA_OUT["Temporary sign out from system"]
+        NOTIF_REG[/"Account created - waiting for admin approval"/]
+        L_LUPA["Forgot Password Screen"]
+        ISI_EMAIL_R[/"Enter your registered email"/]
+        V_FORMAT_R{"Email format correct?"}
+        E_FORMAT_R[/"Incorrect email format"/]
+        KIRIM_LINK["Send reset link to email"]
+        NOTIF_LINK[/"Link sent - check your email"/]
+        KLIK_LINK["User clicks link in email"]
+        ISI_PASS_R[/"Enter new password"/]
+        V_PASS_R{"Password meets requirements?"}
+        E_PASS_R[/"Minimum 6 characters"/]
+        SIMPAN_PASS["Save new password to server"]
+        NOTIF_PASS[/"Password changed successfully\nPlease log in again"/]
+  end
+ subgraph A_KA["Manage Members"]
+    direction TD
+        AA_LIST["List of all members"]
+        AA_ACT{"Action?"}
+        AA_DETAIL["View applicant data"]
+        AA_DEC{"Decision?"}
+        AA_AKTIF["Activate account and send notification"]
+        AA_TOLAK["Change status to rejected"]
+        AA_ADD[/"Fill in new member data"/]
+        AA_ADD_V{"Data complete?"}
+        AA_ADD_E[/"Please complete the data"/]
+        AA_ADD_S["Create and activate account"]
+        AA_EDIT[/"Edit name, phone, address, status"/]
+        AA_EDIT_S["Save changes"]
+        AA_DEL_C[/"Confirm delete?"/]
+        AA_DEL_D{"Sure?"}
+        AA_DEL_S["Delete member data"]
+  end
+ subgraph A_AP["Manage Roles"]
+    direction TD
+        AP_LIST["Member list with their roles"]
+        AP_PILIH[/"Select member to edit"/]
+        AP_UBAH[/"Check or uncheck roles"/]
+        AP_V{"Min. 1 role selected?"}
+        AP_E[/"Must select at least 1 role"/]
+        AP_S["Save new role assignment"]
+        AP_OK[/"Role updated successfully"/]
+  end
+ subgraph A_KP["Manage Volunteers"]
+    direction TD
+        KP_LIST["List of all volunteers"]
+        KP_ACT{"Action?"}
+        KP_ADD[/"Fill in name, phone, position"/]
+        KP_ADD_V{"Data complete?"}
+        KP_ADD_E[/"Please complete the data"/]
+        KP_ADD_S["Save new volunteer"]
+        KP_EDIT[/"Edit name, phone, position, status"/]
+        KP_EDIT_S["Save changes"]
+        KP_DEL_C[/"Confirm delete?"/]
+        KP_DEL_D{"Sure?"}
+        KP_DEL_J{"Active schedule still exists?"}
+        KP_DEL_B[/"Complete the schedule first"/]
+        KP_DEL_S["Delete volunteer data"]
+        KP_TOG@{ label: "Toggle this volunteer's active status" }
+  end
+ subgraph A_JI["Service Schedule"]
+    direction TD
+        JI_LIST["Service schedule list"]
+        JI_ACT{"Action?"}
+        JI_ADD[/"Select volunteer, date\ntime, service type"/]
+        JI_ADD_V{"Data complete?"}
+        JI_ADD_E[/"Please complete the data"/]
+        JI_ADD_S["Save new schedule"]
+        JI_NOTIF["Send reminder to assigned volunteer"]
+        JI_EDIT[/"Edit schedule details"/]
+        JI_EDIT_V{"Data valid?"}
+        JI_EDIT_E[/"Some data is incorrect"/]
+        JI_EDIT_S["Save changes"]
+        JI_DEL_C[/"Confirm delete?\nRelated data will also be deleted"/]
+        JI_DEL_D{"Sure?"}
+        JI_DEL_S["Delete schedule and all related data"]
+        JI_DETAIL["View full info and attendance status"]
+  end
+ subgraph A_JL["Training Schedule"]
+    direction TD
+        JL_LIST["Training schedule list"]
+        JL_ACT{"Action?"}
+        JL_ADD[/"Fill in title, date, time\nlocation, select volunteers"/]
+        JL_ADD_V{"Data complete and min. 1 volunteer?"}
+        JL_ADD_E[/"Complete data and select a volunteer"/]
+        JL_ADD_S["Save training schedule"]
+        JL_NOTIF["Send reminder to all volunteers"]
+        JL_EDIT[/"Edit training details"/]
+        JL_EDIT_S["Save changes"]
+        JL_DEL_C[/"Confirm delete?"/]
+        JL_DEL_D{"Sure?"}
+        JL_DEL_S["Delete training schedule"]
+  end
+ subgraph A_PK["Monitor Attendance"]
+    direction TD
+        PK_AMBIL["Fetch attendance data of all volunteers"]
+        PK_HITUNG["Count:\npresent, absent, unconfirmed"]
+        PK_TAMPIL["Display attendance table"]
+        PK_FILTER{"Filter data?"}
+        PK_SET[/"Select date range or volunteer name"/]
+        PK_APPLY["Display filtered data"]
+        PK_DETAIL{"View detail?"}
+        PK_SHOW["View details:\nname, schedule, status, reason"]
+        PK_EXIT[" "]
+  end
+ subgraph A_PP["Review Substitution Requests"]
+    direction TD
+        PP_AMBIL["Fetch unprocessed substitution requests"]
+        PP_CEK{"Any requests received?"}
+        PP_KOSONG[/"No substitution requests yet"/]
+        PP_LIST["Display request list"]
+        PP_PILIH["Select one request"]
+        PP_DETAIL["View requester, reason\nand proposed replacement"]
+        PP_KEP{"Admin decision?"}
+        PP_SETUJUI["Approve: update schedule and notify volunteer"]
+        PP_ALASAN[/"Write rejection reason"/]
+        PP_ALASAN_V{"Reason filled in?"}
+        PP_ALASAN_E[/"Must fill in reason first"/]
+        PP_TOLAK["Reject: notify volunteer"]
+  end
+ subgraph A_LM["View Member Feedback"]
+    direction TD
+        LM_AMBIL["Fetch all feedback from server"]
+        LM_HITUNG["Calculate average feedback rating"]
+        LM_TAMPIL["Display all feedback with ratings"]
+        LM_FILTER{"Filter?"}
+        LM_SET[/"Select feedback type or minimum rating"/]
+        LM_APPLY["Display filtered feedback"]
+        LM_DETAIL{"Tap a feedback item?"}
+        LM_BACA["Read full feedback content"]
+        LM_HAPUS{"Delete this feedback?"}
+        LM_KONFIRM[/"Confirm delete?"/]
+        LM_CEK{"Sure?"}
+        LM_DO["Delete this feedback"]
+        LM_EXIT[" "]
+  end
+ subgraph ADMIN["ADMIN FLOW"]
+    direction TD
+        A_HOME["Admin Home Screen\nChurch data summary"]
+        A_MENU{"Select admin menu"}
+        A_KA
+        A_AP
+        A_KP
+        A_JI
+        A_JL
+        A_PK
+        A_PP
+        A_LM
+  end
+ subgraph P_JI["My Service Schedule"]
+    direction TD
+        PJI_AMBIL["Fetch my assigned service schedule"]
+        PJI_CEK{"Any upcoming schedule?"}
+        PJI_KOSONG[/"No service schedule assigned to you yet"/]
+        PJI_LIST["Display my schedule:\ndate, time, service type"]
+        PJI_TAP{"Select a schedule?"}
+        PJI_DETAIL["View schedule details\nand confirmation status"]
+        PJI_NOW{"Confirm attendance right away?"}
+        P_EXIT1[" "]
+  end
+ subgraph P_JL["My Training Schedule"]
+    direction TD
+        PJL_AMBIL["Fetch training schedules I am involved in"]
+        PJL_CEK{"Any training schedule?"}
+        PJL_KOSONG[/"No training schedule for you yet"/]
+        PJL_LIST["Display training schedule:\nname, date, location"]
+        PJL_TAP{"Select a schedule?"}
+        PJL_DETAIL["View details:\ndescription and who else is involved"]
+        P_EXIT2[" "]
+  end
+ subgraph P_KK["Attendance Confirmation"]
+    direction TD
+        KK_AMBIL["Fetch my schedule with confirmation status"]
+        KK_CEK{"Anything to confirm?"}
+        KK_KOSONG[/"All schedules already confirmed"/]
+        KK_LIST["Display schedules with their status"]
+        KK_PILIH[/"Select schedule to confirm"/]
+        KK_SUDAH{"Already confirmed before?"}
+        KK_UBAH[/"Already confirmed - want to change?"/]
+        KK_UBAH_D{"Want to change?"}
+        KK_STATUS{"Confirm as?"}
+        KK_HADIR["Save: PRESENT"]
+        KK_ISI_ALASAN[/"Write reason for absence"/]
+        KK_ALASAN_V{"Reason filled in?"}
+        KK_ALASAN_E[/"Must fill in reason first"/]
+        KK_TIDAK["Save: ABSENT with reason"]
+        KK_OK[/"Confirmation saved\nAdmin will see this"/]
+  end
+ subgraph P_MG["Request Substitution"]
+    direction TD
+        MG_AMBIL["Fetch my schedules eligible for substitution"]
+        MG_CEK{"Any schedule eligible for substitution?"}
+        MG_KOSONG[/"No schedule available for substitution"/]
+        MG_LIST["Display schedules that can be substituted"]
+        MG_PILIH[/"Select schedule to be substituted"/]
+        MG_SUDAH{"Previous request already exists?"}
+        MG_ADA[/"A request is already being processed"/]
+        MG_FILL[/"Write reason for substitution\nSuggest replacement - optional"/]
+        MG_VAL{"Reason filled in?"}
+        MG_ERR[/"Must write reason first"/]
+        MG_KIRIM["Send substitution request to admin"]
+        MG_NOTIF["Send notification to admin"]
+        MG_OK[/"Request sent\nWaiting for admin decision"/]
+  end
+ subgraph PELAYAN["VOLUNTEER FLOW"]
+    direction TD
+        PEL_HOME["Volunteer Home Screen\nMy schedule and tasks"]
+        PEL_MENU{"Select menu"}
+        P_JI
+        P_JL
+        P_KK
+        P_MG
+  end
+ subgraph J_BA["Read Bible"]
+    direction TD
+        BA_MODE{"Choose reading mode?"}
+        BA_KITAB["Display list of Bible books"]
+        BA_PILIH_K[/"Select book name"/]
+        BA_PASAL["Display list of chapter numbers"]
+        BA_PILIH_P[/"Select chapter number"/]
+        BA_AYAT["Fetch verses from local database"]
+        BA_BACA["Display chapter content verse by verse"]
+        BA_NAV{"Navigate to?"}
+        BA_NEXT["Increment chapter number"]
+        BA_PREV["Decrement chapter number"]
+        J_EXIT1[" "]
+        BA_SEARCH[/"Type word or phrase to search"/]
+        BA_SEARCH_V{"At least 3 characters?"}
+        BA_SEARCH_E[/"Type at least 3 characters"/]
+        BA_CARI["Search across entire Bible"]
+        BA_HASIL{"Any results?"}
+        BA_KOSONG[/"No matching verses found"/]
+        BA_SHOW["Display matching verses list"]
+        BA_PILIH_H[/"Tap verse to open its chapter"/]
+  end
+ subgraph J_RH["Daily Devotional"]
+    direction TD
+        RH_AMBIL@{ label: "Fetch today's devotional from server" }
+        RH_CEK@{ label: "Today's devotional available?" }
+        RH_TAMPIL["Display devotional:\ntitle, verse, content, reflection, prayer"]
+        RH_NONE[/"No devotional for today yet\nTry again later"/]
+        RH_ARSIP{"Open past devotionals?"}
+        RH_LIST["Display devotional archive"]
+        RH_PILIH[/"Select devotional to read"/]
+        RH_READ["Display selected devotional content"]
+        J_EXIT2[" "]
+  end
+ subgraph J_QB["Reading Quest"]
+    direction TD
+        QB_AMBIL["Fetch quest list and my progress"]
+        QB_LIST["Display quests with completion percentage"]
+        QB_PILIH[/"Select quest to work on"/]
+        QB_STATUS{"Status of this quest?"}
+        QB_DONE_M[/"This quest is already completed"/]
+        QB_TASKS["Display reading task list in this quest"]
+        QB_PICK[/"Select one reading task"/]
+        QB_BACA["Open Bible and read the assigned chapter"]
+        QB_BACK["Return to task list"]
+        QB_MARK[/"Check: I have read this chapter"/]
+        QB_SAVE["Save task progress"]
+        QB_ALL{"All tasks completed?"}
+        QB_UPDATE["Update completion percentage in display"]
+        QB_FINISH["Mark quest as completed"]
+        QB_BADGE[/"Congratulations, badge earned\nQuest completed"/]
+  end
+ subgraph J_KJ["Digital Member Card"]
+    direction TD
+        KJ_AMBIL["Fetch profile data for digital card"]
+        KJ_CEK{"Card data available?"}
+        KJ_BELUM[/"Contact admin to activate your card"/]
+        KJ_TAMPIL["Display digital card:\nname, member number, ID number, QR code"]
+        KJ_SHARE{"Want to share?"}
+        KJ_GEN["Generate digital card image"]
+        KJ_KIRIM["Share via other applications"]
+        J_EXIT3[" "]
+  end
+ subgraph J_KM["Submit Feedback"]
+    direction TD
+        KM_JENIS{"Feedback for what?"}
+        KM_UMUM["Type: General"]
+        KM_ACARA_P[/"Select event from list"/]
+        KM_ACARA["Type: Specific event"]
+        KM_FILL[/"Select rating 1-5\nWrite your comment"/]
+        KM_ANON[/"Anonymous? Check the box if yes"/]
+        KM_VAL{"Rating and comment filled in?"}
+        KM_ERR[/"Please fill in rating and comment"/]
+        KM_KIRIM["Send feedback to server"]
+        KM_OK[/"Feedback sent successfully - thank you"/]
+  end
+ subgraph J_DA["Event Registration"]
+    direction TD
+        DA_AMBIL["Fetch list of currently open events"]
+        DA_CEK{"Any active events?"}
+        DA_EMPTY[/"No events are open at this time"/]
+        DA_LIST["Display event list:\ntitle, date, location"]
+        DA_PILIH[/"Select event of interest"/]
+        DA_DETAIL["View details:\ndescription, date, location, remaining seats"]
+        DA_PENUH{"Seats still available?"}
+        DA_FULL[/"Sorry, all seats are taken"/]
+        DA_FILL[/"Fill in number of attendees\nand family members joining"/]
+        DA_VAL{"Total attendees within remaining seats?"}
+        DA_OVER[/"Too many attendees\nExceeds remaining seats"/]
+        DA_DAFTAR["Register for this event"]
+        DA_OK[/"Registration successful"/]
+  end
+ subgraph J_DP["Prayer Request and Offering Info"]
+    direction TD
+        MD_FILL[/"Write your prayer request"/]
+        MD_VAL{"Prayer request filled in?"}
+        MD_ERR[/"Please write your prayer request first"/]
+        MD_KIRIM["Send prayer request"]
+        MD_OK[/"Prayer request received - God bless you"/]
+        IP_MENU["Display available offering methods"]
+        IP_PILIH{"Select method?"}
+        IP_QR["Display QR code to scan"]
+        IP_BANK["Display bank account number"]
+        IP_CASH["Offering box available during service"]
+  end
+ subgraph JEMAAT["MEMBER FLOW"]
+    direction TD
+        JEM_HOME["Member Home Screen\nBanner, Daily verse, Service schedule"]
+        JEM_MENU{"Select feature"}
+        J_BA
+        J_RH
+        J_QB
+        J_KJ
+        J_KM
+        J_DA
+        J_DP
+  end
+ subgraph SH_EP["Edit Profile"]
+    direction TD
+        EP_TAMPIL["Display my current profile data"]
+        EP_EDIT[/"Edit name, phone number, address"/]
+        EP_VAL{"Edited data valid?"}
+        EP_ERR[/"Something is incorrect - please check again"/]
+        EP_SAVE["Save changes to server"]
+        EP_OK[/"Profile updated successfully"/]
+  end
+ subgraph SH_GT["Switch Role View"]
+    direction TD
+        GT_LIST[/"Display my available roles"/]
+        GT_PILIH[/"Select which role to view as"/]
+        GT_SET["Switch display to selected role"]
+        GT_OK[/"Display switched successfully"/]
+  end
+ subgraph SH_LG["Sign Out"]
+    direction TD
+        KAK_C[/"Sure you want to sign out?"/]
+        KAK_D{"Choice?"}
+        KAK_BATAL["Close dialog - stay in app"]
+        KAK_DO["Clear login session and clean up data"]
+        KAK_DONE[/"Signed out successfully - goodbye"/]
+  end
+ subgraph SHARED["SHARED FEATURES"]
+    direction TD
+        SH_EP
+        SH_GT
+        SH_LG
+  end
+    START(["Open Application"]) --> INIT["Initialize services and connect to server"]
+    INIT --> CHK_SESI{"Previously logged in?"}
+    CHK_SESI -- Yes --> LOAD_PROFIL["Fetch user profile from server"]
+    CHK_SESI -- No --> L_LOGIN
+    L_LOGIN --> ISI_LOGIN & L_DAFTAR & L_LUPA
+    ISI_LOGIN --> V_ISI
+    V_ISI -- No --> E_KOSONG
+    E_KOSONG --> ISI_LOGIN
+    V_ISI -- Yes --> V_FORMAT
+    V_FORMAT -- No --> E_FORMAT
+    E_FORMAT --> ISI_LOGIN
+    V_FORMAT -- Yes --> V_PASS
+    V_PASS -- Too short --> E_PASS
+    E_PASS --> ISI_LOGIN
+    V_PASS -- OK --> AUTH_SVR
+    AUTH_SVR --> AUTH_OK
+    AUTH_OK -- No Match --> E_SALAH
+    E_SALAH --> L_LOGIN
+    L_DAFTAR --> ISI_FORM
+    ISI_FORM --> V_FORM
+    V_FORM -- No --> E_FORM
+    E_FORM --> ISI_FORM
+    V_FORM -- Yes --> V_EMAIL_UNIK
+    V_EMAIL_UNIK -- Already used --> E_EMAIL
+    E_EMAIL --> ISI_FORM
+    V_EMAIL_UNIK -- Available --> SIMPAN_AKUN
+    SIMPAN_AKUN --> PAKSA_OUT
+    PAKSA_OUT --> NOTIF_REG
+    NOTIF_REG --> L_LOGIN
+    L_LUPA --> ISI_EMAIL_R
+    ISI_EMAIL_R --> V_FORMAT_R
+    V_FORMAT_R -- No --> E_FORMAT_R
+    E_FORMAT_R --> ISI_EMAIL_R
+    V_FORMAT_R -- Yes --> KIRIM_LINK
+    KIRIM_LINK --> NOTIF_LINK
+    NOTIF_LINK --> KLIK_LINK
+    KLIK_LINK --> ISI_PASS_R
+    ISI_PASS_R --> V_PASS_R
+    V_PASS_R -- No --> E_PASS_R
+    E_PASS_R --> ISI_PASS_R
+    V_PASS_R -- Yes --> SIMPAN_PASS
+    SIMPAN_PASS --> NOTIF_PASS
+    NOTIF_PASS --> L_LOGIN
+    AUTH_OK -- Match --> LOAD_PROFIL
+    LOAD_PROFIL --> V_STATUS{"Account status?"}
+    V_STATUS -- Pending approval --> OUT1["Force sign out"]
+    OUT1 --> NOTIF_BELUM[/"Your account has not been approved by admin"/]
+    NOTIF_BELUM --> L_LOGIN
+    V_STATUS -- Rejected --> OUT2["Sign out"]
+    OUT2 --> NOTIF_TOLAK[/"Your account has been rejected by admin"/]
+    NOTIF_TOLAK --> L_LOGIN
+    V_STATUS -- Active --> SET_ROLE["Set display based on user role"]
+    SET_ROLE --> ROLE{"Log in as?"}
+    A_HOME --> A_MENU
+    AA_LIST --> AA_ACT
+    AA_ACT -- Approve new --> AA_DETAIL
+    AA_DETAIL --> AA_DEC
+    AA_DEC -- Approve --> AA_AKTIF
+    AA_AKTIF --> AA_LIST
+    AA_DEC -- Reject --> AA_TOLAK
+    AA_TOLAK --> AA_LIST
+    AA_ACT -- Add new --> AA_ADD
+    AA_ADD --> AA_ADD_V
+    AA_ADD_V -- No --> AA_ADD_E
+    AA_ADD_E --> AA_ADD
+    AA_ADD_V -- Yes --> AA_ADD_S
+    AA_ADD_S --> AA_LIST
+    AA_ACT -- Edit data --> AA_EDIT
+    AA_EDIT --> AA_EDIT_S
+    AA_EDIT_S --> AA_LIST
+    AA_ACT -- Delete --> AA_DEL_C
+    AA_DEL_C --> AA_DEL_D
+    AA_DEL_D -- Cancel --> AA_LIST
+    AA_DEL_D -- Delete --> AA_DEL_S
+    AA_DEL_S --> AA_LIST
+    AP_LIST --> AP_PILIH
+    AP_PILIH --> AP_UBAH
+    AP_UBAH --> AP_V
+    AP_V -- No --> AP_E
+    AP_E --> AP_UBAH
+    AP_V -- Yes --> AP_S
+    AP_S --> AP_OK
+    AP_OK --> AP_LIST
+    KP_LIST --> KP_ACT
+    KP_ACT -- Add --> KP_ADD
+    KP_ADD --> KP_ADD_V
+    KP_ADD_V -- No --> KP_ADD_E
+    KP_ADD_E --> KP_ADD
+    KP_ADD_V -- Yes --> KP_ADD_S
+    KP_ADD_S --> KP_LIST
+    KP_ACT -- Edit --> KP_EDIT
+    KP_EDIT --> KP_EDIT_S
+    KP_EDIT_S --> KP_LIST
+    KP_ACT -- Delete --> KP_DEL_C
+    KP_DEL_C --> KP_DEL_D
+    KP_DEL_D -- Cancel --> KP_LIST
+    KP_DEL_D -- Delete --> KP_DEL_J
+    KP_DEL_J -- Still exists --> KP_DEL_B
+    KP_DEL_B --> KP_LIST
+    KP_DEL_J -- None --> KP_DEL_S
+    KP_DEL_S --> KP_LIST
+    KP_ACT -- Toggle active --> KP_TOG
+    KP_TOG --> KP_LIST
+    JI_LIST --> JI_ACT
+    JI_ACT -- Add --> JI_ADD
+    JI_ADD --> JI_ADD_V
+    JI_ADD_V -- No --> JI_ADD_E
+    JI_ADD_E --> JI_ADD
+    JI_ADD_V -- Yes --> JI_ADD_S
+    JI_ADD_S --> JI_NOTIF
+    JI_NOTIF --> JI_LIST
+    JI_ACT -- Edit --> JI_EDIT
+    JI_EDIT --> JI_EDIT_V
+    JI_EDIT_V -- No --> JI_EDIT_E
+    JI_EDIT_E --> JI_EDIT
+    JI_EDIT_V -- Yes --> JI_EDIT_S
+    JI_EDIT_S --> JI_LIST
+    JI_ACT -- Delete --> JI_DEL_C
+    JI_DEL_C --> JI_DEL_D
+    JI_DEL_D -- Cancel --> JI_LIST
+    JI_DEL_D -- Delete --> JI_DEL_S
+    JI_DEL_S --> JI_LIST
+    JI_ACT -- View Detail --> JI_DETAIL
+    JI_DETAIL --> JI_LIST
+    JL_LIST --> JL_ACT
+    JL_ACT -- Add --> JL_ADD
+    JL_ADD --> JL_ADD_V
+    JL_ADD_V -- No --> JL_ADD_E
+    JL_ADD_E --> JL_ADD
+    JL_ADD_V -- Yes --> JL_ADD_S
+    JL_ADD_S --> JL_NOTIF
+    JL_NOTIF --> JL_LIST
+    JL_ACT -- Edit --> JL_EDIT
+    JL_EDIT --> JL_EDIT_S
+    JL_EDIT_S --> JL_LIST
+    JL_ACT -- Delete --> JL_DEL_C
+    JL_DEL_C --> JL_DEL_D
+    JL_DEL_D -- Cancel --> JL_LIST
+    JL_DEL_D -- Delete --> JL_DEL_S
+    JL_DEL_S --> JL_LIST
+    PK_AMBIL --> PK_HITUNG
+    PK_HITUNG --> PK_TAMPIL
+    PK_TAMPIL --> PK_FILTER
+    PK_FILTER -- Yes --> PK_SET
+    PK_SET --> PK_APPLY
+    PK_APPLY --> PK_TAMPIL
+    PK_FILTER -- No --> PK_DETAIL
+    PK_DETAIL -- Yes --> PK_SHOW
+    PK_SHOW --> PK_TAMPIL
+    PK_DETAIL -- No --> PK_EXIT
+    PP_AMBIL --> PP_CEK
+    PP_CEK -- None --> PP_KOSONG
+    PP_CEK -- Yes --> PP_LIST
+    PP_LIST --> PP_PILIH
+    PP_PILIH --> PP_DETAIL
+    PP_DETAIL --> PP_KEP
+    PP_KEP -- Approve --> PP_SETUJUI
+    PP_SETUJUI --> PP_LIST
+    PP_KEP -- Reject --> PP_ALASAN
+    PP_ALASAN --> PP_ALASAN_V
+    PP_ALASAN_V -- Not yet --> PP_ALASAN_E
+    PP_ALASAN_E --> PP_ALASAN
+    PP_ALASAN_V -- Yes --> PP_TOLAK
+    PP_TOLAK --> PP_LIST
+    LM_AMBIL --> LM_HITUNG
+    LM_HITUNG --> LM_TAMPIL
+    LM_TAMPIL --> LM_FILTER
+    LM_FILTER -- Yes --> LM_SET
+    LM_SET --> LM_APPLY
+    LM_APPLY --> LM_TAMPIL
+    LM_FILTER -- No --> LM_DETAIL
+    LM_DETAIL -- Yes --> LM_BACA
+    LM_BACA --> LM_HAPUS
+    LM_HAPUS -- No --> LM_TAMPIL
+    LM_HAPUS -- Yes --> LM_KONFIRM
+    LM_KONFIRM --> LM_CEK
+    LM_CEK -- Cancel --> LM_TAMPIL
+    LM_CEK -- Delete --> LM_DO
+    LM_DO --> LM_AMBIL
+    LM_DETAIL -- No --> LM_EXIT
+    A_MENU -- Manage Members --> AA_LIST
+    A_MENU -- Manage Roles --> AP_LIST
+    A_MENU -- Manage Volunteers --> KP_LIST
+    A_MENU -- Service Schedule --> JI_LIST
+    A_MENU -- Training Schedule --> JL_LIST
+    A_MENU -- Monitor Attendance --> PK_AMBIL
+    A_MENU -- Review Substitution --> PP_AMBIL
+    A_MENU -- View Feedback --> LM_AMBIL
+    ROLE -- Admin --> A_HOME
+    PEL_HOME --> PEL_MENU
+    PJI_AMBIL --> PJI_CEK
+    PJI_CEK -- None --> PJI_KOSONG
+    PJI_CEK -- Yes --> PJI_LIST
+    PJI_LIST --> PJI_TAP
+    PJI_TAP -- Yes --> PJI_DETAIL
+    PJI_DETAIL --> PJI_NOW
+    PJI_NOW -- No --> PJI_LIST
+    PJI_TAP -- No --> P_EXIT1
+    PJL_AMBIL --> PJL_CEK
+    PJL_CEK -- None --> PJL_KOSONG
+    PJL_CEK -- Yes --> PJL_LIST
+    PJL_LIST --> PJL_TAP
+    PJL_TAP -- Yes --> PJL_DETAIL
+    PJL_DETAIL --> PJL_LIST
+    PJL_TAP -- No --> P_EXIT2
+    KK_AMBIL --> KK_CEK
+    KK_CEK -- Nothing --> KK_KOSONG
+    KK_CEK -- Yes --> KK_LIST
+    KK_LIST --> KK_PILIH
+    KK_PILIH --> KK_SUDAH
+    KK_SUDAH -- Yes --> KK_UBAH
+    KK_UBAH --> KK_UBAH_D
+    KK_UBAH_D -- No --> KK_LIST
+    KK_UBAH_D -- Yes --> KK_STATUS
+    KK_SUDAH -- No --> KK_STATUS
+    KK_STATUS -- Can attend --> KK_HADIR
+    KK_HADIR --> KK_OK
+    KK_OK --> KK_LIST
+    KK_STATUS -- Cannot attend --> KK_ISI_ALASAN
+    KK_ISI_ALASAN --> KK_ALASAN_V
+    KK_ALASAN_V -- Not yet --> KK_ALASAN_E
+    KK_ALASAN_E --> KK_ISI_ALASAN
+    KK_ALASAN_V -- Yes --> KK_TIDAK
+    KK_TIDAK --> KK_OK
+    MG_AMBIL --> MG_CEK
+    MG_CEK -- None --> MG_KOSONG
+    MG_CEK -- Yes --> MG_LIST
+    MG_LIST --> MG_PILIH
+    MG_PILIH --> MG_SUDAH
+    MG_SUDAH -- Already exists --> MG_ADA
+    MG_ADA --> MG_LIST
+    MG_SUDAH -- Not yet --> MG_FILL
+    MG_FILL --> MG_VAL
+    MG_VAL -- Not yet --> MG_ERR
+    MG_ERR --> MG_FILL
+    MG_VAL -- Yes --> MG_KIRIM
+    MG_KIRIM --> MG_NOTIF
+    MG_NOTIF --> MG_OK
+    MG_OK --> MG_LIST
+    PEL_MENU -- My Service Schedule --> PJI_AMBIL
+    PEL_MENU -- My Training Schedule --> PJL_AMBIL
+    PEL_MENU -- Attendance Confirmation --> KK_AMBIL
+    PEL_MENU -- Request Substitution --> MG_AMBIL
+    PJI_NOW -- Yes --> KK_AMBIL
+    ROLE -- Volunteer --> PEL_HOME
+    JEM_HOME --> JEM_MENU
+    BA_MODE -- Read by chapter --> BA_KITAB
+    BA_KITAB --> BA_PILIH_K
+    BA_PILIH_K --> BA_PASAL
+    BA_PASAL --> BA_PILIH_P
+    BA_PILIH_P --> BA_AYAT
+    BA_AYAT --> BA_BACA
+    BA_BACA --> BA_NAV
+    BA_NAV -- Next chapter --> BA_NEXT
+    BA_NEXT --> BA_AYAT
+    BA_NAV -- Previous chapter --> BA_PREV
+    BA_PREV --> BA_AYAT
+    BA_NAV -- Select another book --> BA_KITAB
+    BA_NAV -- Done --> J_EXIT1
+    BA_MODE -- Search verse --> BA_SEARCH
+    BA_SEARCH --> BA_SEARCH_V
+    BA_SEARCH_V -- Not yet --> BA_SEARCH_E
+    BA_SEARCH_E --> BA_SEARCH
+    BA_SEARCH_V -- Yes --> BA_CARI
+    BA_CARI --> BA_HASIL
+    BA_HASIL -- None --> BA_KOSONG
+    BA_KOSONG --> BA_SEARCH
+    BA_HASIL -- Found --> BA_SHOW
+    BA_SHOW --> BA_PILIH_H
+    BA_PILIH_H --> BA_BACA
+    RH_AMBIL --> RH_CEK
+    RH_CEK -- Available --> RH_TAMPIL
+    RH_TAMPIL --> RH_ARSIP
+    RH_CEK -- Not available --> RH_NONE
+    RH_NONE --> RH_LIST
+    RH_ARSIP -- Yes --> RH_LIST
+    RH_LIST --> RH_PILIH
+    RH_PILIH --> RH_READ
+    RH_READ --> RH_LIST
+    RH_ARSIP -- No --> J_EXIT2
+    QB_AMBIL --> QB_LIST
+    QB_LIST --> QB_PILIH
+    QB_PILIH --> QB_STATUS
+    QB_STATUS -- Completed --> QB_DONE_M
+    QB_DONE_M --> QB_LIST
+    QB_STATUS -- In progress --> QB_TASKS
+    QB_TASKS --> QB_PICK
+    QB_PICK --> QB_BACA
+    QB_BACA --> QB_BACK
+    QB_BACK --> QB_MARK
+    QB_MARK --> QB_SAVE
+    QB_SAVE --> QB_ALL
+    QB_ALL -- Not yet --> QB_UPDATE
+    QB_UPDATE --> QB_TASKS
+    QB_ALL -- All done --> QB_FINISH
+    QB_FINISH --> QB_BADGE
+    QB_BADGE --> QB_LIST & SELESAI(["Done"])
+    KJ_AMBIL --> KJ_CEK
+    KJ_CEK -- Not available --> KJ_BELUM
+    KJ_CEK -- Available --> KJ_TAMPIL
+    KJ_TAMPIL --> KJ_SHARE
+    KJ_SHARE -- Yes --> KJ_GEN
+    KJ_GEN --> KJ_KIRIM
+    KJ_KIRIM --> KJ_TAMPIL
+    KJ_SHARE -- No --> J_EXIT3
+    KM_JENIS -- Church in general --> KM_UMUM
+    KM_UMUM --> KM_FILL
+    KM_JENIS -- Specific event --> KM_ACARA_P
+    KM_ACARA_P --> KM_ACARA
+    KM_ACARA --> KM_FILL
+    KM_FILL --> KM_ANON
+    KM_ANON --> KM_VAL
+    KM_VAL -- Not yet --> KM_ERR
+    KM_ERR --> KM_FILL
+    KM_VAL -- Yes --> KM_KIRIM
+    KM_KIRIM --> KM_OK
+    DA_AMBIL --> DA_CEK
+    DA_CEK -- None --> DA_EMPTY
+    DA_CEK -- Yes --> DA_LIST
+    DA_LIST --> DA_PILIH
+    DA_PILIH --> DA_DETAIL
+    DA_DETAIL --> DA_PENUH
+    DA_PENUH -- Full --> DA_FULL
+    DA_FULL --> DA_LIST
+    DA_PENUH -- Available --> DA_FILL
+    DA_FILL --> DA_VAL
+    DA_VAL -- Exceeds --> DA_OVER
+    DA_OVER --> DA_FILL
+    DA_VAL -- OK --> DA_DAFTAR
+    DA_DAFTAR --> DA_OK
+    DA_OK --> DA_LIST
+    MD_FILL --> MD_VAL
+    MD_VAL -- Not yet --> MD_ERR
+    MD_ERR --> MD_FILL
+    MD_VAL -- Yes --> MD_KIRIM
+    MD_KIRIM --> MD_OK
+    IP_MENU --> IP_PILIH
+    IP_PILIH -- QRIS --> IP_QR
+    IP_PILIH -- Bank Transfer --> IP_BANK
+    IP_PILIH -- In Person --> IP_CASH
+    JEM_MENU -- Read Bible --> BA_MODE
+    JEM_MENU -- Daily Devotional --> RH_AMBIL
+    JEM_MENU -- Reading Quest --> QB_AMBIL
+    JEM_MENU -- Member Card --> KJ_AMBIL
+    JEM_MENU -- Submit Feedback --> KM_JENIS
+    JEM_MENU -- Event Registration --> DA_AMBIL
+    JEM_MENU -- Prayer Request --> MD_FILL
+    JEM_MENU -- Offering Info --> IP_MENU
+    ROLE -- Member --> JEM_HOME
+    EP_TAMPIL --> EP_EDIT
+    EP_EDIT --> EP_VAL
+    EP_VAL -- No --> EP_ERR
+    EP_ERR --> EP_EDIT
+    EP_VAL -- Yes --> EP_SAVE
+    EP_SAVE --> EP_OK
+    EP_OK --> EP_TAMPIL & SELESAI
+    GT_LIST --> GT_PILIH
+    GT_PILIH --> GT_SET
+    GT_SET --> GT_OK
+    KAK_C --> KAK_D
+    KAK_D -- Cancel --> KAK_BATAL
+    KAK_D -- Sign Out --> KAK_DO
+    KAK_DO --> KAK_DONE
+    ROLE -- Edit Profile --> EP_TAMPIL
+    ROLE -- Switch Role View --> GT_LIST
+    ROLE -- Sign Out --> KAK_C
+    KAK_DONE --> L_LOGIN
+    GT_OK --> ROLE
+    PK_EXIT --> SELESAI
+    LM_EXIT --> SELESAI
+    PP_KOSONG --> SELESAI
+    P_EXIT1 --> SELESAI
+    P_EXIT2 --> SELESAI
+    PJI_KOSONG --> SELESAI
+    PJL_KOSONG --> SELESAI
+    KK_KOSONG --> SELESAI
+    MG_KOSONG --> SELESAI
+    J_EXIT1 --> SELESAI
+    J_EXIT2 --> SELESAI
+    J_EXIT3 --> SELESAI
+    KJ_BELUM --> SELESAI
+    DA_EMPTY --> SELESAI
+    KM_OK --> SELESAI
+    MD_OK --> SELESAI
+    IP_QR --> SELESAI
+    IP_BANK --> SELESAI
+    IP_CASH --> SELESAI
+    KAK_BATAL --> SELESAI
+
+    KP_TOG@{ shape: rect}
+    RH_AMBIL@{ shape: rect}
+    RH_CEK@{ shape: diamond}
+     L_LOGIN:::process
+     ISI_LOGIN:::io
+     V_ISI:::decision
+     E_KOSONG:::io
+     V_FORMAT:::decision
+     E_FORMAT:::io
+     V_PASS:::decision
+     E_PASS:::io
+     AUTH_SVR:::db
+     AUTH_OK:::decision
+     E_SALAH:::io
+     L_DAFTAR:::process
+     ISI_FORM:::io
+     V_FORM:::decision
+     E_FORM:::io
+     V_EMAIL_UNIK:::decision
+     E_EMAIL:::io
+     SIMPAN_AKUN:::db
+     PAKSA_OUT:::process
+     NOTIF_REG:::io
+     L_LUPA:::process
+     ISI_EMAIL_R:::io
+     V_FORMAT_R:::decision
+     E_FORMAT_R:::io
+     KIRIM_LINK:::db
+     NOTIF_LINK:::io
+     KLIK_LINK:::process
+     ISI_PASS_R:::io
+     V_PASS_R:::decision
+     E_PASS_R:::io
+     SIMPAN_PASS:::db
+     NOTIF_PASS:::io
+     AA_LIST:::admin
+     AA_ACT:::decision
+     AA_DETAIL:::admin
+     AA_DEC:::decision
+     AA_AKTIF:::db
+     AA_TOLAK:::db
+     AA_ADD:::io
+     AA_ADD_V:::decision
+     AA_ADD_E:::io
+     AA_ADD_S:::db
+     AA_EDIT:::io
+     AA_EDIT_S:::db
+     AA_DEL_C:::io
+     AA_DEL_D:::decision
+     AA_DEL_S:::db
+     AP_LIST:::admin
+     AP_PILIH:::io
+     AP_UBAH:::io
+     AP_V:::decision
+     AP_E:::io
+     AP_S:::db
+     AP_OK:::io
+     KP_LIST:::admin
+     KP_ACT:::decision
+     KP_ADD:::io
+     KP_ADD_V:::decision
+     KP_ADD_E:::io
+     KP_ADD_S:::db
+     KP_EDIT:::io
+     KP_EDIT_S:::db
+     KP_DEL_C:::io
+     KP_DEL_D:::decision
+     KP_DEL_J:::decision
+     KP_DEL_B:::io
+     KP_DEL_S:::db
+     KP_TOG:::db
+     JI_LIST:::admin
+     JI_ACT:::decision
+     JI_ADD:::io
+     JI_ADD_V:::decision
+     JI_ADD_E:::io
+     JI_ADD_S:::db
+     JI_NOTIF:::db
+     JI_EDIT:::io
+     JI_EDIT_V:::decision
+     JI_EDIT_E:::io
+     JI_EDIT_S:::db
+     JI_DEL_C:::io
+     JI_DEL_D:::decision
+     JI_DEL_S:::db
+     JI_DETAIL:::admin
+     JL_LIST:::admin
+     JL_ACT:::decision
+     JL_ADD:::io
+     JL_ADD_V:::decision
+     JL_ADD_E:::io
+     JL_ADD_S:::db
+     JL_NOTIF:::db
+     JL_EDIT:::io
+     JL_EDIT_S:::db
+     JL_DEL_C:::io
+     JL_DEL_D:::decision
+     JL_DEL_S:::db
+     PK_AMBIL:::db
+     PK_HITUNG:::process
+     PK_TAMPIL:::admin
+     PK_FILTER:::decision
+     PK_SET:::io
+     PK_APPLY:::admin
+     PK_DETAIL:::decision
+     PK_SHOW:::admin
+     PP_AMBIL:::db
+     PP_CEK:::decision
+     PP_KOSONG:::io
+     PP_LIST:::admin
+     PP_PILIH:::admin
+     PP_DETAIL:::admin
+     PP_KEP:::decision
+     PP_SETUJUI:::db
+     PP_ALASAN:::io
+     PP_ALASAN_V:::decision
+     PP_ALASAN_E:::io
+     PP_TOLAK:::db
+     LM_AMBIL:::db
+     LM_HITUNG:::process
+     LM_TAMPIL:::admin
+     LM_FILTER:::decision
+     LM_SET:::io
+     LM_APPLY:::admin
+     LM_DETAIL:::decision
+     LM_BACA:::admin
+     LM_HAPUS:::decision
+     LM_KONFIRM:::io
+     LM_CEK:::decision
+     LM_DO:::db
+     A_HOME:::admin
+     A_MENU:::decision
+     PJI_AMBIL:::db
+     PJI_CEK:::decision
+     PJI_KOSONG:::io
+     PJI_LIST:::pel
+     PJI_TAP:::decision
+     PJI_DETAIL:::pel
+     PJI_NOW:::decision
+     PJL_AMBIL:::db
+     PJL_CEK:::decision
+     PJL_KOSONG:::io
+     PJL_LIST:::pel
+     PJL_TAP:::decision
+     PJL_DETAIL:::pel
+     KK_AMBIL:::db
+     KK_CEK:::decision
+     KK_KOSONG:::io
+     KK_LIST:::pel
+     KK_PILIH:::io
+     KK_SUDAH:::decision
+     KK_UBAH:::io
+     KK_UBAH_D:::decision
+     KK_STATUS:::decision
+     KK_HADIR:::db
+     KK_ISI_ALASAN:::io
+     KK_ALASAN_V:::decision
+     KK_ALASAN_E:::io
+     KK_TIDAK:::db
+     KK_OK:::io
+     MG_AMBIL:::db
+     MG_CEK:::decision
+     MG_KOSONG:::io
+     MG_LIST:::pel
+     MG_PILIH:::io
+     MG_SUDAH:::decision
+     MG_ADA:::io
+     MG_FILL:::io
+     MG_VAL:::decision
+     MG_ERR:::io
+     MG_KIRIM:::db
+     MG_NOTIF:::db
+     MG_OK:::io
+     PEL_HOME:::pel
+     PEL_MENU:::decision
+     BA_MODE:::decision
+     BA_KITAB:::jem
+     BA_PILIH_K:::io
+     BA_PASAL:::jem
+     BA_PILIH_P:::io
+     BA_AYAT:::db
+     BA_BACA:::jem
+     BA_NAV:::decision
+     BA_NEXT:::jem
+     BA_PREV:::jem
+     BA_SEARCH:::io
+     BA_SEARCH_V:::decision
+     BA_SEARCH_E:::io
+     BA_CARI:::db
+     BA_HASIL:::decision
+     BA_KOSONG:::io
+     BA_SHOW:::jem
+     BA_PILIH_H:::io
+     RH_AMBIL:::db
+     RH_CEK:::decision
+     RH_TAMPIL:::jem
+     RH_NONE:::io
+     RH_ARSIP:::decision
+     RH_LIST:::jem
+     RH_PILIH:::io
+     RH_READ:::jem
+     QB_AMBIL:::db
+     QB_LIST:::jem
+     QB_PILIH:::io
+     QB_STATUS:::decision
+     QB_DONE_M:::io
+     QB_TASKS:::jem
+     QB_PICK:::io
+     QB_BACA:::jem
+     QB_BACK:::jem
+     QB_MARK:::io
+     QB_SAVE:::db
+     QB_ALL:::decision
+     QB_UPDATE:::jem
+     QB_FINISH:::db
+     QB_BADGE:::io
+     KJ_AMBIL:::db
+     KJ_CEK:::decision
+     KJ_BELUM:::io
+     KJ_TAMPIL:::jem
+     KJ_SHARE:::decision
+     KJ_GEN:::process
+     KJ_KIRIM:::process
+     KM_JENIS:::decision
+     KM_UMUM:::jem
+     KM_ACARA_P:::io
+     KM_ACARA:::jem
+     KM_FILL:::io
+     KM_ANON:::io
+     KM_VAL:::decision
+     KM_ERR:::io
+     KM_KIRIM:::db
+     KM_OK:::io
+     DA_AMBIL:::db
+     DA_CEK:::decision
+     DA_EMPTY:::io
+     DA_LIST:::jem
+     DA_PILIH:::io
+     DA_DETAIL:::jem
+     DA_PENUH:::decision
+     DA_FULL:::io
+     DA_FILL:::io
+     DA_VAL:::decision
+     DA_OVER:::io
+     DA_DAFTAR:::db
+     DA_OK:::io
+     MD_FILL:::io
+     MD_VAL:::decision
+     MD_ERR:::io
+     MD_KIRIM:::process
+     MD_OK:::io
+     IP_MENU:::jem
+     IP_PILIH:::decision
+     IP_QR:::jem
+     IP_BANK:::jem
+     IP_CASH:::jem
+     JEM_HOME:::jem
+     JEM_MENU:::decision
+     EP_TAMPIL:::process
+     EP_EDIT:::io
+     EP_VAL:::decision
+     EP_ERR:::io
+     EP_SAVE:::db
+     EP_OK:::io
+     GT_LIST:::io
+     GT_PILIH:::io
+     GT_SET:::process
+     GT_OK:::io
+     KAK_C:::io
+     KAK_D:::decision
+     KAK_BATAL:::process
+     KAK_DO:::process
+     KAK_DONE:::io
+     START:::terminator
+     INIT:::process
+     CHK_SESI:::decision
+     LOAD_PROFIL:::db
+     V_STATUS:::decision
+     OUT1:::process
+     NOTIF_BELUM:::io
+     OUT2:::process
+     NOTIF_TOLAK:::io
+     SET_ROLE:::process
+     ROLE:::decision
+     SELESAI:::terminator
+    classDef terminator fill:#2C3E50,color:#fff,stroke:#2C3E50
+    classDef process fill:#EBF5FB,color:#1A252F,stroke:#2980B9
+    classDef decision fill:#FEF9E7,color:#1A252F,stroke:#F39C12
+    classDef io fill:#EAF7F0,color:#1A252F,stroke:#27AE60
+    classDef db fill:#F5EEF8,color:#1A252F,stroke:#8E44AD
+    classDef admin fill:#D6EAF8,color:#1A252F,stroke:#2980B9
+    classDef pel fill:#D1F2EB,color:#1A252F,stroke:#1ABC9C
+    classDef jem fill:#FDEBD0,color:#1A252F,stroke:#E67E22

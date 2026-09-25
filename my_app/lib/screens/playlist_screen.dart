@@ -93,7 +93,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = context.watch<AuthProvider>().isAdmin;
+    final isAdmin = context.watch<AuthProvider>().currentDisplayRole == 'admin';
 
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,

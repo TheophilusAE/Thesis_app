@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/service_schedule.dart';
+import '../providers/auth_provider.dart';
 import '../providers/pelayan_provider.dart';
 import '../providers/service_schedule_provider.dart';
 import '../utils/app_theme.dart';
@@ -46,6 +47,7 @@ class _ServiceScheduleManagementScreenState
 
   @override
   Widget build(BuildContext context) {
+    final canManage = context.watch<AuthProvider>().isAdminMode;
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
@@ -121,8 +123,8 @@ class _ServiceScheduleManagementScreenState
                       icon: Icons.calendar_today_rounded,
                       title: 'Tidak Ada Jadwal Pelayanan',
                       description: 'Belum ada jadwal ibadah atau tugas pelayanan yang terdaftar.',
-                      actionLabel: 'Tambah Jadwal',
-                      onAction: _addNewSchedule,
+                      actionLabel: canManage ? 'Tambah Jadwal' : null,
+                      onAction: canManage ? _addNewSchedule : null,
                     ),
                   );
                 }
@@ -156,8 +158,8 @@ class _ServiceScheduleManagementScreenState
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _ServiceScheduleCard(
                         schedule: schedule,
-                        onEdit: () => _editSchedule(schedule),
-                        onDelete: () => _deleteSchedule(schedule),
+                        onEdit: canManage ? () => _editSchedule(schedule) : null,
+                        onDelete: canManage ? () => _deleteSchedule(schedule) : null,
                       ),
                     );
                   },
@@ -167,7 +169,7 @@ class _ServiceScheduleManagementScreenState
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: !canManage ? null : FloatingActionButton.extended(
         onPressed: _addNewSchedule,
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
@@ -242,13 +244,13 @@ class _ServiceScheduleManagementScreenState
 
 class _ServiceScheduleCard extends StatelessWidget {
   final ServiceSchedule schedule;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _ServiceScheduleCard({
     required this.schedule,
-    required this.onEdit,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -301,6 +303,7 @@ class _ServiceScheduleCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onEdit != null && onDelete != null)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

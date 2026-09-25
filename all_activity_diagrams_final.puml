@@ -1,0 +1,1597 @@
+' =====================================================================
+' SELURUH ACTIVITY DIAGRAM — SISTEM INFORMASI GEREJA
+' Bahasa: Indonesia (Tingkat Sarjana) | Tanpa SQL dan Kode Program
+' Total: 28 Diagram
+' =====================================================================
+
+@startuml 01_Ajukan_Penggantian_Tugas
+title Pelayan — Ajukan Penggantian Tugas
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Pelayan|
+start
+:Buka Halaman Pengajuan Penggantian Tugas;
+
+|Database|
+:Sistem mengambil daftar jadwal\npelayanan milik pelayan ini;
+
+|Pelayan|
+:Lihat Jadwal yang Dapat Digantikan;
+:Pilih Jadwal;
+:Isi Alasan Penggantian;
+:Isi Nama Pengganti (opsional);
+:Tap "Ajukan";
+
+|Aplikasi|
+if (Input valid?) then (ya)
+  |Database|
+  :Sistem menyimpan permintaan\npenggantian dengan status\n"Menunggu Keputusan";
+  |Aplikasi|
+  :Kirim notifikasi kepada Admin;
+  |Pelayan|
+  :Tampilkan "Permintaan\nTerkirim ke Admin";
+else (tidak)
+  |Pelayan|
+  :Tampilkan Error Validasi;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 02_Baca_Alkitab
+title Jemaat — Baca Alkitab
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Buka Fitur Alkitab;
+
+|SQLite Lokal|
+:Sistem mengambil daftar\nseluruh kitab yang tersedia;
+
+|Jemaat|
+:Lihat Daftar Kitab\n(Perjanjian Lama & Baru);
+
+if (Mode yang dipilih?) then (Baca)
+  :Pilih Kitab;
+  |SQLite Lokal|
+  :Sistem mengambil daftar pasal\ndari kitab yang dipilih;
+  |Jemaat|
+  :Pilih Nomor Pasal;
+  |SQLite Lokal|
+  :Sistem mengambil seluruh ayat\ndalam pasal yang dipilih;
+  |Jemaat|
+  :Baca Isi Pasal;
+  :Navigasi ke Pasal Berikut / Sebelum;
+else (Cari)
+  :Masukkan Kata Kunci;
+  |SQLite Lokal|
+  :Sistem mencari ayat yang\nmengandung kata kunci;
+  |Jemaat|
+  :Lihat Hasil Pencarian;
+  :Tap Hasil untuk Membuka Pasal;
+  |SQLite Lokal|
+  :Sistem mengambil isi pasal\ndari hasil pencarian;
+  |Jemaat|
+  :Baca Isi Pasal;
+  :Navigasi ke Pasal Berikut / Sebelum;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 03_Daftar_Akun
+title Daftar Akun
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Calon Jemaat|
+start
+:Buka Aplikasi;
+:Tap Tombol "Daftar";
+:Isi Formulir Pendaftaran\n(Nama, Email, No. HP, Password, NIK);
+:Tap Tombol "Daftar";
+
+|Aplikasi|
+if (Input valid?) then (ya)
+  |Supabase Auth|
+  :Sistem memproses pendaftaran akun;
+  if (Email sudah terdaftar?) then (ya)
+    |Calon Jemaat|
+    :Tampilkan "Email Sudah Terdaftar";
+  else (tidak)
+    :Sistem membuat akun baru;
+    |Database|
+    :Sistem menyimpan profil pengguna\ndengan peran "Jemaat" dan\nstatus "Menunggu Verifikasi";
+    |Supabase Auth|
+    :Sistem mengeluarkan pengguna\nsecara paksa hingga\ndisetujui Admin;
+    |Calon Jemaat|
+    :Tampilkan "Akun menunggu\nverifikasi Admin";
+  endif
+else (tidak)
+  |Calon Jemaat|
+  :Tampilkan Pesan Error Validasi;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 04_Daftar_Event
+title Jemaat — Daftar Event
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Buka Daftar Event;
+
+|Database|
+:Sistem mengambil seluruh\nevent yang sedang aktif;
+
+|Jemaat|
+:Lihat Daftar Event Aktif\n(Judul, Tanggal, Lokasi);
+:Pilih Event;
+:Lihat Detail Event;
+
+if (Kapasitas tersedia?) then (ya)
+  :Tap "Daftar";
+  :Isi Jumlah Peserta\n(Diri + Anggota Keluarga);
+
+  |Database|
+  :Sistem memeriksa sisa kapasitas;
+
+  if (Slot masih ada?) then (ya)
+    :Sistem menyimpan\ndata pendaftaran event;
+    |Jemaat|
+    :Tampilkan "Pendaftaran Berhasil!";
+  else (tidak)
+    |Jemaat|
+    :Tampilkan "Kapasitas Penuh";
+  endif
+else (tidak)
+  :Tampilkan "Event Penuh";
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 05_Edit_Data_Pengguna
+title Admin — Edit Data Pengguna
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Pilih Pengguna dari Daftar;
+:Tap Ikon Edit;
+:Ubah Data yang Diperlukan\n(Nama, HP, Alamat, Status, NIK);
+:Tap "Simpan";
+
+|Aplikasi|
+if (Input valid?) then (ya)
+  |Database|
+  :Sistem memperbarui\ndata profil pengguna;
+
+  if (Berhasil?) then (ya)
+    |Admin|
+    :Tampilkan "Data Berhasil Diperbarui";
+    |Aplikasi|
+    :Refresh Daftar Pengguna;
+  else (tidak)
+    |Admin|
+    :Tampilkan Pesan Error;
+  endif
+else (tidak)
+  |Admin|
+  :Tampilkan Error Validasi;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 06_Edit_Profil
+title Edit Profil
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Pengguna|
+start
+:Buka Tab Profil;
+:Tap "Edit Profil";
+:Ubah Data\n(Nama, No. HP, Alamat);
+:Tap "Simpan";
+
+|Aplikasi|
+if (Input valid?) then (ya)
+  |Database|
+  :Sistem memperbarui\ndata profil;
+
+  if (Berhasil?) then (ya)
+    |Aplikasi|
+    :Perbarui data sesi\npengguna yang aktif;
+    |Pengguna|
+    :Tampilkan "Profil\nBerhasil Diperbarui";
+    :Kembali ke Halaman Profil;
+  else (tidak)
+    |Pengguna|
+    :Tampilkan Pesan Error;
+  endif
+else (tidak)
+  |Pengguna|
+  :Tampilkan Error Validasi;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 07_Lupa_Kata_Sandi
+title Lupa Kata Sandi
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Pengguna|
+start
+:Tap "Lupa Password?";
+:Masukkan Alamat Email;
+:Tap "Kirim";
+
+|Aplikasi|
+if (Format email valid?) then (ya)
+  |Supabase Auth|
+  :Sistem mengirim email\nreset password;
+  |Aplikasi|
+  :Tampilkan "Link reset\ndikirim ke email";
+  |Pengguna|
+  :Buka Email & Klik Link Reset;
+  :Masukkan Password Baru;
+  :Tap "Simpan Password";
+  |Supabase Auth|
+  :Sistem memperbarui password;
+  |Pengguna|
+  :Tampilkan "Password\nBerhasil Diubah";
+  :Diarahkan ke Halaman Login;
+else (tidak)
+  |Pengguna|
+  :Tampilkan Error Format Email;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 08_Hapus_Pengguna
+title Admin — Hapus Pengguna
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Pilih Pengguna dari Daftar;
+:Tap Ikon "Hapus";
+
+|Aplikasi|
+:Tampilkan Dialog Konfirmasi\n"Hapus pengguna ini?\nTindakan tidak dapat dibatalkan";
+
+|Admin|
+if (Konfirmasi?) then (ya)
+  :Tap "Hapus";
+  |Database|
+  :Sistem menghapus akun pengguna\nbeserta seluruh data terkait;
+
+  if (Berhasil?) then (ya)
+    |Admin|
+    :Tampilkan "Pengguna\nBerhasil Dihapus";
+    |Aplikasi|
+    :Refresh Daftar Pengguna;
+  else (tidak)
+    |Admin|
+    :Tampilkan Pesan Error;
+  endif
+else (tidak)
+  :Tap "Batal";
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 09_Kelola_Data_Pelayan
+title Admin — Kelola Data Pelayan
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Manajemen Pelayan;
+
+|Database|
+:Sistem mengambil daftar\nseluruh pelayan gereja;
+
+|Admin|
+:Lihat Daftar Pelayan;
+
+if (Ubah Status Aktif?) then (ya)
+  :Tap Tombol Aktif / Nonaktif;
+  |Database|
+  :Sistem memperbarui\nstatus aktif pelayan;
+  |Admin|
+  :Tampilkan "Status\nBerhasil Diperbarui";
+
+else (tidak — pilih aksi)
+  if (Aksi yang dipilih?) then (Tambah)
+    :Tap "Tambah Pelayan";
+    :Isi Form\n(Nama, No. HP, Posisi,\nUser ID, Status Aktif);
+    :Tap "Simpan";
+    |Database|
+    :Sistem menyimpan\ndata pelayan baru;
+    |Admin|
+    :Tampilkan "Pelayan\nBerhasil Ditambahkan";
+
+  elseif (Edit?)
+    :Tap Ikon Edit;
+    :Ubah Data Pelayan;
+    :Tap "Simpan";
+    |Database|
+    :Sistem memperbarui\ndata pelayan;
+    |Admin|
+    :Tampilkan "Data\nBerhasil Diperbarui";
+
+  else (Hapus)
+    :Tap Ikon Hapus;
+    :Konfirmasi Dialog;
+    |Database|
+    :Sistem menghapus\ndata pelayan;
+    |Admin|
+    :Tampilkan "Pelayan\nBerhasil Dihapus";
+  endif
+endif
+
+:Refresh Daftar Pelayan;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 10_Kelola_Jadwal_Latihan
+title Admin — Kelola Jadwal Latihan
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Jadwal Latihan;
+
+|Database|
+:Sistem mengambil seluruh\njadwal latihan;
+
+|Admin|
+:Lihat Daftar Jadwal Latihan;
+
+if (Aksi yang dipilih?) then (Tambah)
+  :Tap "Tambah Jadwal Latihan";
+  :Isi Form\n(Judul, Tanggal, Waktu,\nLokasi, Pilih Pelayan);
+  :Tap "Simpan";
+  |Database|
+  :Sistem menyimpan\njadwal latihan baru;
+  :Sistem menyimpan notifikasi\nuntuk setiap pelayan terkait;
+  |Admin|
+  :Tampilkan "Jadwal Latihan\nDitambahkan";
+
+elseif (Edit?)
+  :Tap Ikon Edit;
+  :Perbarui Detail;
+  :Tap "Simpan";
+  |Database|
+  :Sistem memperbarui\njadwal latihan;
+  |Admin|
+  :Tampilkan "Jadwal Diperbarui";
+
+else (Hapus)
+  :Konfirmasi Dialog;
+  |Database|
+  :Sistem menghapus\njadwal latihan;
+  |Admin|
+  :Tampilkan "Jadwal Dihapus";
+endif
+
+:Refresh Daftar Jadwal;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 11_Kelola_Jadwal_Pelayanan
+title Admin — Kelola Jadwal Pelayanan
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Jadwal Pelayanan;
+
+|Database|
+:Sistem mengambil seluruh\njadwal pelayanan beserta\nnama pelayan yang ditugaskan;
+
+|Admin|
+:Lihat Daftar Jadwal;
+
+if (Aksi yang dipilih?) then (Tambah)
+  :Tap "Tambah Jadwal";
+  :Pilih Pelayan & Isi Detail\n(Tanggal, Waktu, Jenis Ibadah);
+  :Tap "Simpan";
+  |Database|
+  :Sistem menyimpan\njadwal pelayanan baru;
+  |Aplikasi|
+  :Jadwalkan notifikasi\nuntuk Pelayan;
+  |Admin|
+  :Tampilkan "Jadwal Ditambahkan";
+
+elseif (Edit?)
+  :Tap Ikon Edit;
+  :Perbarui Detail Jadwal;
+  :Tap "Simpan";
+  |Database|
+  :Sistem memperbarui\njadwal pelayanan;
+  |Admin|
+  :Tampilkan "Jadwal Diperbarui";
+
+else (Hapus)
+  :Konfirmasi Dialog;
+  |Database|
+  :Sistem menghapus jadwal\nbeserta data terkait;
+  |Admin|
+  :Tampilkan "Jadwal Dihapus";
+endif
+
+:Refresh Daftar Jadwal;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 12_Kelola_Role_Pengguna
+title Admin — Kelola Role Pengguna
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Manajemen Role;
+
+|Database|
+:Sistem mengambil daftar pengguna\nbeserta role masing-masing;
+
+|Admin|
+:Lihat Daftar Pengguna beserta Role;
+:Pilih Pengguna;
+:Centang / Uncentang Role\n(admin / pelayan / jemaat);
+:Tap "Simpan";
+
+|Aplikasi|
+if (Minimal 1 role dipilih?) then (ya)
+  |Database|
+  :Sistem memperbarui\nrole pengguna;
+  |Admin|
+  :Tampilkan "Role\nBerhasil Diperbarui";
+else (tidak)
+  |Admin|
+  :Tampilkan "Pilih\nMinimal 1 Role";
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 13_Kirim_Feedback
+title Jemaat — Kirim Feedback
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Buka Menu Kirim Feedback;
+
+|Aplikasi|
+:Tampilkan formulir pengisian feedback;
+
+|Jemaat|
+:Pilih Jenis Feedback\n(Acara atau Umum);
+:Tulis Pesan Feedback;
+:Beri Penilaian Bintang (1 sampai 5);
+:Aktifkan Opsi Anonim (opsional);
+:Tap "Kirim";
+
+|Aplikasi|
+if (Pesan terisi dan penilaian\nlebih dari nol?) then (ya)
+  |Database|
+  :Sistem menyimpan\ndata feedback;
+  |Aplikasi|
+  :Tampilkan "Feedback\nBerhasil Dikirim";
+  :Kembali ke halaman sebelumnya;
+else (tidak)
+  |Jemaat|
+  :Tampilkan Error\n"Pesan tidak boleh kosong";
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 14_Kirim_Permintaan_Doa
+title Jemaat — Kirim Permintaan Doa
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Buka Tab Beranda;
+:Tap Tombol "Doa";
+
+|Aplikasi|
+:Tampilkan lembar bawah\n"Permintaan Doa";
+
+|Jemaat|
+:Tulis Pokok Doa\ndi Kolom Teks;
+
+if (Pokok doa terisi?) then (ya)
+  :Tap "Kirim";
+  |Aplikasi|
+  :Tutup lembar bawah;
+  :Tampilkan notifikasi\n"Permintaan doa diterima.\nTuhan memberkati!";
+  |Jemaat|
+  :Kembali ke Beranda;
+else (tidak)
+  :Tampilkan Peringatan\n"Isi pokok doa";
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 15_Konfirmasi_Kehadiran
+title Pelayan — Konfirmasi Kehadiran
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Pelayan|
+start
+:Buka Konfirmasi Kehadiran;
+
+|Database|
+:Sistem mengambil jadwal mendatang\nbeserta status kehadiran pelayan;
+
+|Pelayan|
+:Lihat Daftar Jadwal Mendatang;
+:Pilih Jadwal;
+:Lihat Detail Jadwal;
+
+if (Status kehadiran?) then (Hadir)
+  :Tap "Konfirmasi Hadir";
+  |Database|
+  :Sistem menyimpan catatan\nkehadiran sebagai "hadir";
+  |Pelayan|
+  :Tampilkan "Kehadiran\nTerkonfirmasi";
+else (Tidak Hadir)
+  :Isi Alasan Ketidakhadiran;
+  :Tap "Tidak Hadir";
+  |Database|
+  :Sistem menyimpan catatan\nketidakhadiran beserta alasan;
+  |Pelayan|
+  :Tampilkan "Ketidakhadiran\nTercatat";
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 16_Lihat_Info_Persembahan
+title Jemaat — Lihat Info Persembahan
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Tap Tombol "Persembahan"\ndi Halaman Beranda;
+
+|Aplikasi|
+:Tampilkan pilihan\nmetode persembahan;
+
+|Jemaat|
+if (Metode yang dipilih?) then (QRIS)
+  |Aplikasi|
+  :Hasilkan dan tampilkan\nkode QR untuk dipindai;
+
+elseif (Transfer Bank?)
+  |Database|
+  :Sistem mengambil data\nrekening bank gereja;
+  |Aplikasi|
+  :Tampilkan nomor rekening\ndan nama pemilik rekening;
+
+else (Langsung)
+  |Database|
+  :Sistem mengambil jadwal\nibadah yang paling dekat;
+  |Aplikasi|
+  :Tampilkan jadwal ibadah\nuntuk membawa persembahan\nsecara langsung;
+endif
+
+|Jemaat|
+:Tutup Panel Persembahan;
+:Kembali ke Halaman Beranda;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 17_Lihat_Jadwal_Pelayanan
+title Pelayan — Lihat Jadwal Pelayanan
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Pelayan|
+start
+:Buka Tab Jadwal atau Beranda;
+
+|Database|
+:Sistem mengambil seluruh jadwal\npelayanan milik pelayan ini;
+
+|Aplikasi|
+:Pisahkan jadwal mendatang\ndan jadwal yang sudah lewat;
+
+|Pelayan|
+:Lihat Daftar Jadwal Mendatang\n(Tanggal, Waktu, Jenis Ibadah);
+
+if (Tap salah satu jadwal?) then (ya)
+  |Aplikasi|
+  :Tampilkan Detail Jadwal\n(Waktu, Posisi, Catatan);
+  |Pelayan|
+  :Baca Detail;
+else (tidak)
+  :Gulir Jadwal yang Sudah Lewat;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 18_Lihat_Kartu_Jemaat
+title Jemaat — Lihat Kartu Jemaat
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Buka "Kartu Jemaat";
+
+|Aplikasi|
+:Ambil data profil dari\nsesi yang sedang aktif;
+:Tampilkan Kartu Jemaat Digital\n(Nama, No. Anggota, NIK,\nStatus, Tanggal Bergabung);
+
+|Jemaat|
+:Lihat Kartu Jemaat Digital;
+
+if (Ingin berbagi?) then (ya)
+  :Tap "Bagikan";
+  |Aplikasi|
+  :Hasilkan tangkapan layar kartu;
+  |Jemaat|
+  :Pilih aplikasi tujuan berbagi;
+  :Kartu dibagikan;
+else (tidak)
+  :Tutup halaman;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 19_Lihat_Semua_Feedback
+title Admin — Lihat Semua Feedback
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Tinjau Feedback;
+
+|Database|
+:Sistem mengambil seluruh\ndata feedback beserta pengirim;
+
+|Aplikasi|
+:Hitung rating rata-rata;
+
+|Admin|
+:Lihat Statistik Rating;
+:Lihat Daftar Feedback\n(Rating, Pesan, Pengirim, Tanggal);
+
+if (Terapkan filter?) then (ya)
+  :Pilih Filter\n(Rating / Tanggal / Jenis);
+  |Aplikasi|
+  :Saring dan tampilkan\nulang data;
+  |Admin|
+  :Lihat Feedback Terfilter;
+else (tidak)
+  :Baca Isi Feedback;
+endif
+
+if (Hapus feedback yang\ntidak relevan?) then (ya)
+  :Tap Ikon Hapus;
+  :Konfirmasi Dialog;
+  |Database|
+  :Sistem menghapus\ndata feedback tersebut;
+  |Admin|
+  :Refresh Daftar Feedback;
+else (tidak)
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 20_Login
+title Login
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Pengguna|
+start
+:Buka Aplikasi;
+:Masukkan Email & Password;
+:Tap Tombol "Login";
+
+|Aplikasi|
+if (Input valid?) then (ya)
+  |Supabase Auth|
+  :Sistem memverifikasi kredensial;
+
+  if (Kredensial benar?) then (ya)
+    |Database|
+    :Sistem mengambil profil\npengguna dari tabel data;
+    |Aplikasi|
+    if (Status akun = pending?) then (ya)
+      |Supabase Auth|
+      :Sistem mengeluarkan\npengguna secara paksa;
+      |Pengguna|
+      :Tampilkan "Akun belum\ndiverifikasi Admin";
+    else (tidak — aktif)
+      |Aplikasi|
+      :Tentukan tampilan utama\nsesuai role pengguna;
+      |Pengguna|
+      :Tampilkan halaman utama\nsesuai role;
+    endif
+  else (tidak)
+    |Pengguna|
+    :Tampilkan "Email /\nPassword Salah";
+  endif
+else (tidak)
+  |Pengguna|
+  :Tampilkan Error Validasi;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 21_Logout
+title Logout
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Pengguna|
+start
+:Buka Tab Profil;
+:Tap Tombol "Keluar";
+
+|Aplikasi|
+:Tampilkan Dialog Konfirmasi\n"Apakah Anda yakin ingin keluar?";
+
+|Pengguna|
+if (Konfirmasi?) then (ya)
+  :Tap "Keluar";
+  |Supabase Auth|
+  :Sistem mengakhiri\nsesi yang sedang aktif;
+  |Aplikasi|
+  :Bersihkan data sesi pengguna;
+  :Reset tampilan ke kondisi awal;
+  |Pengguna|
+  :Diarahkan ke Halaman Login;
+else (tidak)
+  :Tap "Batal";
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 22_Monitor_Kehadiran_Pelayan
+title Admin — Monitor Kehadiran Pelayan
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Monitoring Kehadiran;
+
+|Database|
+:Sistem mengambil seluruh catatan\nkehadiran beserta nama pelayan\ndan informasi jadwal;
+
+|Aplikasi|
+:Kelompokkan data per jadwal\ndan hitung status kehadiran;
+
+|Admin|
+:Tampilkan Tabel Kehadiran\n(Hadir / Tidak Hadir / Belum);
+:Pilih Filter\n(Tanggal / Pelayan);
+
+|Aplikasi|
+:Terapkan filter pada data;
+
+|Admin|
+:Lihat Rekap Kehadiran\nHasil Filter;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 23_Notifikasi_Jadwal_Otomatis
+title Sistem — Notifikasi Jadwal Otomatis
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Aplikasi|
+start
+:Aplikasi dibuka;\npenjadwal notifikasi dijalankan;
+
+|Database|
+:Sistem mengambil seluruh\njadwal pelayanan yang akan datang;
+:Sistem mengambil seluruh\njadwal latihan yang akan datang;
+
+|Aplikasi|
+fork
+  :Proses setiap jadwal pelayanan;\nhitung waktu 1 hari sebelum tanggal;
+  :Jadwalkan pengingat\n"Jadwal Pelayanan Besok";
+fork again
+  :Proses setiap jadwal latihan;\nhitung waktu 1 hari sebelum tanggal;
+  :Jadwalkan pengingat\n"Jadwal Latihan Besok";
+end fork
+
+|Database|
+:Sistem menyimpan catatan notifikasi\nuntuk setiap pelayan yang bersangkutan;
+
+|Pelayan|
+:Terima Push Notification\ndi Perangkat;
+:Tap Notifikasi;
+
+|Aplikasi|
+:Arahkan ke halaman detail\njadwal yang terkait;
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 24_Quest_Baca_Alkitab
+title Jemaat — Quest Baca Alkitab
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Buka Quest Baca Alkitab;
+
+|SQLite Lokal|
+:Sistem mengambil daftar quest\nbeserta progres jemaat ini;
+
+|Jemaat|
+:Lihat Daftar Quest\ndan Bilah Progres;
+:Pilih Quest;
+:Baca Pasal yang\nDitugaskan Quest;
+:Tap "Tandai Selesai";
+
+|SQLite Lokal|
+:Sistem memperbarui\nprogres quest;
+
+if (Semua tugas selesai?) then (ya)
+  :Sistem menandai quest\nsebagai selesai dan\nmemberikan poin hadiah;
+  |Jemaat|
+  :Tampilkan Animasi Selamat\n& Badge Reward;
+else (tidak)
+  |Jemaat|
+  :Bilah Progres Diperbarui;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 25_Renungan_Harian
+title Jemaat — Renungan Harian
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Buka Renungan Harian;
+
+|Database|
+:Sistem mengambil\nrenungan untuk hari ini;
+
+if (Renungan hari ini tersedia?) then (ya)
+  |Aplikasi|
+  :Tampilkan renungan hari ini;
+  |Jemaat|
+  :Baca Renungan Hari Ini\n(Ayat Referensi, Isi,\nRefleksi, Doa Penutup);
+else (tidak)
+  |Jemaat|
+  :Tampilkan Pesan\n"Tidak ada renungan\nuntuk hari ini.";
+endif
+
+|Database|
+:Sistem mengambil daftar\nrenungan sebelumnya\nsebagai arsip;
+
+|Jemaat|
+:Lihat Daftar Arsip Renungan\n(Judul, Referensi Ayat, Tanggal);
+
+if (Pilih renungan dari arsip?) then (ya)
+  :Pilih Renungan;
+  |Aplikasi|
+  :Tampilkan isi renungan\nyang dipilih;
+  |Jemaat|
+  :Baca Renungan dari Arsip;
+else (tidak)
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 26_Tambah_Pengguna_Baru
+title Admin — Tambah Pengguna Baru
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Manajemen Pengguna;
+:Tap Tombol "Tambah";
+:Isi Form\n(Nama, Email, Password,\nRole, NIK, Status);
+:Tap "Simpan";
+
+|Aplikasi|
+if (Input valid?) then (ya)
+  |Supabase Auth|
+  :Sistem mendaftarkan\nakun baru;
+
+  if (Email sudah ada?) then (ya)
+    |Aplikasi|
+    :Tampilkan "Email\nSudah Terdaftar";
+  else (tidak)
+    |Aplikasi|
+    :Pulihkan sesi Admin\nyang sedang aktif;
+    |Database|
+    :Sistem menyimpan profil\npengguna baru dengan role\ndan status yang ditentukan;
+    |Admin|
+    :Tampilkan "Pengguna\nBerhasil Ditambahkan";
+    |Aplikasi|
+    :Refresh Daftar Pengguna;
+  endif
+else (tidak)
+  |Admin|
+  :Tampilkan Error Validasi;
+endif
+
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 27_Tinjau_Permintaan_Penggantian
+title Admin — Tinjau Permintaan Penggantian
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Permintaan Penggantian;
+
+|Database|
+:Sistem mengambil seluruh\npermintaan yang masih\nmenunggu keputusan;
+
+|Admin|
+:Lihat Daftar Permintaan Pending;
+:Pilih Permintaan;
+:Baca Detail\n(Jadwal, Alasan,\nPengganti yang Diusulkan);
+
+if (Keputusan Admin?) then (Setujui)
+  :Tap "Setujui";
+  |Database|
+  :Sistem memperbarui status\npermintaan menjadi "disetujui";
+  :Sistem memperbarui jadwal\ndengan nama pelayan pengganti;
+  :Sistem menyimpan notifikasi\nuntuk pelayan yang mengajukan;
+  |Admin|
+  :Tampilkan "Permintaan Disetujui";
+
+else (Tolak)
+  :Tulis Alasan Penolakan;
+  :Tap "Tolak";
+  |Database|
+  :Sistem memperbarui status\npermintaan menjadi "ditolak";
+  :Sistem menyimpan notifikasi\nuntuk pelayan yang mengajukan;
+  |Admin|
+  :Tampilkan "Permintaan Ditolak";
+endif
+
+:Refresh Daftar Permintaan;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 28_Verifikasi_Pendaftaran
+title Admin — Verifikasi Pendaftaran
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #1A5276
+skinparam ActivityFontColor white
+skinparam ActivityFontStyle bold
+skinparam ActivityFontSize 13
+skinparam ActivityBorderColor #154360
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ActivityDiamondFontStyle bold
+skinparam SwimlaneHeaderBackgroundColor #0D1F2D
+skinparam SwimlaneHeaderFontColor white
+skinparam SwimlaneHeaderFontStyle bold
+skinparam SwimlaneHeaderFontSize 13
+skinparam SwimlaneBackgroundColor white
+skinparam SwimlaneBorderColor #0D1F2D
+skinparam ArrowColor #1A2A4A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Manajemen Pengguna;
+:Filter: Tampilkan status "menunggu";
+
+|Database|
+:Sistem mengambil daftar\ncalon anggota yang\nmenunggu verifikasi;
+
+|Admin|
+:Lihat Daftar Calon Anggota;
+:Pilih Pengguna;
+:Periksa Data Profil\n(Nama, NIK, Alamat, dll.);
+
+if (Setujui keanggotaan?) then (ya)
+  :Tap "Setujui";
+  |Aplikasi|
+  :Proses persetujuan keanggotaan;
+  |Database|
+  :Sistem memperbarui status\npengguna menjadi "aktif";
+  :Sistem menyimpan notifikasi\nuntuk pengguna bahwa\nakun telah disetujui;
+  |Admin|
+  :Tampilkan "Pengguna\nBerhasil Diverifikasi";
+
+else (tidak)
+  :Tap "Tolak";
+  |Database|
+  :Sistem memperbarui status\npengguna menjadi "ditolak";
+  |Admin|
+  :Tampilkan "Pengguna Ditolak";
+endif
+
+:Refresh Daftar Menunggu;
+stop
+@enduml

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,11 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _identityNumberController = TextEditingController();
-  final _familyGroupController = TextEditingController();
-  final _addressController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _baptismStatus = 'Belum';
   String? _errorMessage;
 
   @override
@@ -31,9 +28,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _identityNumberController.dispose();
-    _familyGroupController.dispose();
-    _addressController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -48,10 +42,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: _emailController.text.trim(),
       phone: _phoneController.text.trim(),
       password: _passwordController.text,
-      identityNumber: _identityNumberController.text.trim(),
-      familyGroup: _familyGroupController.text.trim(),
-      address: _addressController.text.trim(),
-      baptismDate: _baptismStatus,
     );
 
     if (!mounted) return;
@@ -64,7 +54,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
               SizedBox(width: 10),
               Expanded(
-                child: Text('Pendaftaran berhasil! Akun Anda akan diverifikasi oleh admin gereja.'),
+                child: Text(
+                  'Registrasi berhasil. Akun Anda sedang menunggu verifikasi admin gereja.',
+                ),
               ),
             ],
           ),
@@ -78,7 +70,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final msg = authProvider.lastMessage ?? 'Pendaftaran gagal. Silakan periksa data Anda.';
+    var msg = authProvider.lastMessage ?? 'Pendaftaran gagal. Silakan periksa data Anda.';
+    if (kDebugMode && authProvider.lastRawError != null) {
+      msg = '$msg [debug: ${authProvider.lastRawError}]';
+    }
     setState(() => _errorMessage = msg);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -152,7 +147,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Lengkapi data diri Anda untuk terdaftar dalam basis data jemaat GPDI',
+                  'Lengkapi data dasar Anda untuk mendaftarkan akun jemaat.',
                   style: TextStyle(
                     fontSize: 14.5,
                     color: isDark ? const Color(0xFFA5A1A8) : AppTheme.secondaryText,
@@ -176,7 +171,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Setelah mendaftar, akun Anda akan diverifikasi oleh admin gereja sebelum seluruh fitur jemaat dapat diakses.',
+                          'Setelah mendaftar, akun Anda akan diverifikasi oleh admin gereja. Data jemaat lainnya (NIK, komsel, baptis, alamat) dapat dilengkapi di Profil setelah akun disetujui.',
                           style: TextStyle(
                             color: isDark ? const Color(0xFF2C3E50) : const Color(0xFF1E3A5F),
                             fontSize: 13.5,
@@ -267,7 +262,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       hintText: 'Minimal 6 karakter',
                       prefixIcon: Icons.lock_outline_rounded,
                       isPassword: true,
-                      textInputAction: TextInputAction.next,
+                      textInputAction: TextInputAction.done,
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Kata sandi tidak boleh kosong';
                         if (v.length < 6) return 'Kata sandi minimal 6 karakter';
@@ -278,85 +273,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Section 2: Data Jemaat & Domisili
-                _buildSectionCard(
-                  title: 'Data Jemaat & Domisili',
-                  icon: Icons.church_outlined,
-                  isDark: isDark,
-                  children: [
-                    AppTextField(
-                      controller: _identityNumberController,
-                      label: 'Nomor Identitas (NIK / KTP)',
-                      hintText: '16 digit NIK (opsional)',
-                      prefixIcon: Icons.credit_card_outlined,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: 16),
-                    AppTextField(
-                      controller: _familyGroupController,
-                      label: 'Kelompok Keluarga / Komsel',
-                      hintText: 'Nama KK atau wilayah komsel (opsional)',
-                      prefixIcon: Icons.groups_outlined,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Baptism Status Dropdown
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Status Baptis Selam',
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? const Color(0xFFF5F3F6) : AppTheme.textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E1C1F) : Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppTheme.borderColor),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _baptismStatus,
-                              isExpanded: true,
-                              icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'Belum',
-                                  child: Text('Belum Dibaptis Selam'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'Sudah',
-                                  child: Text('Sudah Dibaptis Selam'),
-                                ),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) setState(() => _baptismStatus = val);
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    AppTextField(
-                      controller: _addressController,
-                      label: 'Alamat Domisili',
-                      hintText: 'Alamat tempat tinggal saat ini (opsional)',
-                      prefixIcon: Icons.home_outlined,
-                      maxLines: 2,
-                      textInputAction: TextInputAction.done,
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 28),
 
                 // Submit Button
@@ -386,7 +302,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                         child: Text(
-                          'Masuk di Sini',
+                          'Masuk di sini',
                           style: TextStyle(
                             color: AppTheme.primary,
                             fontWeight: FontWeight.w700,

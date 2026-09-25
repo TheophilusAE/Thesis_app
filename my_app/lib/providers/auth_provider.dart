@@ -4,7 +4,11 @@ import '../models/user.dart';
 import '../services/supabase_service.dart';
 
 class AuthProvider with ChangeNotifier {
-  final SupabaseService _supabaseService = SupabaseService();
+  final SupabaseService _supabaseService;
+
+  AuthProvider({SupabaseService? service})
+      : _supabaseService = service ?? SupabaseService();
+
   User? _currentUser;
   bool _isLoggedIn = false;
   bool _isLoading = false;
@@ -12,13 +16,24 @@ class AuthProvider with ChangeNotifier {
   String? _lastMessage;
   late String _currentDisplayRole = 'jemaat';
   bool _suppressAuthEvents = false;
+  // Non-null when a session exists but the account is not approved yet
+  // ('pending' or 'rejected'). Approval (membership_status) is separate from
+  // Supabase email confirmation.
+  String? _blockedStatus;
+  String? _lastRawError; // debug aid only; never shown in release builds
 
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _isLoggedIn;
   bool get isLoading => _isLoading;
+  String? get blockedStatus => _blockedStatus;
+  String? get lastRawError => _lastRawError;
   bool get isInitializing => _isInitializing;
   String? get lastMessage => _lastMessage;
   bool get isAdmin => _currentUser?.hasRole('admin') ?? false;
+  /// True only when the account really holds the admin role AND the admin
+  /// view is active (an admin who switched to Jemaat/Pelayan view is not in
+  /// admin mode). Use this for admin-only UI and route guards.
+  bool get isAdminMode => isAdmin && _currentDisplayRole == 'admin';
   bool get isPelayan => _currentUser?.hasRole('pelayan') ?? false;
   bool get isJemaat => _currentUser?.hasRole('jemaat') ?? false;
   List<String> get userRoles => _currentUser?.roles ?? [];
@@ -26,6 +41,9 @@ class AuthProvider with ChangeNotifier {
   String get currentDisplayRole => _currentDisplayRole;
 
   String _mapError(dynamic e) {
+    // Always log the real exception; the user only sees a friendly message.
+    debugPrint('Auth error: $e');
+    _lastRawError = e.toString();
     final msg = e.toString().toLowerCase();
     if (msg.contains('email not confirmed') || msg.contains('email_not_confirmed')) {
       return 'Email belum dikonfirmasi. Periksa kotak masuk email Anda.';
@@ -44,13 +62,41 @@ class AuthProvider with ChangeNotifier {
     if (msg.contains('unable to validate email') || msg.contains('invalid email')) {
       return 'Format email tidak valid.';
     }
-    if (msg.contains('rate_limit') || msg.contains('over_request_rate_limit')) {
-      return 'Terlalu banyak percobaan. Tunggu beberapa saat.';
+    if (msg.contains('rate_limit') ||
+        msg.contains('rate limit') ||
+        msg.contains('over_request_rate_limit') ||
+        msg.contains('429')) {
+      return 'Terlalu banyak percobaan atau batas pengiriman email tercapai. Tunggu beberapa saat lalu coba lagi.';
+    }
+    if (msg.contains('database error saving new user')) {
+      return 'Server gagal menyimpan data akun baru. Hubungi admin gereja.';
+    }
+    if (msg.contains('signup') && msg.contains('disabled')) {
+      return 'Pendaftaran akun baru sedang dinonaktifkan.';
     }
     if (msg.contains('network') || msg.contains('socket') || msg.contains('connection')) {
       return 'Tidak ada koneksi internet. Periksa jaringan Anda.';
     }
     return 'Terjadi kesalahan. Silakan coba lagi.';
+  }
+
+  /// Statuses treated as approved. 'verified' is a legacy value the admin
+  /// screen already normalizes to 'active'.
+  static bool isApprovedStatus(String status) =>
+      status == 'active' || status == 'verified';
+
+  /// Single access gate: only approved accounts (or admins) count as logged
+  /// in; anything else with a session is held on the waiting screen.
+  void _applyAccessGate() {
+    final user = _currentUser;
+    if (user == null) {
+      _isLoggedIn = false;
+      _blockedStatus = null;
+      return;
+    }
+    final approved = user.hasRole('admin') || isApprovedStatus(user.membershipStatus);
+    _isLoggedIn = approved;
+    _blockedStatus = approved ? null : user.membershipStatus;
   }
 
   void init() {
@@ -60,10 +106,10 @@ class AuthProvider with ChangeNotifier {
       final session = data.session;
 
       if (event == AuthChangeEvent.signedIn && session != null) {
-        _isLoggedIn = true;
         _loadUserData(session.user.id);
       } else if (event == AuthChangeEvent.signedOut) {
         _isLoggedIn = false;
+        _blockedStatus = null;
         _currentUser = null;
         _currentDisplayRole = 'jemaat';
         notifyListeners();
@@ -85,16 +131,17 @@ class AuthProvider with ChangeNotifier {
     try {
       final user = _supabaseService.getCurrentUser();
       if (user != null) {
-        _isLoggedIn = true;
         await _loadUserData(user.id);
       } else {
         _isLoggedIn = false;
+        _blockedStatus = null;
         _currentUser = null;
         _currentDisplayRole = 'jemaat';
       }
     } catch (e) {
       _lastMessage = _mapError(e);
       _isLoggedIn = false;
+      _blockedStatus = null;
     } finally {
       _isLoading = false;
       _isInitializing = false;
@@ -135,6 +182,8 @@ class AuthProvider with ChangeNotifier {
         );
       }
 
+      _applyAccessGate();
+
       if (_currentUser!.hasRole('admin')) {
         _currentDisplayRole = 'admin';
       } else if (_currentUser!.hasRole('pelayan')) {
@@ -144,7 +193,22 @@ class AuthProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
+      // Without a verified profile we cannot prove approval: fail closed.
+      _currentUser = null;
+      _isLoggedIn = false;
+      _blockedStatus = null;
     }
+    notifyListeners();
+  }
+
+  /// Re-reads the profile (used by the waiting-for-approval screen).
+  Future<void> refreshApprovalStatus() async {
+    final user = _supabaseService.getCurrentUser();
+    if (user == null) return;
+    _isLoading = true;
+    notifyListeners();
+    await _loadUserData(user.id);
+    _isLoading = false;
     notifyListeners();
   }
 
@@ -153,13 +217,12 @@ class AuthProvider with ChangeNotifier {
     required String email,
     required String phone,
     required String password,
-    String? identityNumber,
-    String? familyGroup,
-    String? address,
-    String? baptismDate,
   }) async {
     _isLoading = true;
     _lastMessage = null;
+    // signUp may auto-sign-in the new (unapproved) user; keep that from
+    // briefly flipping app state before we sign out below.
+    _suppressAuthEvents = true;
     notifyListeners();
 
     try {
@@ -168,15 +231,6 @@ class AuthProvider with ChangeNotifier {
         password: password,
         nama: name,
         phone: phone,
-        additionalData: {
-          if (identityNumber != null && identityNumber.isNotEmpty)
-            'identity_number': identityNumber,
-          if (familyGroup != null && familyGroup.isNotEmpty)
-            'family_group': familyGroup,
-          if (address != null && address.isNotEmpty) 'address': address,
-          if (baptismDate != null && baptismDate.isNotEmpty)
-            'baptism_date': baptismDate,
-        },
       );
 
       if (response.user == null) {
@@ -191,8 +245,10 @@ class AuthProvider with ChangeNotifier {
         await _supabaseService.signOut();
       } catch (_) {}
       _isLoggedIn = false;
+      _blockedStatus = null;
+      _currentUser = null;
       _lastMessage =
-          'Registrasi berhasil! Akun Anda sedang menunggu verifikasi admin. Anda dapat login setelah akun disetujui.';
+          'Registrasi berhasil. Akun Anda sedang menunggu verifikasi admin gereja.';
 
       _isLoading = false;
       notifyListeners();
@@ -202,6 +258,8 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
+    } finally {
+      _suppressAuthEvents = false;
     }
   }
 
@@ -221,6 +279,8 @@ class AuthProvider with ChangeNotifier {
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     _lastMessage = null;
+    // Login decides access itself; keep the auth listener from racing it.
+    _suppressAuthEvents = true;
     notifyListeners();
 
     try {
@@ -232,13 +292,16 @@ class AuthProvider with ChangeNotifier {
       if (response.user != null) {
         await _loadUserData(response.user!.id);
 
-        // Block accounts that haven't been verified by admin yet
-        if (_currentUser?.membershipStatus == 'pending') {
+        // Block accounts admin has not approved (pending) or has rejected.
+        final blocked = _blockedStatus;
+        if (blocked != null || _currentUser == null) {
           _isLoggedIn = false;
+          _blockedStatus = null;
           _currentUser = null;
           _currentDisplayRole = 'jemaat';
-          _lastMessage =
-              'Akun Anda belum diverifikasi admin. Silakan tunggu persetujuan untuk dapat login.';
+          _lastMessage = blocked == 'rejected'
+              ? 'Pendaftaran akun Anda ditolak. Silakan hubungi admin gereja.'
+              : 'Akun Anda belum diverifikasi admin. Silakan tunggu persetujuan untuk dapat login.';
           try {
             await _supabaseService.signOut();
           } catch (_) {}
@@ -247,7 +310,6 @@ class AuthProvider with ChangeNotifier {
           return false;
         }
 
-        _isLoggedIn = true;
         _lastMessage = 'Login berhasil';
         _isLoading = false;
         notifyListeners();
@@ -264,6 +326,8 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
+    } finally {
+      _suppressAuthEvents = false;
     }
   }
 
@@ -287,6 +351,7 @@ class AuthProvider with ChangeNotifier {
       _lastMessage = 'Error logout: $e';
     }
     _isLoggedIn = false;
+    _blockedStatus = null;
     _currentUser = null;
     _currentDisplayRole = 'jemaat';
     notifyListeners();
@@ -299,7 +364,11 @@ class AuthProvider with ChangeNotifier {
         {
           'nama': updatedUser.name,
           'phone': updatedUser.phone,
-          if (updatedUser.address != null) 'address': updatedUser.address,
+          // Extended Jemaat data is optional: blank -> NULL, never a placeholder.
+          'address': updatedUser.address,
+          'identity_number': updatedUser.identityNumber,
+          'family_group': updatedUser.familyGroup,
+          'baptism_date': updatedUser.baptismDate,
         },
       );
       _currentUser = updatedUser;

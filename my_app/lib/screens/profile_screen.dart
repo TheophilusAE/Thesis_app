@@ -152,8 +152,32 @@ class _ProfileBody extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (user.identityNumber == null ||
+                    user.familyGroup == null ||
+                    user.baptismDate == null ||
+                    user.address == null) ...[
+                  const SizedBox(height: 14),
+                  _ActionButton(
+                    icon: Icons.assignment_ind_outlined,
+                    label: 'Lengkapi Data Jemaat',
+                    color: Theme.of(context).colorScheme.primary,
+                    outlined: true,
+                    onTap: () => showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      showDragHandle: true,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (ctx) => Padding(
+                        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+                        child: _EditProfileSheet(user: user),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
-                if (user.hasRole('admin')) ...[
+                if (context.watch<AuthProvider>().isAdminMode) ...[
                   _ActionButton(
                     icon: Icons.manage_accounts_rounded,
                     label: 'Kelola Data Pengguna',
@@ -609,7 +633,12 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _addressCtrl;
+  late final TextEditingController _nikCtrl;
+  late final TextEditingController _familyGroupCtrl;
+  String? _baptism;
   bool _saving = false;
+
+  static String? _blankToNull(String v) => v.trim().isEmpty ? null : v.trim();
 
   @override
   void initState() {
@@ -617,6 +646,10 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _nameCtrl = TextEditingController(text: widget.user.name);
     _phoneCtrl = TextEditingController(text: widget.user.phone);
     _addressCtrl = TextEditingController(text: widget.user.address ?? '');
+    _nikCtrl = TextEditingController(text: widget.user.identityNumber ?? '');
+    _familyGroupCtrl = TextEditingController(text: widget.user.familyGroup ?? '');
+    final b = widget.user.baptismDate;
+    _baptism = (b == 'Sudah' || b == 'Belum') ? b : null;
   }
 
   @override
@@ -624,6 +657,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _addressCtrl.dispose();
+    _nikCtrl.dispose();
+    _familyGroupCtrl.dispose();
     super.dispose();
   }
 
@@ -636,12 +671,35 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       return;
     }
 
+    // NIK is optional, but if provided it must be a 16-digit number.
+    final nik = _nikCtrl.text.trim();
+    if (nik.isNotEmpty && !RegExp(r'^\d{16}$').hasMatch(nik)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('NIK harus 16 digit angka')),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
 
-    final updatedUser = widget.user.copyWith(
+    final u = widget.user;
+    // Built directly (not copyWith) so cleared optional fields become null.
+    final updatedUser = User(
+      id: u.id,
       name: name,
+      email: u.email,
       phone: _phoneCtrl.text.trim(),
-      address: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+      roles: u.roles,
+      membershipStatus: u.membershipStatus,
+      identityNumber: _blankToNull(nik),
+      familyGroup: _blankToNull(_familyGroupCtrl.text),
+      membershipType: u.membershipType,
+      memberCardNumber: u.memberCardNumber,
+      profileImage: u.profileImage,
+      address: _blankToNull(_addressCtrl.text),
+      birthDate: u.birthDate,
+      baptismDate: _baptism,
+      memberSince: u.memberSince,
     );
 
     final auth = context.read<AuthProvider>();
@@ -669,14 +727,14 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Edit Profil',
+            'Edit Profil & Lengkapi Data Jemaat',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
@@ -699,9 +757,39 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
           ),
           const SizedBox(height: 14),
           TextFormField(
+            controller: _nikCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Nomor Identitas (NIK / KTP) (opsional)',
+              prefixIcon: Icon(Icons.credit_card_outlined),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _familyGroupCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Kelompok Keluarga / Komsel (opsional)',
+              prefixIcon: Icon(Icons.groups_outlined),
+            ),
+          ),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<String>(
+            initialValue: _baptism,
+            decoration: const InputDecoration(
+              labelText: 'Status Baptis Selam (opsional)',
+              prefixIcon: Icon(Icons.water_drop_outlined),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Belum', child: Text('Belum Dibaptis Selam')),
+              DropdownMenuItem(value: 'Sudah', child: Text('Sudah Dibaptis Selam')),
+            ],
+            onChanged: (v) => setState(() => _baptism = v),
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
             controller: _addressCtrl,
             decoration: const InputDecoration(
-              labelText: 'Alamat (opsional)',
+              labelText: 'Alamat Domisili (opsional)',
               prefixIcon: Icon(Icons.home_outlined),
               alignLabelWithHint: true,
             ),

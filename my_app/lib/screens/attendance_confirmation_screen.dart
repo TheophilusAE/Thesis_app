@@ -243,12 +243,14 @@ class _AttendanceConfirmationScreenState
     );
 
     if (confirmed == true) {
-      await _attendanceProvider.cancelConfirmation(confirmation.id);
+      final success = await _attendanceProvider.cancelConfirmation(confirmation.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Konfirmasi kehadiran dibatalkan'),
-          backgroundColor: AppTheme.warningColor,
+        SnackBar(
+          content: Text(success
+              ? 'Konfirmasi kehadiran dibatalkan'
+              : 'Gagal membatalkan konfirmasi kehadiran'),
+          backgroundColor: success ? AppTheme.warningColor : AppTheme.errorColor,
         ),
       );
     }
@@ -545,6 +547,9 @@ class _AttendanceConfirmationScreenState
           const SizedBox(height: 12),
 
           // Actions
+          // Only a manual, self-confirmed record can be un-confirmed here —
+          // a QR check-in was verified in person by a pelayan and isn't
+          // self-editable (also enforced server-side via RLS).
           if (!isConfirmed)
             SizedBox(
               width: double.infinity,
@@ -556,7 +561,7 @@ class _AttendanceConfirmationScreenState
                 onPressed: () => _showConfirmSheet(confirmation, schedule),
               ),
             )
-          else
+          else if (confirmation.checkInMethod == 'manual')
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -570,6 +575,17 @@ class _AttendanceConfirmationScreenState
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: const [
+                Icon(Icons.qr_code_rounded, size: 14, color: AppTheme.neutralMedium),
+                SizedBox(width: 6),
+                Text(
+                  'Dicatat via QR oleh pelayan — tidak dapat dibatalkan sendiri',
+                  style: TextStyle(fontSize: 11.5, color: AppTheme.neutralMedium, fontStyle: FontStyle.italic),
                 ),
               ],
             ),

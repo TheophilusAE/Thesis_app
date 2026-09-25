@@ -1,0 +1,567 @@
+' =====================================================================
+' ACTIVITY DIAGRAMS — PERBAIKAN
+' Fix header: menggunakan <style> block untuk target header swimlane
+' Total: 7 Diagram + 1 Referensi
+' =====================================================================
+
+' ─── REFERENSI STYLE ─────────────────────────────────────────────────
+
+@startuml 22_Admin_Monitor_Kehadiran_Referensi
+title Admin — Monitor Kehadiran Pelayan
+
+<style>
+swimlane {
+  header {
+    BackGroundColor #1E3A5F
+    FontColor white
+    FontStyle bold
+    FontSize 13
+  }
+  BackGroundColor white
+  BorderColor #1E3A5F
+  LineColor #1E3A5F
+}
+</style>
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #5B9BD5
+skinparam ActivityFontColor white
+skinparam ActivityFontSize 12
+skinparam ActivityBorderColor #4A89C8
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ArrowColor #2E5D9A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Monitoring Kehadiran;
+
+|Database|
+:SELECT a.*, s.service_date,\ns.service_type, u.nama\nFROM attendance a\nJOIN schedules s ON a.schedule_id = s.id\nJOIN users u ON a.user_id = u.id;
+
+|Aplikasi|
+:Kelompokkan data per jadwal\n& hitung status kehadiran;
+
+|Admin|
+:Tampilkan Tabel Kehadiran\n(Hadir / Tidak Hadir / Belum);
+:Pilih Filter (Tanggal / Pelayan);
+
+|Aplikasi|
+:Terapkan filter pada data;
+
+|Admin|
+:Lihat Rekap Kehadiran\nHasil Filter;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 09_Admin_Kelola_Data_Pelayan
+title Admin — Kelola Data Pelayan
+
+<style>
+swimlane {
+  header {
+    BackGroundColor #1E3A5F
+    FontColor white
+    FontStyle bold
+    FontSize 13
+  }
+  BackGroundColor white
+  BorderColor #1E3A5F
+  LineColor #1E3A5F
+}
+</style>
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #5B9BD5
+skinparam ActivityFontColor white
+skinparam ActivityFontSize 12
+skinparam ActivityBorderColor #4A89C8
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ArrowColor #2E5D9A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Manajemen Pelayan;
+
+|Database|
+:SELECT * FROM pelayans\nORDER BY nama;
+
+|Admin|
+:Lihat Daftar Pelayan;
+
+if (Ubah Status Aktif?) then (ya)
+  :Tap Tombol Aktif / Nonaktif;
+
+  |Database|
+  :UPDATE pelayans\nSET is_active = !is_active\nWHERE id = pelayanId;
+
+  |Admin|
+  :Tampilkan "Status Berhasil Diperbarui";
+
+else (tidak — pilih aksi CRUD)
+
+  if (Aksi yang dipilih?) then (Tambah)
+    :Tap "Tambah Pelayan";
+    :Isi Form (Nama, No. HP,\nPosisi, User ID, Status Aktif);
+    :Tap "Simpan";
+
+    |Database|
+    :INSERT INTO pelayans\n(nama, phone, position,\nuser_id, is_active);
+
+    |Admin|
+    :Tampilkan "Pelayan Berhasil Ditambahkan";
+
+  elseif (Edit?)
+    :Tap Ikon Edit;
+    :Ubah Data Pelayan;
+    :Tap "Simpan";
+
+    |Database|
+    :UPDATE pelayans\nSET nama, phone, position\nWHERE id = pelayanId;
+
+    |Admin|
+    :Tampilkan "Data Berhasil Diperbarui";
+
+  else (Hapus)
+    :Tap Ikon Hapus;
+    :Konfirmasi Dialog Penghapusan;
+
+    |Database|
+    :DELETE FROM pelayans\nWHERE id = pelayanId;
+
+    |Admin|
+    :Tampilkan "Pelayan Berhasil Dihapus";
+  endif
+endif
+
+:Refresh Daftar Pelayan;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 13_Jemaat_Kirim_Feedback
+title Jemaat — Kirim Feedback
+
+<style>
+swimlane {
+  header {
+    BackGroundColor #1E3A5F
+    FontColor white
+    FontStyle bold
+    FontSize 13
+  }
+  BackGroundColor white
+  BorderColor #1E3A5F
+  LineColor #1E3A5F
+}
+</style>
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #5B9BD5
+skinparam ActivityFontColor white
+skinparam ActivityFontSize 12
+skinparam ActivityBorderColor #4A89C8
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ArrowColor #2E5D9A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Buka Menu Kirim Feedback;
+
+|Aplikasi|
+:Tampilkan Formulir Feedback;
+
+|Jemaat|
+:Pilih Jenis Feedback (Acara atau Umum);
+:Tulis Pesan Feedback;
+:Beri Penilaian Bintang (1—5);
+:Aktifkan Opsi Anonim (opsional);
+:Tap "Kirim";
+
+|Aplikasi|
+if (Pesan terisi dan\npenilaian lebih dari nol?) then (ya)
+
+  |Database|
+  :INSERT INTO feedback\n{user_id, type, message,\nrating, is_anonymous,\ncreated_at: NOW()};
+
+  |Aplikasi|
+  :Tampilkan "Feedback Berhasil Dikirim";
+  :Kembali ke halaman sebelumnya;
+
+else (tidak)
+
+  |Jemaat|
+  :Tampilkan Error\n"Pesan tidak boleh kosong";
+
+endif
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 16_Jemaat_Lihat_Info_Persembahan
+title Jemaat — Lihat Info Persembahan
+
+<style>
+swimlane {
+  header {
+    BackGroundColor #1E3A5F
+    FontColor white
+    FontStyle bold
+    FontSize 13
+  }
+  BackGroundColor white
+  BorderColor #1E3A5F
+  LineColor #1E3A5F
+}
+</style>
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #5B9BD5
+skinparam ActivityFontColor white
+skinparam ActivityFontSize 12
+skinparam ActivityBorderColor #4A89C8
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ArrowColor #2E5D9A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Tap Tombol "Persembahan"\ndi Halaman Beranda;
+
+|Aplikasi|
+:Tampilkan Pilihan Metode Persembahan;
+
+|Jemaat|
+if (Metode yang dipilih?) then (QRIS)
+
+  |Aplikasi|
+  :Generate dan Tampilkan\nKode QR untuk Dipindai;
+
+elseif (Transfer Bank?)
+
+  |Database|
+  :SELECT rekening_bank, nama_pemilik\nFROM church_accounts\nWHERE is_active = true;
+
+  |Aplikasi|
+  :Tampilkan Nomor Rekening\ndan Nama Pemilik Rekening;
+
+else (Langsung)
+
+  |Database|
+  :SELECT * FROM service_schedules\nWHERE service_date >= TODAY\nORDER BY service_date ASC\nLIMIT 1;
+
+  |Aplikasi|
+  :Tampilkan Jadwal Ibadah Terdekat\nuntuk Membawa Persembahan Langsung;
+
+endif
+
+|Jemaat|
+:Tutup Panel Persembahan;
+:Kembali ke Halaman Beranda;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 19_Admin_Lihat_Semua_Feedback
+title Admin — Lihat Semua Feedback
+
+<style>
+swimlane {
+  header {
+    BackGroundColor #1E3A5F
+    FontColor white
+    FontStyle bold
+    FontSize 13
+  }
+  BackGroundColor white
+  BorderColor #1E3A5F
+  LineColor #1E3A5F
+}
+</style>
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #5B9BD5
+skinparam ActivityFontColor white
+skinparam ActivityFontSize 12
+skinparam ActivityBorderColor #4A89C8
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ArrowColor #2E5D9A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Tinjau Feedback;
+
+|Database|
+:SELECT * FROM feedback\nORDER BY created_at DESC;
+
+|Aplikasi|
+:Hitung Rating Rata-rata;
+
+|Admin|
+:Lihat Statistik Rating;
+:Lihat Daftar Feedback\n(Rating, Pesan, Pengirim, Tanggal);
+
+if (Terapkan filter?) then (ya)
+  :Pilih Filter\n(Rating / Tanggal / Jenis);
+
+  |Aplikasi|
+  :Filter & Tampilkan Ulang Data;
+
+  |Admin|
+  :Lihat Feedback Terfilter;
+
+else (tidak)
+  :Baca Isi Feedback;
+endif
+
+if (Hapus feedback yang\ntidak relevan?) then (ya)
+  :Tap Ikon Hapus;
+  :Konfirmasi Dialog Penghapusan;
+
+  |Database|
+  :DELETE FROM feedback\nWHERE id = feedbackId;
+
+  |Admin|
+  :Refresh Daftar Feedback;
+
+else (tidak)
+endif
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 25_Jemaat_Renungan_Harian
+title Jemaat — Renungan Harian
+
+<style>
+swimlane {
+  header {
+    BackGroundColor #1E3A5F
+    FontColor white
+    FontStyle bold
+    FontSize 13
+  }
+  BackGroundColor white
+  BorderColor #1E3A5F
+  LineColor #1E3A5F
+}
+</style>
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #5B9BD5
+skinparam ActivityFontColor white
+skinparam ActivityFontSize 12
+skinparam ActivityBorderColor #4A89C8
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ArrowColor #2E5D9A
+skinparam DefaultFontName Arial
+
+|Jemaat|
+start
+:Buka Renungan Harian;
+
+|Database|
+:SELECT * FROM bible_verses\nWHERE type = 'devotional'\nAND date = TODAY;
+
+if (Renungan hari ini tersedia?) then (ya)
+
+  |Aplikasi|
+  :Load Detail Renungan;
+
+  |Jemaat|
+  :Baca Renungan Hari Ini\n(Ayat Referensi, Isi,\nRefleksi, Doa Penutup);
+
+else (tidak)
+
+  |Jemaat|
+  :Tampilkan Pesan\n"Tidak ada renungan\nuntuk hari ini.";
+
+endif
+
+|Database|
+:SELECT * FROM bible_verses\nWHERE type = 'devotional'\nAND date < TODAY\nORDER BY date DESC;
+
+|Jemaat|
+:Lihat Daftar Arsip Renungan\n(Judul, Referensi Ayat, Tanggal);
+
+if (Pilih renungan dari arsip?) then (ya)
+  :Pilih Renungan dari Arsip;
+
+  |Aplikasi|
+  :Load Detail Renungan dari Arsip;
+
+  |Jemaat|
+  :Baca Renungan dari Arsip;
+
+else (tidak)
+endif
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 27_Admin_Tinjau_Permintaan_Penggantian
+title Admin — Tinjau Permintaan Penggantian
+
+<style>
+swimlane {
+  header {
+    BackGroundColor #1E3A5F
+    FontColor white
+    FontStyle bold
+    FontSize 13
+  }
+  BackGroundColor white
+  BorderColor #1E3A5F
+  LineColor #1E3A5F
+}
+</style>
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #5B9BD5
+skinparam ActivityFontColor white
+skinparam ActivityFontSize 12
+skinparam ActivityBorderColor #4A89C8
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ArrowColor #2E5D9A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Permintaan Penggantian;
+
+|Database|
+:SELECT * FROM substitution_requests\nWHERE status = 'pending';
+
+|Admin|
+:Lihat Daftar Permintaan Pending;
+:Pilih Permintaan;
+:Baca Detail (Jadwal, Alasan,\nPengganti yang Diusulkan);
+
+if (Keputusan Admin?) then (Setujui)
+  :Tap "Setujui";
+
+  |Database|
+  :UPDATE substitution_requests\nSET status = 'approved',\nreviewed_by = adminId,\nreviewed_at = NOW();
+  :UPDATE schedules\nSET pelayan_id = penggantiId\nWHERE id = scheduleId;
+  :INSERT INTO notifications\n{user_id: pelayanId,\nmessage: 'Penggantian Disetujui',\nis_read: false};
+
+  |Admin|
+  :Tampilkan "Permintaan Disetujui";
+
+else (Tolak)
+  :Tulis Alasan Penolakan;
+  :Tap "Tolak";
+
+  |Database|
+  :UPDATE substitution_requests\nSET status = 'rejected',\nadmin_notes = alasan;
+  :INSERT INTO notifications\n{user_id: pelayanId,\nmessage: 'Penggantian Ditolak',\nis_read: false};
+
+  |Admin|
+  :Tampilkan "Permintaan Ditolak";
+endif
+
+:Refresh Daftar Permintaan;
+stop
+@enduml
+
+'─────────────────────────────────────────────────────────────────────
+
+@startuml 28_Admin_Verifikasi_Pendaftaran
+title Admin — Verifikasi Pendaftaran
+
+<style>
+swimlane {
+  header {
+    BackGroundColor #1E3A5F
+    FontColor white
+    FontStyle bold
+    FontSize 13
+  }
+  BackGroundColor white
+  BorderColor #1E3A5F
+  LineColor #1E3A5F
+}
+</style>
+
+skinparam TitleFontStyle bold
+skinparam TitleFontSize 16
+skinparam ActivityBackgroundColor #5B9BD5
+skinparam ActivityFontColor white
+skinparam ActivityFontSize 12
+skinparam ActivityBorderColor #4A89C8
+skinparam ActivityDiamondBackgroundColor #E74C3C
+skinparam ActivityDiamondBorderColor #C0392B
+skinparam ActivityDiamondFontColor white
+skinparam ArrowColor #2E5D9A
+skinparam DefaultFontName Arial
+
+|Admin|
+start
+:Buka Manajemen Pengguna;
+:Filter: Tampilkan status "pending";
+
+|Database|
+:SELECT * FROM users\nWHERE membership_status = 'pending';
+
+|Admin|
+:Lihat Daftar Calon Anggota;
+:Pilih Pengguna;
+:Periksa Data Profil\n(Nama, NIK, Alamat, dll.);
+
+if (Setujui keanggotaan?) then (ya)
+  :Tap "Setujui";
+
+  |Aplikasi|
+  :Proses persetujuan keanggotaan;
+
+  |Database|
+  :UPDATE users\nSET membership_status = 'active'\nWHERE id = userId;
+  :INSERT INTO notifications\n{user_id: userId,\nmessage: 'Akun Anda telah disetujui.',\nis_read: false};
+
+  |Admin|
+  :Tampilkan "Pengguna Berhasil Diverifikasi";
+
+else (tidak)
+  :Tap "Tolak";
+
+  |Database|
+  :UPDATE users\nSET membership_status = 'rejected'\nWHERE id = userId;
+
+  |Admin|
+  :Tampilkan "Pengguna Ditolak";
+endif
+
+:Refresh Daftar Pending;
+stop
+@enduml

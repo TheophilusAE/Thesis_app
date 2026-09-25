@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/training_schedule.dart';
+import '../providers/auth_provider.dart';
 import '../providers/training_schedule_provider.dart';
 import '../utils/app_theme.dart';
 import '../widgets/common/app_card.dart';
@@ -44,6 +45,7 @@ class _TrainingScheduleManagementScreenState
 
   @override
   Widget build(BuildContext context) {
+    final canManage = context.watch<AuthProvider>().isAdminMode;
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
@@ -119,8 +121,8 @@ class _TrainingScheduleManagementScreenState
                       icon: Icons.school_rounded,
                       title: 'Tidak Ada Jadwal Latihan',
                       description: 'Belum ada agenda pelatihan atau gladi bersih yang terdaftar.',
-                      actionLabel: 'Tambah Jadwal Latihan',
-                      onAction: _addNewSchedule,
+                      actionLabel: canManage ? 'Tambah Jadwal Latihan' : null,
+                      onAction: canManage ? _addNewSchedule : null,
                     ),
                   );
                 }
@@ -154,8 +156,8 @@ class _TrainingScheduleManagementScreenState
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _TrainingScheduleCard(
                         schedule: schedule,
-                        onEdit: () => _editSchedule(schedule),
-                        onDelete: () => _deleteSchedule(schedule),
+                        onEdit: canManage ? () => _editSchedule(schedule) : null,
+                        onDelete: canManage ? () => _deleteSchedule(schedule) : null,
                       ),
                     );
                   },
@@ -165,7 +167,7 @@ class _TrainingScheduleManagementScreenState
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: !canManage ? null : FloatingActionButton.extended(
         onPressed: _addNewSchedule,
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
@@ -241,13 +243,13 @@ class _TrainingScheduleManagementScreenState
 
 class _TrainingScheduleCard extends StatelessWidget {
   final TrainingSchedule schedule;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _TrainingScheduleCard({
     required this.schedule,
-    required this.onEdit,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -303,6 +305,7 @@ class _TrainingScheduleCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onEdit != null && onDelete != null)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

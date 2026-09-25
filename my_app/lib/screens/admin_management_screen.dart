@@ -896,7 +896,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = context.watch<AuthProvider>().isAdmin;
+    final isAdmin = context.watch<AuthProvider>().isAdminMode;
 
     if (!isAdmin) {
       return Scaffold(

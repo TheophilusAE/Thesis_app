@@ -1,0 +1,292 @@
+@startuml class_diagram
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam classFontSize 11
+skinparam classFontStyle bold
+skinparam classHeaderBackgroundColor #4A90D9
+skinparam classFontColor #FFFFFF
+skinparam classAttributeFontColor #000000
+skinparam classAttributeFontSize 10
+skinparam classAttributeFontStyle normal
+skinparam classBackgroundColor #D6E8FA
+skinparam classBorderColor #2C5F8A
+skinparam classBorderThickness 1.5
+skinparam arrowFontSize 9
+skinparam arrowColor #2C5F8A
+skinparam nodesep 60
+skinparam ranksep 80
+skinparam shadowing false
+
+title Gereja App — Class Diagram
+
+class User <<entity>> {
+  +id : String
+  +name : String
+  +email : String
+  +phone : String
+  +roles : List<String>
+  +membershipStatus : String
+  +identityNumber : String?
+  +familyGroup : String?
+  +membershipType : String?
+  +memberCardNumber : String?
+  +address : String?
+  +birthDate : DateTime?
+  +baptismDate : String?
+  +memberSince : String?
+  --
+  +hasRole(role) : bool
+  +isAdmin : bool
+  +isPelayan : bool
+  +isJemaat : bool
+}
+
+class Pelayan <<entity>> {
+  +id : String
+  +userId : String
+  +nama : String
+  +noTelepon : String
+  +posisi : String
+  +isAktif : bool
+  +createdAt : DateTime
+  +updatedAt : DateTime
+  --
+  +fromJson(json) : Pelayan
+  +toJson() : Map
+  +copyWith(...) : Pelayan
+}
+
+class ServiceSchedule <<entity>> {
+  +id : String
+  +pelayaniId : String
+  +pelayaniName : String
+  +pelayaniPosition : String
+  +serviceDate : DateTime
+  +startTime : String
+  +endTime : String
+  +serviceType : String
+  +isRecurring : bool
+  +recurringPattern : String
+  +notes : String?
+  +createdAt : DateTime
+  --
+  +fromJson(json) : ServiceSchedule
+  +toJson() : Map
+  +copyWith(...) : ServiceSchedule
+}
+
+class TrainingSchedule <<entity>> {
+  +id : String
+  +nama : String
+  +trainingDate : DateTime
+  +startTime : String
+  +endTime : String
+  +deskripsi : String
+  +pelayaniIds : List<String>
+  +lokasi : String
+  +notes : String?
+  +createdAt : DateTime
+  --
+  +fromJson(json) : TrainingSchedule
+  +toJson() : Map
+  +copyWith(...) : TrainingSchedule
+}
+
+class SubstitutionRequest <<entity>> {
+  +id : String
+  +serviceScheduleId : String
+  +requestedByUserId : String
+  +requestedByName : String
+  +replacementUserId : String?
+  +replacementName : String?
+  +reason : String
+  +status : String
+  +adminNotes : String?
+  +createdAt : DateTime
+  +reviewedAt : DateTime?
+  +reviewedByAdminId : String?
+  --
+  +fromJson(json) : SubstitutionRequest
+  +toJson() : Map
+  +copyWith(...) : SubstitutionRequest
+}
+
+class AttendanceConfirmation <<entity>> {
+  +id : String
+  +userId : String
+  +userName : String
+  +serviceScheduleId : String
+  +scheduleDate : DateTime
+  +confirmed : bool
+  +confirmedAt : DateTime?
+  +notes : String?
+  +createdAt : DateTime
+  --
+  +fromJson(json) : AttendanceConfirmation
+  +toJson() : Map
+  +copyWith(...) : AttendanceConfirmation
+}
+
+class AppNotification <<entity>> {
+  +id : String
+  +userId : String
+  +title : String
+  +message : String
+  +type : String
+  +relatedScheduleId : String?
+  +isRead : bool
+  +createdAt : DateTime
+  +readAt : DateTime?
+  --
+  +fromJson(json) : AppNotification
+  +toJson() : Map
+  +copyWith(...) : AppNotification
+}
+
+class UserFeedback <<entity>> {
+  +id : String
+  +userId : String
+  +userName : String
+  +feedbackType : String
+  +eventId : String?
+  +eventName : String?
+  +rating : int
+  +message : String
+  +createdAt : DateTime
+  +isAnonymous : bool
+  --
+  +fromJson(json) : UserFeedback
+  +toJson() : Map
+}
+
+class ChurchEvent <<entity>> {
+  +id : String
+  +title : String
+  +description : String
+  +date : DateTime
+  +location : String
+  +maxCapacity : int?
+  +isActive : bool
+  +createdAt : DateTime
+  --
+  +fromJson(json) : ChurchEvent
+  +toJson() : Map
+  +copyWith(...) : ChurchEvent
+}
+
+class EventRegistration <<entity>> {
+  +id : String
+  +eventId : String
+  +userId : String
+  +familyMembers : List<FamilyMember>
+  +totalCount : int
+  +notes : String?
+  +registeredAt : DateTime
+  +userName : String?
+  +userEmail : String?
+  --
+  +fromJson(json) : EventRegistration
+}
+
+class FamilyMember <<entity>> {
+  +name : String
+  +relationship : String
+  --
+  +fromJson(json) : FamilyMember
+  +toJson() : Map
+}
+
+class BibleVerse <<entity>> {
+  +id : int
+  +book : String
+  +chapter : int
+  +verse : int
+  +text : String
+  --
+  +fromJson(json) : BibleVerse
+  +toJson() : Map
+}
+
+class Devotional <<entity>> {
+  +id : String
+  +title : String
+  +content : String
+  +verse : String
+  +verseReference : String
+  +date : DateTime
+  +author : String?
+  --
+  +fromJson(json) : Devotional
+  +toJson() : Map
+}
+
+class ReadingQuest <<entity>> {
+  +day : int
+  +readings : List<ReadingPlan>
+  +isCompleted : bool
+  --
+  +fromJson(json) : ReadingQuest
+  +toJson() : Map
+}
+
+class ReadingPlan <<entity>> {
+  +book : String
+  +startChapter : int
+  +endChapter : int
+  +displayText : String
+  --
+  +fromJson(json) : ReadingPlan
+  +toJson() : Map
+}
+
+class Playlist <<entity>> {
+  +id : String
+  +title : String
+  +description : String
+  +songs : List<Song>
+  +date : DateTime
+  +coverImage : String?
+  --
+  +fromJson(json) : Playlist
+  +toJson() : Map
+}
+
+class Song <<entity>> {
+  +id : String
+  +title : String
+  +artist : String
+  +lyrics : String?
+  +audioUrl : String?
+  --
+  +fromJson(json) : Song
+  +toJson() : Map
+}
+
+' ══════════════════════════════════════════
+' COMPOSITION
+' ══════════════════════════════════════════
+EventRegistration "1" *-- "0..*" FamilyMember  : familyMembers
+ReadingQuest      "1" *-- "1..*" ReadingPlan   : readings
+Playlist          "1" *-- "0..*" Song          : songs
+
+' ══════════════════════════════════════════
+' ASSOCIATION
+' ══════════════════════════════════════════
+Pelayan         "1"    --> "1"    User                    : userId
+
+Pelayan         "1"    --> "0..*" ServiceSchedule         : pelayaniId
+Pelayan         "1"    --> "0..*" TrainingSchedule        : pelayaniIds
+
+ServiceSchedule "1"    --> "0..*" SubstitutionRequest     : serviceScheduleId
+ServiceSchedule "1"    --> "0..*" AttendanceConfirmation  : serviceScheduleId
+
+User            "1"    --> "0..*" AppNotification         : userId
+User            "1"    --> "0..*" UserFeedback            : userId
+User            "1"    --> "0..*" AttendanceConfirmation  : userId
+User            "1"    --> "0..*" SubstitutionRequest     : requestedByUserId
+User            "1"    --> "0..*" EventRegistration       : userId
+
+ChurchEvent     "1"    --> "0..*" EventRegistration       : eventId
+UserFeedback    "0..*" --> "0..1" ChurchEvent             : eventId
+
+@enduml

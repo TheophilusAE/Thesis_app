@@ -3,22 +3,26 @@ import '../models/pelayan.dart';
 import '../services/supabase_service.dart';
 
 class PelayaniProvider extends ChangeNotifier {
-  final SupabaseService _supabaseService = SupabaseService();
+  final SupabaseService _supabaseService;
 
   List<Pelayan> _allPelayan = [];
   List<Pelayan> _filteredPelayan = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
-  PelayaniProvider();
+  PelayaniProvider({SupabaseService? service})
+      : _supabaseService = service ?? SupabaseService();
 
   // Getters
   List<Pelayan> get allPelayan => _allPelayan;
   List<Pelayan> get filteredPelayan => _filteredPelayan;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
   /// Load all Pelayan from Supabase
   Future<void> loadAllPelayan() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
@@ -27,6 +31,7 @@ class PelayaniProvider extends ChangeNotifier {
       _filteredPelayan = _allPelayan;
     } catch (e) {
       debugPrint('Error loading Pelayan: $e');
+      _errorMessage = 'Gagal memuat daftar pelayan.';
     }
 
     _isLoading = false;
@@ -36,6 +41,7 @@ class PelayaniProvider extends ChangeNotifier {
   /// Load active Pelayan from Supabase
   Future<void> loadActivePelayan() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
@@ -43,6 +49,7 @@ class PelayaniProvider extends ChangeNotifier {
       _filteredPelayan = data.map((e) => Pelayan.fromJson(e)).toList();
     } catch (e) {
       debugPrint('Error loading active Pelayan: $e');
+      _errorMessage = 'Gagal memuat daftar pelayan.';
     }
 
     _isLoading = false;
