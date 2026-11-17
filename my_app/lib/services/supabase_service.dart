@@ -92,18 +92,112 @@ class SupabaseService {
     return _asMapList(data);
   }
 
-  Future<void> verifyUser(String userId, {required bool approved}) async {
-    await _client.from('users').update({
-      'membership_status': approved ? 'active' : 'rejected',
-    }).eq('id', userId);
+  /// Approve/reject/deactivate a member through the `set_member_status` RPC,
+  /// which checks the caller's `users:approve` permission (Super Admin for
+  /// 'inactive'/'pending'). Direct UPDATEs of membership_status are blocked
+  /// by a database trigger for everyone except Super Admin.
+  Future<void> setMemberStatus(String userId, String status) async {
+    await _client.rpc('set_member_status', params: {
+      'p_user_id': userId,
+      'p_status': status,
+    });
   }
 
+  /// Roles can only be changed by a Super Admin (enforced by RLS + trigger).
+  /// `.select()` makes a silently-blocked update visible as an error.
   Future<void> updateUserRoles(String userId, List<String> roles) async {
-    await _client.from('users').update({'roles': roles}).eq('id', userId);
+    final rows = await _client
+        .from('users')
+        .update({'roles': roles, 'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', userId)
+        .select('id');
+    if ((rows as List).isEmpty) {
+      throw Exception('Perubahan role ditolak: hanya Super Admin yang dapat mengubah role.');
+    }
   }
 
-  Future<void> deleteUserProfile(String userId) async {
-    await _client.from('users').delete().eq('id', userId);
+  /// Fills in a freshly created account (admin "Tambah Pengguna" flow) via
+  /// the `admin_complete_new_user` RPC — Admin only needs `users:create`.
+  Future<void> adminCompleteNewUser({
+    required String userId,
+    required List<String> roles,
+    required String status,
+    required Map<String, dynamic> profile,
+  }) async {
+    await _client.rpc('admin_complete_new_user', params: {
+      'p_user_id': userId,
+      'p_roles': roles,
+      'p_status': status,
+      'p_profile': profile,
+    });
+  }
+
+  // ============== RBAC: ADMIN PERMISSIONS ==============
+
+  /// True when PostgREST reports a missing table/function, i.e. the RBAC v2
+  /// migration has not been run on this database yet.
+  static bool isMissingRelation(Object e) {
+    if (e is PostgrestException) {
+      final code = e.code ?? '';
+      return code == '42P01' || code == 'PGRST205' || code == 'PGRST202' || code == '42883';
+    }
+    final msg = e.toString();
+    return msg.contains('42P01') || msg.contains('PGRST205');
+  }
+
+  /// The signed-in admin's own grants. Returns null when the
+  /// `admin_permissions` table does not exist yet (pre-migration database).
+  Future<List<Map<String, dynamic>>?> getMyAdminPermissions(String userId) async {
+    try {
+      final data = await _client.from('admin_permissions').select().eq('user_id', userId);
+      return _asMapList(data);
+    } catch (e) {
+      if (isMissingRelation(e)) return null;
+      rethrow;
+    }
+  }
+
+  /// All grants (Super Admin only — RLS returns only your own rows otherwise).
+  Future<List<Map<String, dynamic>>> getAllAdminPermissions() async {
+    final data = await _client.from('admin_permissions').select();
+    return _asMapList(data);
+  }
+
+  /// Replaces every grant of [userId] atomically (`set_admin_permissions`).
+  Future<void> setAdminPermissions(String userId, List<Map<String, dynamic>> grants) async {
+    await _client.rpc('set_admin_permissions', params: {
+      'p_user_id': userId,
+      'p_grants': grants,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getAdminCategories() async {
+    final data = await _client.from('admin_categories').select().order('nama');
+    return _asMapList(data);
+  }
+
+  Future<void> addAdminCategory({required String kode, required String nama}) async {
+    await _client.from('admin_categories').insert({'kode': kode, 'nama': nama});
+  }
+
+  Future<void> setAdminCategoryActive(String id, bool isActive) async {
+    await _client.from('admin_categories').update({
+      'is_active': isActive,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', id);
+  }
+
+  // ============== PUBLIC (GUEST) DATA ==============
+
+  /// Service schedule without pelayan names, readable by guests (anon).
+  Future<List<Map<String, dynamic>>> getPublicServiceSchedule(DateTime from, DateTime to) async {
+    String day(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    final data = await _client.rpc('get_public_service_schedule', params: {
+      'p_from': day(from),
+      'p_to': day(to),
+    });
+    return _asMapList(data);
   }
 
   // ============== PELAYANS ==============
@@ -260,6 +354,30 @@ class SupabaseService {
     await _client.from('substitution_requests').update(data).eq('id', id);
   }
 
+  /// Atomic review (`review_substitution` RPC): on approval the duty is moved
+  /// to [replacementPelayanId] and the request is marked approved in one
+  /// transaction. Requires `jadwal_pelayanan:approve`. Returns the RPC's JSON
+  /// result (status, replacement_user_id, replacement_name, ...).
+  Future<Map<String, dynamic>> reviewSubstitution({
+    required String requestId,
+    required bool approve,
+    String? replacementPelayanId,
+    String? adminNotes,
+  }) async {
+    final result = await _client.rpc('review_substitution', params: {
+      'p_request_id': requestId,
+      'p_approve': approve,
+      'p_replacement_pelayan_id': replacementPelayanId,
+      'p_admin_notes': adminNotes,
+    });
+    return result is Map ? Map<String, dynamic>.from(result) : <String, dynamic>{};
+  }
+
+  /// The requester cancels their own pending request.
+  Future<void> cancelSubstitutionRequest(String requestId) async {
+    await _client.rpc('cancel_substitution_request', params: {'p_request_id': requestId});
+  }
+
   Future<void> deleteSubstitutionRequest(String id) async {
     await _client.from('substitution_requests').delete().eq('id', id);
   }
@@ -333,6 +451,15 @@ class SupabaseService {
   Future<Map<String, dynamic>> addNotification(Map<String, dynamic> data) async {
     final response = await _client.from('notifications').insert(data).select();
     return Map<String, dynamic>.from(_asMapList(response).first);
+  }
+
+  /// Inserts notifications addressed to other users (admin broadcast).
+  /// Deliberately no `.select()`: `notif_select_own` only lets a user read
+  /// their own rows, so asking for the inserted rows back would make the
+  /// RETURNING clause fail RLS even though the insert itself is allowed.
+  Future<void> addNotifications(List<Map<String, dynamic>> rows) async {
+    if (rows.isEmpty) return;
+    await _client.from('notifications').insert(rows);
   }
 
   Future<void> markNotificationAsRead(String id) async {
@@ -433,6 +560,11 @@ class SupabaseService {
 
   Future<void> updatePrayerRequest(String id, Map<String, dynamic> data) async {
     await _client.from('prayer_requests').update(data).eq('id', id);
+  }
+
+  /// Status change by an admin with `prayer:approve` (RPC-checked).
+  Future<void> updatePrayerStatus(String id, String status) async {
+    await _client.rpc('update_prayer_status', params: {'p_id': id, 'p_status': status});
   }
 
   Future<void> deletePrayerRequest(String id) async {

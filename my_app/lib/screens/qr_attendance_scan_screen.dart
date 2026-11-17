@@ -27,6 +27,7 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
   final SupabaseService _supabaseService = SupabaseService();
 
   bool _permissionGranted = false;
+  bool _permissionPermanentlyDenied = false;
   bool _checkingPermission = true;
   bool _isProcessing = false;
   bool _torchOn = false;
@@ -39,10 +40,16 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
   }
 
   Future<void> _init() async {
-    final status = await Permission.camera.request();
+    var status = await Permission.camera.status;
+    if (!status.isGranted && !status.isPermanentlyDenied && !status.isRestricted) {
+      status = await Permission.camera.request();
+    }
     if (!mounted) return;
     setState(() {
       _permissionGranted = status.isGranted;
+      // iOS never re-prompts after a denial, so the only way forward is the
+      // system Settings page.
+      _permissionPermanentlyDenied = status.isPermanentlyDenied || status.isRestricted;
       _checkingPermission = false;
     });
     if (_permissionGranted) {
@@ -255,7 +262,10 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
       body: _checkingPermission
           ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : !_permissionGranted
-              ? _PermissionDenied(onRetry: _init)
+              ? _PermissionDenied(
+                  onRetry: _init,
+                  openSettings: _permissionPermanentlyDenied ? openAppSettings : null,
+                )
               : Column(
                   children: [
                     // Schedule Picker Header
@@ -337,7 +347,20 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          MobileScanner(controller: _controller, onDetect: _onDetect),
+                          MobileScanner(
+                            controller: _controller,
+                            onDetect: _onDetect,
+                            errorBuilder: (context, error, child) => const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(24),
+                                child: Text(
+                                  'Kamera tidak dapat digunakan saat ini. Tutup lalu buka kembali halaman ini.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ),
 
                           // Scanner Viewfinder Overlay
                           Container(
@@ -395,8 +418,9 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
 
 class _PermissionDenied extends StatelessWidget {
   final VoidCallback onRetry;
+  final Future<bool> Function()? openSettings;
 
-  const _PermissionDenied({required this.onRetry});
+  const _PermissionDenied({required this.onRetry, this.openSettings});
 
   @override
   Widget build(BuildContext context) {
@@ -409,8 +433,8 @@ class _PermissionDenied extends StatelessWidget {
         title: 'Izin Kamera Dibutuhkan',
         description:
             'Aplikasi membutuhkan izin akses kamera untuk dapat memindai kode QR kartu jemaat digital.',
-        actionLabel: 'Berikan Izin Kamera',
-        onAction: onRetry,
+        actionLabel: openSettings != null ? 'Buka Pengaturan' : 'Berikan Izin Kamera',
+        onAction: openSettings != null ? () => openSettings!() : onRetry,
       ),
     );
   }

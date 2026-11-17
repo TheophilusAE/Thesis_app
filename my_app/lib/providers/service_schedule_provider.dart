@@ -2,9 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/service_schedule.dart';
 import '../services/supabase_service.dart';
+import '../utils/recurrence.dart';
+
+/// Outcome of creating a (possibly recurring) schedule: [created] holds the
+/// rows actually saved, [requested] how many occurrences were attempted, and
+/// [skippedDuplicates] how many were skipped because an identical duty
+/// already existed.
+class ScheduleCreateResult {
+  final List<ServiceSchedule> created;
+  final int requested;
+  final int skippedDuplicates;
+
+  const ScheduleCreateResult({
+    required this.created,
+    required this.requested,
+    required this.skippedDuplicates,
+  });
+
+  bool get allSaved => created.length + skippedDuplicates == requested;
+  bool get anySaved => created.isNotEmpty;
+}
 
 class ServiceScheduleProvider extends ChangeNotifier {
-  final SupabaseService _service = SupabaseService();
+  ServiceScheduleProvider({SupabaseService? service})
+      : _service = service ?? SupabaseService();
+
+  final SupabaseService _service;
 
   List<ServiceSchedule> _allSchedules = [];
   List<ServiceSchedule> _filteredSchedules = [];
@@ -84,7 +107,22 @@ class ServiceScheduleProvider extends ChangeNotifier {
     await loadSchedulesByDateRange(start, end);
   }
 
-  Future<bool> addServiceSchedule({
+  /// True if an identical duty (same pelayan, service type, day and start
+  /// time) is already loaded — prevents duplicate occurrences.
+  bool _isDuplicate(String pelayaniId, String serviceType, DateTime date, String startTime) {
+    return _allSchedules.any((s) =>
+        s.pelayaniId == pelayaniId &&
+        s.serviceType == serviceType &&
+        s.startTime == startTime &&
+        s.serviceDate.year == date.year &&
+        s.serviceDate.month == date.month &&
+        s.serviceDate.day == date.day);
+  }
+
+  /// Creates a schedule. When [isRecurring] is true, one row is created per
+  /// occurrence (see [generateRecurrenceDates]); otherwise exactly one row.
+  /// Occurrences that duplicate an already-loaded duty are skipped.
+  Future<ScheduleCreateResult> addServiceSchedule({
     required String pelayaniId,
     required String pelayaniName,
     required String pelayaniPosition,
@@ -96,33 +134,60 @@ class ServiceScheduleProvider extends ChangeNotifier {
     required String recurringPattern,
     String? notes,
   }) async {
-    try {
-      final schedule = ServiceSchedule(
-        id: '',
-        pelayaniId: pelayaniId,
-        pelayaniName: pelayaniName,
-        pelayaniPosition: pelayaniPosition,
-        serviceDate: serviceDate,
-        startTime: startTime,
-        endTime: endTime,
-        serviceType: serviceType,
-        isRecurring: isRecurring,
-        recurringPattern: recurringPattern,
-        notes: notes,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      final result = await _service.addSchedule(schedule.toSupabaseJson());
-      _allSchedules.add(ServiceSchedule.fromJson(result));
-      _filteredSchedules = List.from(_allSchedules);
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      debugPrint('Error adding schedule: $e');
-      return false;
+    final dates = isRecurring
+        ? generateRecurrenceDates(serviceDate, recurringPattern)
+        : [DateTime(serviceDate.year, serviceDate.month, serviceDate.day)];
+
+    final created = <ServiceSchedule>[];
+    var skipped = 0;
+    _error = null;
+
+    for (final date in dates) {
+      if (_isDuplicate(pelayaniId, serviceType, date, startTime)) {
+        skipped++;
+        continue;
+      }
+      try {
+        final schedule = ServiceSchedule(
+          id: '',
+          pelayaniId: pelayaniId,
+          pelayaniName: pelayaniName,
+          pelayaniPosition: pelayaniPosition,
+          serviceDate: date,
+          startTime: startTime,
+          endTime: endTime,
+          serviceType: serviceType,
+          isRecurring: isRecurring,
+          recurringPattern: isRecurring ? recurringPattern : '',
+          notes: notes,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        final result = await _service.addSchedule(schedule.toSupabaseJson());
+        final saved = ServiceSchedule.fromJson(result);
+        _allSchedules.add(saved);
+        created.add(saved);
+      } catch (e) {
+        _error = e.toString();
+        debugPrint('Error adding schedule for $date: $e');
+        // Stop at the first failure (usually RLS/network); later rows would
+        // fail the same way and partial results are reported to the caller.
+        break;
+      }
     }
+
+    _filteredSchedules = List.from(_allSchedules);
+    notifyListeners();
+    return ScheduleCreateResult(
+      created: created,
+      requested: dates.length,
+      skippedDuplicates: skipped,
+    );
   }
+
+  // Substitution approval no longer reassigns the duty from the client: the
+  // `review_substitution` RPC moves it and approves the request in one
+  // database transaction (see SubstitutionRequestProvider.approveRequest).
 
   Future<bool> updateServiceSchedule(
     String id, {

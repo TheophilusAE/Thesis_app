@@ -4,7 +4,11 @@ import '../models/notification.dart' as app_notification;
 import '../services/supabase_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
-  final SupabaseService _service = SupabaseService();
+  NotificationProvider({SupabaseService? service})
+      : _service = service ?? SupabaseService();
+
+  final SupabaseService _service;
+  String? _subscribedUserId;
 
   List<app_notification.AppNotification> _allNotifications = [];
   List<app_notification.AppNotification> _unreadNotifications = [];
@@ -19,7 +23,23 @@ class NotificationProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  String? _loadedUserId;
+
+  /// Loads the inbox once per signed-in user and starts realtime updates.
+  /// Switching accounts on the same device discards the previous inbox.
+  Future<void> ensureLoadedFor(String userId) async {
+    subscribeToRealtime(userId);
+    if (_loadedUserId == userId) return;
+    await loadNotifications(userId);
+  }
+
   Future<void> loadNotifications(String userId) async {
+    if (_loadedUserId != userId) {
+      _allNotifications = [];
+      _unreadNotifications = [];
+      _unreadCount = 0;
+    }
+    _loadedUserId = userId;
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -71,6 +91,39 @@ class NotificationProvider extends ChangeNotifier {
     } catch (e) {
       _error = e.toString();
       debugPrint('Error creating notification: $e');
+      return false;
+    }
+  }
+
+  /// Sends the same in-app notification to several other users (e.g. an
+  /// admin approving a substitution or publishing a schedule). These rows
+  /// belong to other users, so they are never added to this device's list.
+  /// Returns false on failure so callers can report it honestly.
+  Future<bool> notifyUsers({
+    required Iterable<String> userIds,
+    required String title,
+    required String message,
+    required String type,
+    String? relatedScheduleId,
+  }) async {
+    final targets = userIds.where((id) => id.isNotEmpty).toSet();
+    if (targets.isEmpty) return true;
+    try {
+      await _service.addNotifications([
+        for (final id in targets)
+          {
+            'user_id': id,
+            'title': title,
+            'message': message,
+            'type': type,
+            'related_schedule_id': relatedScheduleId,
+            'is_read': false,
+          },
+      ]);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error sending notifications: $e');
       return false;
     }
   }
@@ -174,7 +227,12 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  /// Idempotent: re-subscribing for the same user is a no-op, and switching
+  /// users drops the previous channel first.
   void subscribeToRealtime(String userId) {
+    if (_subscribedUserId == userId && _subscription != null) return;
+    unsubscribeFromRealtime();
+    _subscribedUserId = userId;
     _subscription = _service.subscribeToNotifications(userId, (_) => loadNotifications(userId));
   }
 
@@ -183,6 +241,18 @@ class NotificationProvider extends ChangeNotifier {
       _service.unsubscribeChannel(_subscription!);
       _subscription = null;
     }
+    _subscribedUserId = null;
+  }
+
+  /// Clears the inbox when the signed-in user changes, so one account never
+  /// sees another account's notifications on a shared device.
+  void clearForSignOut() {
+    unsubscribeFromRealtime();
+    _loadedUserId = null;
+    _allNotifications = [];
+    _unreadNotifications = [];
+    _unreadCount = 0;
+    notifyListeners();
   }
 
   @override

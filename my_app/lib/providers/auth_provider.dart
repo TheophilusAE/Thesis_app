@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import '../models/admin_permission.dart';
 import '../models/user.dart';
 import '../services/supabase_service.dart';
+import '../utils/permissions.dart';
 
 class AuthProvider with ChangeNotifier {
   final SupabaseService _supabaseService;
@@ -21,6 +23,7 @@ class AuthProvider with ChangeNotifier {
   // Supabase email confirmation.
   String? _blockedStatus;
   String? _lastRawError; // debug aid only; never shown in release builds
+  PermissionSet _permissions = PermissionSet.none;
 
   User? get currentUser => _currentUser;
   bool get isLoggedIn => _isLoggedIn;
@@ -29,7 +32,16 @@ class AuthProvider with ChangeNotifier {
   String? get lastRawError => _lastRawError;
   bool get isInitializing => _isInitializing;
   String? get lastMessage => _lastMessage;
-  bool get isAdmin => _currentUser?.hasRole('admin') ?? false;
+
+  /// No approved session: the app shows the public guest home.
+  bool get isGuest => !_isLoggedIn && _blockedStatus == null;
+
+  /// Highest role: full CRUD everywhere, manages admins and permissions.
+  bool get isSuperAdmin => _currentUser?.hasRole('super_admin') ?? false;
+
+  /// Any administrative account (Admin or Super Admin).
+  bool get isAdmin =>
+      (_currentUser?.hasRole('admin') ?? false) || isSuperAdmin;
   /// True only when the account really holds the admin role AND the admin
   /// view is active (an admin who switched to Jemaat/Pelayan view is not in
   /// admin mode). Use this for admin-only UI and route guards.
@@ -39,6 +51,20 @@ class AuthProvider with ChangeNotifier {
   List<String> get userRoles => _currentUser?.roles ?? [];
   User? get user => _currentUser;
   String get currentDisplayRole => _currentDisplayRole;
+
+  /// Permissions of the signed-in account. UI decisions only — the database
+  /// (RLS + RPCs) enforces the same rules.
+  PermissionSet get permissions => _permissions;
+
+  /// Admin-mode permission check for a module action (see [PermissionSet]).
+  bool can(String module, PermissionAction action, {String? categoryId}) =>
+      isAdminMode && _permissions.can(module, action, categoryId: categoryId);
+
+  /// Admin-mode check: may open the module's management screen at all.
+  bool canAccess(String module) => isAdminMode && _permissions.canAccess(module);
+
+  /// Editing/deleting existing records — Super Admin only.
+  bool get canModifyExisting => isAdminMode && _permissions.canModifyExisting;
 
   String _mapError(dynamic e) {
     // Always log the real exception; the user only sees a friendly message.
@@ -80,13 +106,33 @@ class AuthProvider with ChangeNotifier {
     return 'Terjadi kesalahan. Silakan coba lagi.';
   }
 
+  /// Turns a database/RPC exception into the message for the user. Our RPCs
+  /// raise readable Indonesian messages (PostgrestException.message); other
+  /// errors fall back to the generic mapping.
+  String _dbError(Object e) {
+    debugPrint('DB error: $e');
+    _lastRawError = e.toString();
+    if (e is PostgrestException && e.message.trim().isNotEmpty) {
+      if (e.code == '42501' || e.code == '22023' || e.code == 'P0002' || e.code == 'P0001') {
+        return e.message;
+      }
+    }
+    final msg = e.toString();
+    if (msg.contains('Super Admin') || msg.contains('izin')) {
+      return msg.replaceFirst('Exception: ', '');
+    }
+    return _mapError(e);
+  }
+
   /// Statuses treated as approved. 'verified' is a legacy value the admin
   /// screen already normalizes to 'active'.
   static bool isApprovedStatus(String status) =>
       status == 'active' || status == 'verified';
 
-  /// Single access gate: only approved accounts (or admins) count as logged
-  /// in; anything else with a session is held on the waiting screen.
+  /// Single access gate: only approved accounts count as logged in; anything
+  /// else with a session ('pending', 'rejected', 'inactive') is held on the
+  /// waiting screen. Admin roles no longer bypass this — a Super Admin can
+  /// deactivate an admin account (mirrors `public.is_approved()`).
   void _applyAccessGate() {
     final user = _currentUser;
     if (user == null) {
@@ -94,9 +140,75 @@ class AuthProvider with ChangeNotifier {
       _blockedStatus = null;
       return;
     }
-    final approved = user.hasRole('admin') || isApprovedStatus(user.membershipStatus);
+    final approved = isApprovedStatus(user.membershipStatus);
     _isLoggedIn = approved;
     _blockedStatus = approved ? null : user.membershipStatus;
+  }
+
+  /// Builds the app user from a `public.users` row. Single mapping so every
+  /// column (incl. membership_type) is read the same way everywhere.
+  static User userFromRow(Map<String, dynamic> p, {String? fallbackId}) {
+    return User(
+      id: (p['id'] ?? fallbackId ?? '') as String,
+      name: (p['nama'] ?? '') as String,
+      email: (p['email'] ?? '') as String,
+      phone: (p['phone'] ?? '') as String,
+      roles: List<String>.from(p['roles'] ?? const ['jemaat']),
+      membershipStatus: (p['membership_status'] ?? 'pending') as String,
+      identityNumber: p['identity_number'] as String?,
+      familyGroup: p['family_group'] as String?,
+      membershipType: p['membership_type'] as String?,
+      memberCardNumber: p['member_card_number'] as String?,
+      memberSince: p['member_since'] as String?,
+      address: p['address'] as String?,
+      baptismDate: p['baptism_date'] as String?,
+    );
+  }
+
+  /// Loads the admin's grants. Before the RBAC v2 migration the table does
+  /// not exist: fall back to legacy behaviour (RLS still enforces access).
+  Future<void> _loadPermissions() async {
+    final user = _currentUser;
+    if (user == null || !_isLoggedIn || !isAdmin) {
+      _permissions = PermissionSet.none;
+      return;
+    }
+    if (isSuperAdmin) {
+      _permissions = const PermissionSet(isSuperAdmin: true, isAdmin: true);
+      return;
+    }
+    try {
+      final rows = await _supabaseService.getMyAdminPermissions(user.id);
+      if (rows == null) {
+        debugPrint('admin_permissions missing — RBAC v2 migration not run; legacy admin mode');
+        _permissions = const PermissionSet(isSuperAdmin: false, isAdmin: true, legacyMode: true);
+      } else {
+        _permissions = PermissionSet(
+          isSuperAdmin: false,
+          isAdmin: true,
+          grants: rows.map(AdminPermission.fromJson).toList(),
+        );
+      }
+    } catch (e) {
+      // Fail closed: an admin whose grants cannot be read sees no admin menus.
+      debugPrint('Error loading admin permissions: $e');
+      _permissions = const PermissionSet(isSuperAdmin: false, isAdmin: true);
+    }
+  }
+
+  /// Re-reads the signed-in admin's permissions (e.g. after a Super Admin
+  /// changed them).
+  Future<void> refreshPermissions() async {
+    await _loadPermissions();
+    notifyListeners();
+  }
+
+  void _clearSession() {
+    _isLoggedIn = false;
+    _blockedStatus = null;
+    _currentUser = null;
+    _currentDisplayRole = 'jemaat';
+    _permissions = PermissionSet.none;
   }
 
   void init() {
@@ -108,10 +220,7 @@ class AuthProvider with ChangeNotifier {
       if (event == AuthChangeEvent.signedIn && session != null) {
         _loadUserData(session.user.id);
       } else if (event == AuthChangeEvent.signedOut) {
-        _isLoggedIn = false;
-        _blockedStatus = null;
-        _currentUser = null;
-        _currentDisplayRole = 'jemaat';
+        _clearSession();
         notifyListeners();
       }
     });
@@ -133,10 +242,7 @@ class AuthProvider with ChangeNotifier {
       if (user != null) {
         await _loadUserData(user.id);
       } else {
-        _isLoggedIn = false;
-        _blockedStatus = null;
-        _currentUser = null;
-        _currentDisplayRole = 'jemaat';
+        _clearSession();
       }
     } catch (e) {
       _lastMessage = _mapError(e);
@@ -153,20 +259,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final profileData = await _supabaseService.getUserProfile(userId);
       if (profileData != null) {
-        _currentUser = User(
-          id: profileData['id'] ?? userId,
-          name: profileData['nama'] ?? '',
-          email: profileData['email'] ?? '',
-          phone: profileData['phone'] ?? '',
-          roles: List<String>.from(profileData['roles'] ?? ['jemaat']),
-          membershipStatus: profileData['membership_status'] ?? 'pending',
-          identityNumber: profileData['identity_number'],
-          familyGroup: profileData['family_group'],
-          memberCardNumber: profileData['member_card_number'],
-          memberSince: profileData['member_since'],
-          address: profileData['address'],
-          baptismDate: profileData['baptism_date'],
-        );
+        _currentUser = userFromRow(profileData, fallbackId: userId);
       } else {
         // Fallback: build minimal user from auth metadata so home screen doesn't crash
         final authUser = _supabaseService.getCurrentUser();
@@ -184,19 +277,18 @@ class AuthProvider with ChangeNotifier {
 
       _applyAccessGate();
 
-      if (_currentUser!.hasRole('admin')) {
+      if (isAdmin) {
         _currentDisplayRole = 'admin';
       } else if (_currentUser!.hasRole('pelayan')) {
         _currentDisplayRole = 'pelayan';
       } else {
         _currentDisplayRole = 'jemaat';
       }
+      await _loadPermissions();
     } catch (e) {
       debugPrint('Error loading user data: $e');
       // Without a verified profile we cannot prove approval: fail closed.
-      _currentUser = null;
-      _isLoggedIn = false;
-      _blockedStatus = null;
+      _clearSession();
     }
     notifyListeners();
   }
@@ -292,16 +384,16 @@ class AuthProvider with ChangeNotifier {
       if (response.user != null) {
         await _loadUserData(response.user!.id);
 
-        // Block accounts admin has not approved (pending) or has rejected.
+        // Block accounts admin has not approved (pending), has rejected, or
+        // a Super Admin has deactivated.
         final blocked = _blockedStatus;
         if (blocked != null || _currentUser == null) {
-          _isLoggedIn = false;
-          _blockedStatus = null;
-          _currentUser = null;
-          _currentDisplayRole = 'jemaat';
-          _lastMessage = blocked == 'rejected'
-              ? 'Pendaftaran akun Anda ditolak. Silakan hubungi admin gereja.'
-              : 'Akun Anda belum diverifikasi admin. Silakan tunggu persetujuan untuk dapat login.';
+          _clearSession();
+          _lastMessage = switch (blocked) {
+            'rejected' => 'Pendaftaran akun Anda ditolak. Silakan hubungi admin gereja.',
+            'inactive' => 'Akun Anda telah dinonaktifkan. Silakan hubungi admin gereja.',
+            _ => 'Akun Anda belum diverifikasi admin. Silakan tunggu persetujuan untuk dapat login.',
+          };
           try {
             await _supabaseService.signOut();
           } catch (_) {}
@@ -350,10 +442,7 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       _lastMessage = 'Error logout: $e';
     }
-    _isLoggedIn = false;
-    _blockedStatus = null;
-    _currentUser = null;
-    _currentDisplayRole = 'jemaat';
+    _clearSession();
     notifyListeners();
   }
 
@@ -388,20 +477,7 @@ class AuthProvider with ChangeNotifier {
       final users = <User>[];
       for (final p in data) {
         try {
-          users.add(User(
-            id: p['id'] ?? '',
-            name: p['nama'] ?? '',
-            email: p['email'] ?? '',
-            phone: p['phone'] ?? '',
-            roles: List<String>.from(p['roles'] ?? ['jemaat']),
-            membershipStatus: p['membership_status'] ?? 'pending',
-            identityNumber: p['identity_number'],
-            familyGroup: p['family_group'],
-            memberCardNumber: p['member_card_number'],
-            memberSince: p['member_since'],
-            address: p['address'],
-            baptismDate: p['baptism_date'],
-          ));
+          users.add(userFromRow(p));
         } catch (e) {
           // Don't let one malformed row take down the entire admin user list.
           debugPrint('getAllUsers: skipped malformed row ${p['id']}: $e');
@@ -418,22 +494,7 @@ class AuthProvider with ChangeNotifier {
   Future<List<User>> getPendingUsers() async {
     try {
       final data = await _supabaseService.getPendingUsers();
-      return data
-          .map((p) => User(
-                id: p['id'] ?? '',
-                name: p['nama'] ?? '',
-                email: p['email'] ?? '',
-                phone: p['phone'] ?? '',
-                roles: List<String>.from(p['roles'] ?? ['jemaat']),
-                membershipStatus: p['membership_status'] ?? 'pending',
-                identityNumber: p['identity_number'],
-                familyGroup: p['family_group'],
-                memberCardNumber: p['member_card_number'],
-                memberSince: p['member_since'],
-                address: p['address'],
-                baptismDate: p['baptism_date'],
-              ))
-          .toList();
+      return data.map((p) => userFromRow(p)).toList();
     } catch (e) {
       _lastMessage = e.toString();
       return [];
@@ -491,21 +552,28 @@ class AuthProvider with ChangeNotifier {
         }
       }
 
-      await _supabaseService.updateUserProfile(response.user!.id, {
-        'roles': roles,
-        'identity_number': identityNumber,
-        'family_group': familyGroup,
-        'address': address,
-        'member_card_number': memberCardNumber,
-        'member_since': memberSince,
-        'baptism_date': baptismDate,
-        'membership_status': membershipStatus ?? 'active',
-        'membership_type': membershipType,
-      });
+      // Admin only holds `users:create`: the new row is completed by a
+      // permission-checked RPC instead of a direct UPDATE (which RLS now
+      // reserves for Super Admin). Admins may only give jemaat/pelayan roles;
+      // 'active' additionally needs `users:approve`.
+      await _supabaseService.adminCompleteNewUser(
+        userId: response.user!.id,
+        roles: roles,
+        status: membershipStatus ?? 'pending',
+        profile: {
+          'identity_number': identityNumber,
+          'family_group': familyGroup,
+          'address': address,
+          'member_card_number': memberCardNumber,
+          'member_since': memberSince,
+          'baptism_date': baptismDate,
+          'membership_type': membershipType,
+        },
+      );
 
       return true;
     } catch (e) {
-      _lastMessage = e.toString();
+      _lastMessage = _dbError(e);
       // Attempt to restore admin session even on error.
       final nowUserId = supabase.auth.currentUser?.id;
       if (adminUserId != null &&
@@ -522,6 +590,10 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Edits another member's full record — Super Admin only (RLS
+  /// `users_update_own` + escalation trigger). Every column is written from
+  /// [updatedUser], so the caller must pass a user loaded with all columns
+  /// (see [userFromRow]) to avoid nulling fields such as membership_type.
   Future<bool> updateUser(User updatedUser) async {
     try {
       await _supabaseService.updateUserProfile(updatedUser.id, {
@@ -543,42 +615,45 @@ class AuthProvider with ChangeNotifier {
       }
       return true;
     } catch (e) {
-      _lastMessage = e.toString();
+      _lastMessage = _dbError(e);
       return false;
     }
   }
 
+  /// Changes only the roles column (Super Admin only, DB-enforced).
   Future<bool> updateUserRoles(String userId, List<String> roles) async {
     try {
       await _supabaseService.updateUserRoles(userId, roles);
+      if (_currentUser?.id == userId) {
+        _currentUser = _currentUser!.copyWith(roles: roles);
+        notifyListeners();
+      }
       return true;
     } catch (e) {
-      _lastMessage = e.toString();
+      _lastMessage = _dbError(e);
       return false;
     }
   }
 
-  Future<bool> deleteUser(String userId) async {
+  /// Super Admin "removes" a member by deactivating the account
+  /// (membership_status = 'inactive'). Deleting the login itself needs the
+  /// service-role key, which never ships in the app; deactivation blocks
+  /// sign-in and every RLS-gated write while keeping history intact.
+  Future<bool> deactivateUser(String userId) =>
+      setMemberStatus(userId: userId, status: 'inactive');
+
+  /// Approve ('active') / reject ('rejected') a member — needs
+  /// `users:approve`; other statuses are Super Admin only (RPC-enforced).
+  Future<bool> setMemberStatus({required String userId, required String status}) async {
     try {
-      await _supabaseService.deleteUserProfile(userId);
+      await _supabaseService.setMemberStatus(userId, status);
       return true;
     } catch (e) {
-      _lastMessage = e.toString();
+      _lastMessage = _dbError(e);
       return false;
     }
   }
 
-  Future<void> loadPendingUsers() async {
-    // Exposed as getPendingUsers() — call that instead
-  }
-
-  Future<bool> verifyUser({required String userId, required bool approved}) async {
-    try {
-      await _supabaseService.verifyUser(userId, approved: approved);
-      return true;
-    } catch (e) {
-      _lastMessage = e.toString();
-      return false;
-    }
-  }
+  Future<bool> verifyUser({required String userId, required bool approved}) =>
+      setMemberStatus(userId: userId, status: approved ? 'active' : 'rejected');
 }

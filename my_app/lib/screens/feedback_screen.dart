@@ -306,8 +306,12 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                                 'Kirim sebagai Anonim',
                                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                               ),
+                              // Honest scope: the feedback_insert_own RLS policy requires
+                              // user_id = auth.uid(), so the account is always stored —
+                              // only the displayed name is hidden.
                               Text(
-                                'Identitas Anda tidak akan ditampilkan ke pengurus',
+                                'Nama Anda tidak ditampilkan kepada pengurus. Akun pengirim '
+                                'tetap tercatat di sistem untuk keamanan.',
                                 style: TextStyle(color: AppTheme.neutralMedium, fontSize: 11),
                               ),
                             ],

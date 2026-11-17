@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/feedback.dart' as fb;
+import '../providers/auth_provider.dart';
 import '../providers/feedback_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
+import '../widgets/permission_guard.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 
@@ -50,7 +53,12 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // Admin: read only; deleting feedback is Super Admin only.
+    final canDelete = context.watch<AuthProvider>().canModifyExisting;
+    return PermissionGuard(
+      module: AppModule.feedback,
+      title: 'Manajemen Feedback',
+      child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
         title: const Text(
@@ -213,7 +221,7 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
                                     _sortFeedback(provider.filteredFeedback)[index];
                                 return FeedbackCard(
                                   feedback: feedback,
-                                  onDelete: () async {
+                                  onDelete: !canDelete ? null : () async {
                                     final confirmed = await showDialog<bool>(
                                       context: context,
                                       builder: (context) => AlertDialog(
@@ -269,6 +277,7 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
           );
         },
       ),
+      ),
     );
   }
 
@@ -301,12 +310,13 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
 
 class FeedbackCard extends StatelessWidget {
   final fb.UserFeedback feedback;
-  final VoidCallback onDelete;
+  /// Null hides the delete button (only Super Admin may delete).
+  final VoidCallback? onDelete;
 
   const FeedbackCard({
     super.key,
     required this.feedback,
-    required this.onDelete,
+    this.onDelete,
   });
 
   String _getFeedbackTypeLabel(String type) {
@@ -379,6 +389,7 @@ class FeedbackCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (onDelete != null)
               IconButton(
                 icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorColor, size: 20),
                 visualDensity: VisualDensity.compact,

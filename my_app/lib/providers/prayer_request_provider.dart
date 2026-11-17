@@ -78,10 +78,8 @@ class PrayerRequestProvider extends ChangeNotifier {
 
   Future<bool> updateStatus(String id, String status) async {
     try {
-      await _service.updatePrayerRequest(id, {
-        'status': status,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+      // RPC checks the `prayer:approve` permission server-side.
+      await _service.updatePrayerStatus(id, status);
       _patchLocal(id, status: status);
       return true;
     } catch (e) {

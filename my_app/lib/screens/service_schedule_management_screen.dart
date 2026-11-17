@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/service_schedule.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pelayan_provider.dart';
 import '../providers/service_schedule_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
+import '../utils/qr_payload.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import 'add_edit_service_schedule_screen.dart';
@@ -47,7 +50,12 @@ class _ServiceScheduleManagementScreenState
 
   @override
   Widget build(BuildContext context) {
-    final canManage = context.watch<AuthProvider>().isAdminMode;
+    final auth = context.watch<AuthProvider>();
+    // Admin: create only; editing/deleting existing duties is Super Admin
+    // only (RLS: schedules_insert_admin / schedules_super_admin_all).
+    final canCreate = auth.can(AppModule.jadwalPelayanan, PermissionAction.create);
+    final canModify = auth.canModifyExisting;
+    final canShowQr = auth.canAccess(AppModule.jadwalPelayanan) || auth.isPelayan;
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
@@ -123,8 +131,8 @@ class _ServiceScheduleManagementScreenState
                       icon: Icons.calendar_today_rounded,
                       title: 'Tidak Ada Jadwal Pelayanan',
                       description: 'Belum ada jadwal ibadah atau tugas pelayanan yang terdaftar.',
-                      actionLabel: canManage ? 'Tambah Jadwal' : null,
-                      onAction: canManage ? _addNewSchedule : null,
+                      actionLabel: canCreate ? 'Tambah Jadwal' : null,
+                      onAction: canCreate ? _addNewSchedule : null,
                     ),
                   );
                 }
@@ -158,8 +166,9 @@ class _ServiceScheduleManagementScreenState
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _ServiceScheduleCard(
                         schedule: schedule,
-                        onEdit: canManage ? () => _editSchedule(schedule) : null,
-                        onDelete: canManage ? () => _deleteSchedule(schedule) : null,
+                        onEdit: canModify ? () => _editSchedule(schedule) : null,
+                        onDelete: canModify ? () => _deleteSchedule(schedule) : null,
+                        onShowQr: canShowQr ? () => _showCheckinQr(schedule) : null,
                       ),
                     );
                   },
@@ -169,7 +178,7 @@ class _ServiceScheduleManagementScreenState
           ),
         ],
       ),
-      floatingActionButton: !canManage ? null : FloatingActionButton.extended(
+      floatingActionButton: !canCreate ? null : FloatingActionButton.extended(
         onPressed: _addNewSchedule,
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
@@ -205,6 +214,55 @@ class _ServiceScheduleManagementScreenState
         .then((_) {
       if (mounted) context.read<ServiceScheduleProvider>().loadAllSchedules();
     });
+  }
+
+  void _showCheckinQr(ServiceSchedule schedule) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          schedule.serviceType,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(schedule.serviceDate),
+              style: const TextStyle(fontSize: 13, color: AppTheme.neutralMedium),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.neutralBorder),
+              ),
+              child: QrImageView(
+                data: encodeServiceCheckinPayload(scheduleId: schedule.id),
+                version: QrVersions.auto,
+                size: 220,
+                backgroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Tunjukkan/tampilkan QR ini agar jemaat dapat memindai untuk presensi kehadiran.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12.5, color: AppTheme.neutralMedium, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _deleteSchedule(ServiceSchedule schedule) {
@@ -246,11 +304,13 @@ class _ServiceScheduleCard extends StatelessWidget {
   final ServiceSchedule schedule;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onShowQr;
 
   const _ServiceScheduleCard({
     required this.schedule,
     this.onEdit,
     this.onDelete,
+    this.onShowQr,
   });
 
   @override
@@ -303,24 +363,34 @@ class _ServiceScheduleCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onEdit != null && onDelete != null)
+              if (onShowQr != null || (onEdit != null && onDelete != null))
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
-                    onPressed: onEdit,
-                    tooltip: 'Edit',
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                    padding: EdgeInsets.zero,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
-                    onPressed: onDelete,
-                    tooltip: 'Hapus',
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                    padding: EdgeInsets.zero,
-                  ),
+                  if (onShowQr != null)
+                    IconButton(
+                      icon: const Icon(Icons.qr_code_rounded, size: 20, color: AppTheme.goldDark),
+                      onPressed: onShowQr,
+                      tooltip: 'Tampilkan QR Presensi',
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                  if (onEdit != null && onDelete != null) ...[
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
+                      onPressed: onEdit,
+                      tooltip: 'Edit',
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
+                      onPressed: onDelete,
+                      tooltip: 'Hapus',
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
                 ],
               ),
             ],

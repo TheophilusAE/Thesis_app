@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/sermon.dart';
+import '../providers/auth_provider.dart';
 import '../providers/sermon_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
+import '../widgets/permission_guard.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import '../widgets/common/app_status_badge.dart';
@@ -96,7 +99,13 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final auth = context.watch<AuthProvider>();
+    final canCreate = auth.can(AppModule.sermon, PermissionAction.create);
+    final canModify = auth.canModifyExisting;
+    return PermissionGuard(
+      module: AppModule.sermon,
+      title: 'Kelola Khotbah',
+      child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
         title: const Text(
@@ -213,17 +222,19 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
                                             type: sermon.isActive ? BadgeType.success : BadgeType.neutral,
                                             isSmall: true,
                                           ),
-                                          const SizedBox(width: 4),
-                                          IconButton(
-                                            icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
-                                            visualDensity: VisualDensity.compact,
-                                            onPressed: () => _edit(sermon),
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.errorColor),
-                                            visualDensity: VisualDensity.compact,
-                                            onPressed: () => _delete(sermon),
-                                          ),
+                                          if (canModify) ...[
+                                            const SizedBox(width: 4),
+                                            IconButton(
+                                              icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
+                                              visualDensity: VisualDensity.compact,
+                                              onPressed: () => _edit(sermon),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.errorColor),
+                                              visualDensity: VisualDensity.compact,
+                                              onPressed: () => _delete(sermon),
+                                            ),
+                                          ],
                                         ],
                                       ),
                                       const SizedBox(height: 10),
@@ -275,12 +286,13 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: !canCreate ? null : FloatingActionButton.extended(
         onPressed: _addNew,
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Tambah Khotbah', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
       ),
     );
   }

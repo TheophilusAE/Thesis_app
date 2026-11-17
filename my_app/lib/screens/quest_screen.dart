@@ -25,9 +25,12 @@ class _QuestScreenState extends State<QuestScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<QuestProvider>().loadReadingPlan();
+      if (!mounted) return;
+      context.read<QuestProvider>().loadReadingPlan(_userId);
     });
   }
+
+  String? get _userId => context.read<AuthProvider>().currentUser?.id;
 
   @override
   void dispose() {
@@ -70,7 +73,7 @@ class _QuestScreenState extends State<QuestScreen> {
 
           return RefreshIndicator(
             color: AppTheme.primary,
-            onRefresh: () => questProvider.loadReadingPlan(),
+            onRefresh: () => questProvider.loadReadingPlan(_userId),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
               children: [
@@ -111,7 +114,9 @@ class _QuestScreenState extends State<QuestScreen> {
   Widget _buildAdminSection(BuildContext context, QuestProvider questProvider) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        if (authProvider.currentDisplayRole != 'admin') {
+        // Changing the (device-level) reading target alters existing
+        // progress mapping: Super Admin only.
+        if (!authProvider.canModifyExisting) {
           return const SizedBox.shrink();
         }
 
@@ -163,7 +168,9 @@ class _QuestScreenState extends State<QuestScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Tentukan target jumlah pasal harian yang direkomendasikan untuk jemaat:',
+                  'Tentukan target jumlah pasal harian untuk rencana baca. Catatan: pengaturan '
+                  'ini tersimpan dan berlaku di perangkat ini saja, belum tersinkron ke '
+                  'perangkat jemaat lain.',
                   style: TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
                 ),
                 SliderTheme(
@@ -528,12 +535,14 @@ class _QuestScreenState extends State<QuestScreen> {
     );
 
     if (confirm == true && mounted) {
-      await questProvider.markDayCompleted(quest.day);
+      final saved = await questProvider.markDayCompleted(quest.day);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Puji Tuhan! Bacaan Hari ${quest.day} selesai dibaca! 🎉'),
-          backgroundColor: AppTheme.emerald,
+          content: Text(saved
+              ? 'Puji Tuhan! Bacaan Hari ${quest.day} selesai dibaca! 🎉'
+              : 'Silakan login untuk menyimpan progres bacaan.'),
+          backgroundColor: saved ? AppTheme.emerald : AppTheme.errorColor,
         ),
       );
     }

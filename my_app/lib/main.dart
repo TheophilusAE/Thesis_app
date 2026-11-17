@@ -23,8 +23,11 @@ import 'providers/event_provider.dart';
 import 'providers/komsel_provider.dart';
 import 'providers/prayer_request_provider.dart';
 import 'providers/sermon_provider.dart';
+import 'providers/recommendation_provider.dart';
+import 'providers/admin_access_provider.dart';
 import 'services/local_notification_service.dart';
 import 'utils/app_theme.dart';
+import 'screens/guest_home_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/pending_approval_screen.dart';
@@ -70,7 +73,13 @@ Future<void> main() async {
   );
   
   await _initializeDatabaseFactory();
-  await LocalNotificationService().init();
+  try {
+    await LocalNotificationService().init();
+  } catch (e) {
+    // Reminders are optional: never let a notification-plugin failure
+    // (e.g. unsupported platform config) stop the app from starting.
+    debugPrint('LocalNotificationService init failed: $e');
+  }
   runApp(const MyApp());
 }
 
@@ -116,6 +125,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PrayerRequestProvider()),
         ChangeNotifierProvider(create: (_) => KomselProvider()),
         ChangeNotifierProvider(create: (_) => SermonProvider()),
+        ChangeNotifierProvider(create: (_) => RecommendationProvider()),
+        ChangeNotifierProvider(create: (_) => AdminAccessProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -191,7 +202,8 @@ class _AuthGateState extends State<_AuthGate> {
           return const HomeScreen();
         }
 
-        return const LoginScreen();
+        // No session: public guest home (login/register reachable from it).
+        return const GuestHomeScreen();
       },
     );
   }

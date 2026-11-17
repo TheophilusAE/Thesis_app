@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/pelayan.dart';
+import '../providers/auth_provider.dart';
 import '../providers/pelayan_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
+import '../widgets/permission_guard.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import '../widgets/common/app_status_badge.dart';
@@ -37,7 +40,14 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final auth = context.watch<AuthProvider>();
+    // Admin: create + read; edit/delete existing pelayan is Super Admin only.
+    final canCreate = auth.can(AppModule.pelayan, PermissionAction.create);
+    final canModify = auth.canModifyExisting;
+    return PermissionGuard(
+      module: AppModule.pelayan,
+      title: 'Manajemen Pelayan',
+      child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
         title: const Text(
@@ -132,8 +142,8 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
                       icon: Icons.person_off_rounded,
                       title: 'Tidak Ada Data Pelayan',
                       description: 'Belum ada data pelayan yang sesuai dengan pencarian atau filter.',
-                      actionLabel: 'Tambah Pelayan',
-                      onAction: _addNewPelayan,
+                      actionLabel: canCreate ? 'Tambah Pelayan' : null,
+                      onAction: canCreate ? _addNewPelayan : null,
                     ),
                   );
                 }
@@ -147,8 +157,8 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _PelayaniCard(
                         pelayan: pelayan,
-                        onEdit: () => _editPelayan(pelayan),
-                        onDelete: () => _deletePelayan(pelayan),
+                        onEdit: canModify ? () => _editPelayan(pelayan) : null,
+                        onDelete: canModify ? () => _deletePelayan(pelayan) : null,
                       ),
                     );
                   },
@@ -158,7 +168,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: !canCreate ? null : FloatingActionButton.extended(
         onPressed: _addNewPelayan,
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
@@ -168,6 +178,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
           'Tambah Pelayan',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
+      ),
       ),
     );
   }
@@ -252,13 +263,14 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
 
 class _PelayaniCard extends StatelessWidget {
   final Pelayan pelayan;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  // Null = not permitted for this account; the button is hidden.
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _PelayaniCard({
     required this.pelayan,
-    required this.onEdit,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -333,6 +345,7 @@ class _PelayaniCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (onEdit != null)
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
                     onPressed: onEdit,
@@ -340,6 +353,7 @@ class _PelayaniCard extends StatelessWidget {
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     padding: EdgeInsets.zero,
                   ),
+                  if (onDelete != null)
                   IconButton(
                     icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
                     onPressed: onDelete,

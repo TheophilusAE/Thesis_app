@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../utils/app_theme.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
+import '../widgets/permission_guard.dart';
 
 class RoleManagementScreen extends StatefulWidget {
   const RoleManagementScreen({super.key});
@@ -122,7 +123,8 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                     const SizedBox(height: 8),
                     _roleCheckboxTile(
                       title: 'Admin',
-                      subtitle: 'Akses penuh manajemen data jemaat, jadwal, & sistem',
+                      subtitle: 'Tambah & lihat data sesuai izin modul/kategori '
+                          '(atur di Kelola Admin & Izin)',
                       value: selectedRoles.contains('admin'),
                       color: AppTheme.primary,
                       icon: Icons.shield_rounded,
@@ -132,6 +134,25 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                             if (!selectedRoles.contains('admin')) selectedRoles.add('admin');
                           } else {
                             selectedRoles.remove('admin');
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _roleCheckboxTile(
+                      title: 'Super Admin',
+                      subtitle: 'Akses penuh: ubah & hapus semua data, kelola admin dan izin',
+                      value: selectedRoles.contains('super_admin'),
+                      color: AppTheme.goldDark,
+                      icon: Icons.verified_user_rounded,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          if (val == true) {
+                            if (!selectedRoles.contains('super_admin')) selectedRoles.add('super_admin');
+                            // A Super Admin also uses the admin view.
+                            if (!selectedRoles.contains('admin')) selectedRoles.add('admin');
+                          } else {
+                            selectedRoles.remove('super_admin');
                           }
                         });
                       },
@@ -162,15 +183,17 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                   onPressed: selectedRoles.isEmpty
                       ? null
                       : () async {
-                          final updatedUser = user.copyWith(roles: selectedRoles);
-                          final success = await _authProvider.updateUser(updatedUser);
+                          // Writes only the roles column; the rest of the
+                          // profile (e.g. membership_type) is left untouched.
+                          final success =
+                              await _authProvider.updateUserRoles(user.id, selectedRoles);
                           if (!mounted) return;
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(success
                                   ? 'Role berhasil diperbarui'
-                                  : 'Gagal memperbarui role'),
+                                  : 'Gagal memperbarui role. ${_authProvider.lastMessage ?? ''}'),
                               backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
                             ),
                           );
@@ -223,6 +246,15 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Roles are Super Admin territory (RLS + escalation trigger enforce it).
+    return PermissionGuard(
+      superAdminOnly: true,
+      title: 'Kelola Role Pengguna',
+      child: _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     if (_loading) {
       return const Scaffold(
         backgroundColor: AppTheme.warmIvory,
@@ -396,6 +428,11 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     String label;
 
     switch (role) {
+      case 'super_admin':
+        color = AppTheme.goldDark;
+        icon = Icons.verified_user_rounded;
+        label = 'Super Admin';
+        break;
       case 'admin':
         color = AppTheme.primary;
         icon = Icons.shield_rounded;

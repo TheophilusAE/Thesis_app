@@ -11,6 +11,9 @@ import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import '../widgets/common/app_skeleton.dart';
 import '../widgets/common/app_status_badge.dart';
+import '../widgets/login_required.dart';
+import '../utils/event_capacity.dart';
+import 'feedback_screen.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});
@@ -98,11 +101,18 @@ class _EventCardState extends State<_EventCard> {
 
   Future<void> _loadRegistrationInfo() async {
     final uid = context.read<AuthProvider>().user?.id;
+    final provider = context.read<EventProvider>();
     if (uid == null) {
-      setState(() => _loadingReg = false);
+      // Guest: no personal registration, but the public headcount still
+      // shows how full the event is.
+      final count = await provider.getRegisteredCount(widget.event.id);
+      if (!mounted) return;
+      setState(() {
+        _registeredCount = count;
+        _loadingReg = false;
+      });
       return;
     }
-    final provider = context.read<EventProvider>();
     final results = await Future.wait([
       provider.getUserRegistration(widget.event.id, uid),
       provider.getRegisteredCount(widget.event.id),
@@ -128,6 +138,7 @@ class _EventCardState extends State<_EventCard> {
     final dateStr = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(widget.event.date);
     final timeStr = DateFormat('HH:mm').format(widget.event.date);
     final registered = _myReg != null;
+    final isGuest = context.watch<AuthProvider>().currentUser == null;
 
     return AppCard(
       padding: EdgeInsets.zero,
@@ -336,13 +347,38 @@ class _EventCardState extends State<_EventCard> {
                         ? _RegisteredActions(
                             event: widget.event,
                             registration: _myReg!,
+                            registeredCount: _registeredCount,
                             onChanged: _loadRegistrationInfo,
                           )
-                        : AppButton(
-                            label: _isFull ? 'Pendaftaran Ditutup (Penuh)' : 'Daftar Sekarang',
-                            icon: Icons.app_registration_rounded,
-                            onPressed: _isFull ? null : () => _showRegistrationSheet(context),
-                          ),
+                        : isGuest
+                            ? AppButton(
+                                label: 'Masuk untuk Mendaftar',
+                                icon: Icons.login_rounded,
+                                onPressed: () =>
+                                    showLoginRequired(context, feature: 'Pendaftaran event'),
+                              )
+                            : AppButton(
+                                label: _isFull ? 'Pendaftaran Ditutup (Penuh)' : 'Daftar Sekarang',
+                                icon: Icons.app_registration_rounded,
+                                onPressed: _isFull ? null : () => _showRegistrationSheet(context),
+                              ),
+                const SizedBox(height: 6),
+                if (!isGuest)
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => FeedbackScreen(
+                          event: widget.event,
+                          feedbackType: 'event',
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.rate_review_outlined, size: 18),
+                    label: const Text('Beri Feedback Kegiatan'),
+                  ),
+                ),
               ],
             ),
           ),
@@ -363,6 +399,7 @@ class _EventCardState extends State<_EventCard> {
       builder: (ctx) => _RegistrationSheet(
         event: widget.event,
         existingRegistration: _myReg,
+        registeredCount: _registeredCount,
         onSuccess: () {
           Navigator.pop(ctx);
           _loadRegistrationInfo();
@@ -375,11 +412,13 @@ class _EventCardState extends State<_EventCard> {
 class _RegisteredActions extends StatelessWidget {
   final ChurchEvent event;
   final EventRegistration registration;
+  final int registeredCount;
   final VoidCallback onChanged;
 
   const _RegisteredActions({
     required this.event,
     required this.registration,
+    required this.registeredCount,
     required this.onChanged,
   });
 
@@ -473,6 +512,7 @@ class _RegisteredActions extends StatelessWidget {
       builder: (ctx) => _RegistrationSheet(
         event: event,
         existingRegistration: registration,
+        registeredCount: registeredCount,
         onSuccess: () {
           Navigator.pop(ctx);
           onChanged();
@@ -528,11 +568,13 @@ class _RegisteredActions extends StatelessWidget {
 class _RegistrationSheet extends StatefulWidget {
   final ChurchEvent event;
   final EventRegistration? existingRegistration;
+  final int registeredCount;
   final VoidCallback onSuccess;
 
   const _RegistrationSheet({
     required this.event,
     this.existingRegistration,
+    required this.registeredCount,
     required this.onSuccess,
   });
 
@@ -579,6 +621,17 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
 
   int get _totalPeople => 1 + _familyRows.length;
 
+  /// Seats available to this user (their own current seats are counted as
+  /// free when editing). Null = no capacity limit.
+  int? get _seatsAvailable => remainingCapacity(
+        maxCapacity: widget.event.maxCapacity,
+        currentCount: widget.registeredCount,
+        existingTotal: widget.existingRegistration?.totalCount ?? 0,
+      );
+
+  bool get _exceedsCapacity =>
+      _seatsAvailable != null && _totalPeople > _seatsAvailable!;
+
   Future<void> _submit() async {
     for (final row in _familyRows) {
       if (row.nameCtrl.text.trim().isEmpty) {
@@ -604,30 +657,33 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
             ))
         .toList();
 
-    final ok = await context.read<EventProvider>().registerForEvent(
+    final error = await context.read<EventProvider>().registerForEvent(
           eventId: widget.event.id,
           userId: uid,
           familyMembers: familyMembers,
+          maxCapacity: widget.event.maxCapacity,
           notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         );
 
     if (!mounted) return;
     setState(() => _saving = false);
 
-    if (ok) {
+    final isEdit = widget.existingRegistration != null;
+    if (error == null) {
+      // Capture the messenger before onSuccess pops this sheet.
+      final messenger = ScaffoldMessenger.of(context);
       widget.onSuccess();
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          content: Text('Pendaftaran berhasil! $_totalPeople peserta terdaftar.'),
+          content: Text(isEdit
+              ? 'Perubahan pendaftaran disimpan ($_totalPeople peserta).'
+              : 'Pendaftaran berhasil! $_totalPeople peserta terdaftar.'),
           backgroundColor: AppTheme.emerald,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal mendaftar. Silakan coba kembali.'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(error), backgroundColor: AppTheme.errorColor),
       );
     }
   }
@@ -842,17 +898,28 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                       children: [
                         const Icon(Icons.info_outline_rounded, color: AppTheme.goldDark, size: 18),
                         const SizedBox(width: 8),
-                        Text(
-                          'Total peserta: $_totalPeople orang',
-                          style: const TextStyle(
-                            color: AppTheme.goldDark,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            _seatsAvailable == null
+                                ? 'Total peserta: $_totalPeople orang'
+                                : 'Total peserta: $_totalPeople orang • sisa kuota $_seatsAvailable',
+                            style: const TextStyle(
+                              color: AppTheme.goldDark,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
+                  if (_exceedsCapacity) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Jumlah peserta melebihi sisa kuota. Kurangi anggota keluarga untuk melanjutkan.',
+                      style: TextStyle(color: AppTheme.errorColor, fontSize: 12.5),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -865,7 +932,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                   label: isEdit ? 'Simpan Perubahan' : 'Konfirmasi Pendaftaran ($_totalPeople Orang)',
                   icon: Icons.check_circle_outline_rounded,
                   isLoading: _saving,
-                  onPressed: _submit,
+                  onPressed: _exceedsCapacity ? null : _submit,
                 ),
               ),
             ),

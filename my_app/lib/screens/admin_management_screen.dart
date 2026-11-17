@@ -7,6 +7,7 @@ import '../models/event.dart';
 import '../models/reading_quest.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import '../providers/notification_provider.dart';
 import '../services/devotional_service.dart';
 import '../services/event_service.dart';
 import '../services/quest_service.dart';
@@ -18,6 +19,7 @@ import 'role_management_screen.dart';
 import 'service_schedule_management_screen.dart';
 import 'training_schedule_management_screen.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
 
 class AdminManagementScreen extends StatefulWidget {
   const AdminManagementScreen({super.key});
@@ -215,6 +217,24 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     }
   }
 
+  /// Approve or reject a pending member via the permission-checked RPC and
+  /// tell the admin what happened (a refusal is no longer silent).
+  Future<void> _setMemberStatus(User user, {required bool approved}) async {
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.verifyUser(userId: user.id, approved: approved);
+    if (ok) {
+      await _reloadAll();
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? (approved ? '${user.name} disetujui.' : '${user.name} ditolak.')
+            : 'Gagal: ${auth.lastMessage ?? 'periksa koneksi lalu coba lagi.'}'),
+      ),
+    );
+  }
+
   Future<void> _showUserDialog({User? existingUser}) async {
     final nameController = TextEditingController(text: existingUser?.name ?? '');
     final emailController = TextEditingController(text: existingUser?.email ?? '');
@@ -227,11 +247,30 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     final addressController = TextEditingController(text: existingUser?.address ?? '');
     final memberSinceController = TextEditingController(text: existingUser?.memberSince ?? '');
     final baptismController = TextEditingController(text: existingUser?.baptismDate ?? '');
-    List<String> selectedRoles = existingUser?.roles ?? ['jemaat'];
+    // Copy: never mutate the loaded user's role list in place.
+    final List<String> selectedRoles = List<String>.of(existingUser?.roles ?? const ['jemaat']);
     // Normalize legacy 'verified' value (DB uses 'active')
     final rawStatus = existingUser?.membershipStatus ?? 'pending';
     String membershipStatus = rawStatus == 'verified' ? 'active' : rawStatus;
     final isMobile = MediaQuery.of(context).size.width < 700;
+    final auth = context.read<AuthProvider>();
+    // Only a Super Admin may grant the admin role (DB-enforced as well).
+    final canGrantAdmin = auth.isSuperAdmin;
+    // Status options mirror the server rules: a new account made by an Admin
+    // starts pending unless they hold users:approve; editing an existing
+    // account (Super Admin only) may set any status.
+    final statusItems = <DropdownMenuItem<String>>[
+      const DropdownMenuItem(value: 'pending', child: Text('Pending')),
+      if (existingUser != null || auth.can(AppModule.users, PermissionAction.approve))
+        const DropdownMenuItem(value: 'active', child: Text('Active')),
+      if (existingUser != null) ...const [
+        DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
+        DropdownMenuItem(value: 'inactive', child: Text('Nonaktif')),
+      ],
+    ];
+    if (!statusItems.any((i) => i.value == membershipStatus)) {
+      membershipStatus = 'pending';
+    }
 
     Widget formFields(void Function(VoidCallback fn) setDialogState) {
       return Column(
@@ -281,31 +320,29 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                 },
                 contentPadding: EdgeInsets.zero,
               ),
-              CheckboxListTile(
-                title: const Text('Admin'),
-                value: selectedRoles.contains('admin'),
-                onChanged: (value) {
-                  setDialogState(() {
-                    if (value == true) {
-                      if (!selectedRoles.contains('admin')) selectedRoles.add('admin');
-                    } else {
-                      selectedRoles.remove('admin');
-                    }
-                  });
-                },
-                contentPadding: EdgeInsets.zero,
-              ),
+              if (canGrantAdmin)
+                CheckboxListTile(
+                  title: const Text('Admin'),
+                  subtitle: const Text('Atur izin modulnya di Kelola Admin & Izin'),
+                  value: selectedRoles.contains('admin'),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      if (value == true) {
+                        if (!selectedRoles.contains('admin')) selectedRoles.add('admin');
+                      } else {
+                        selectedRoles.remove('admin');
+                      }
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
             ],
           ),
           const SizedBox(height: 6),
           _dialogDropdownField<String>(
             label: 'Status Keanggotaan',
             value: membershipStatus,
-            items: const [
-              DropdownMenuItem(value: 'pending', child: Text('Pending')),
-              DropdownMenuItem(value: 'active', child: Text('Active')),
-              DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
-            ],
+            items: statusItems,
             onChanged: (value) {
               if (value != null) {
                 setDialogState(() {
@@ -894,21 +931,59 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     return quest.readings.map((reading) => reading.displayText).join(', ');
   }
 
+  /// Tabs this account may open. Each tab is listed only when the admin holds
+  /// read/create/approve on its module; "Role" is Super Admin only. The
+  /// embedded screens and the database apply the same checks again.
+  List<({String label, Widget Function() build})> _visibleTabs(AuthProvider auth) {
+    final tabs = <({String label, String? module, bool superOnly, Widget Function() build})>[
+      (label: 'User', module: AppModule.users, superOnly: false, build: _buildUserTab),
+      (label: 'Role', module: null, superOnly: true, build: () => const RoleManagementScreen()),
+      (label: 'Renungan', module: AppModule.renungan, superOnly: false, build: _buildDevotionalTab),
+      (label: 'Quest Baca', module: AppModule.quest, superOnly: false, build: _buildQuestTab),
+      (label: 'Feedback', module: AppModule.feedback, superOnly: false,
+          build: () => const FeedbackManagementScreen()),
+      (label: 'Pelayan', module: AppModule.pelayan, superOnly: false,
+          build: () => const PelayaniManagementScreen()),
+      (label: 'Jadwal Ibadah', module: AppModule.jadwalPelayanan, superOnly: false,
+          build: () => const ServiceScheduleManagementScreen()),
+      (label: 'Jadwal Latihan', module: AppModule.jadwalPelayanan, superOnly: false,
+          build: () => const TrainingScheduleManagementScreen()),
+      (label: 'Substitusi', module: AppModule.jadwalPelayanan, superOnly: false,
+          build: () => const AdminSubstitutionReviewScreen()),
+      (label: 'Kehadiran', module: AppModule.kehadiran, superOnly: false,
+          build: () => const AdminAttendanceMonitoringScreen()),
+      (label: 'Event', module: AppModule.event, superOnly: false, build: () => const _AdminEventTab()),
+    ];
+    return [
+      for (final t in tabs)
+        if (t.superOnly ? auth.isSuperAdmin : auth.canAccess(t.module!))
+          (label: t.label, build: t.build),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isAdmin = context.watch<AuthProvider>().isAdminMode;
+    final auth = context.watch<AuthProvider>();
+    final tabs = auth.isAdminMode ? _visibleTabs(auth) : const <({String label, Widget Function() build})>[];
 
-    if (!isAdmin) {
+    if (tabs.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Panel Admin')),
         body: const Center(
-          child: Text('Akses ditolak. Hanya admin yang dapat membuka halaman ini.'),
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Akses ditolak. Akun Anda belum diberi izin untuk modul di halaman ini. '
+              'Hubungi Super Admin.',
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
       );
     }
 
     return DefaultTabController(
-      length: 11,
+      length: tabs.length,
       child: Scaffold(
         backgroundColor: AppTheme.warmIvory,
         appBar: AppBar(
@@ -943,19 +1018,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             indicatorSize: TabBarIndicatorSize.label,
             dividerColor: AppTheme.neutralBorder,
             padding: const EdgeInsets.only(bottom: 2),
-            tabs: const [
-              Tab(text: 'User'),
-              Tab(text: 'Role'),
-              Tab(text: 'Renungan'),
-              Tab(text: 'Quest Baca'),
-              Tab(text: 'Feedback'),
-              Tab(text: 'Pelayan'),
-              Tab(text: 'Jadwal Ibadah'),
-              Tab(text: 'Jadwal Latihan'),
-              Tab(text: 'Substitusi'),
-              Tab(text: 'Kehadiran'),
-              Tab(text: 'Event'),
-            ],
+            tabs: [for (final t in tabs) Tab(text: t.label)],
           ),
           actions: [
             IconButton(
@@ -968,25 +1031,17 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : TabBarView(
-                children: [
-                  _buildUserTab(),
-                  const RoleManagementScreen(),
-                  _buildDevotionalTab(),
-                  _buildQuestTab(),
-                  const FeedbackManagementScreen(),
-                  const PelayaniManagementScreen(),
-                  const ServiceScheduleManagementScreen(),
-                  const TrainingScheduleManagementScreen(),
-                  const AdminSubstitutionReviewScreen(),
-                  const AdminAttendanceMonitoringScreen(),
-                  const _AdminEventTab(),
-                ],
+                children: [for (final t in tabs) t.build()],
               ),
       ),
     );
   }
 
   Widget _buildUserTab() {
+    final auth = context.read<AuthProvider>();
+    final canCreateUser = auth.can(AppModule.users, PermissionAction.create);
+    final canApproveUser = auth.can(AppModule.users, PermissionAction.approve);
+    final canModify = auth.canModifyExisting;
     final filteredUsers = _filteredUsers;
     final pendingCount = _users.where((user) => user.hasRole('jemaat') && user.membershipStatus == 'pending').length;
     final adminCount = _users.where((user) => user.hasRole('admin')).length;
@@ -1015,14 +1070,16 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _showUserDialog(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tambah User'),
+              if (canCreateUser) ...[
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showUserDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tambah User'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _reloadAll,
@@ -1123,8 +1180,12 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                                   children: [
                                     // Display all roles
                                     ...user.roles.map((role) {
-                                      final roleLabel = role == 'admin' ? 'Admin' : 
-                                                       role == 'pelayan' ? 'Pelayan' : 'Jemaat';
+                                      final roleLabel = switch (role) {
+                                        'super_admin' => 'Super Admin',
+                                        'admin' => 'Admin',
+                                        'pelayan' => 'Pelayan',
+                                        _ => 'Jemaat',
+                                      };
                                       return Chip(label: Text(roleLabel));
                                     }),
                                     Chip(label: Text(user.membershipStatus)),
@@ -1134,34 +1195,41 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                               ],
                             ),
                           ),
-                          PopupMenuButton<String>(
-                            onSelected: (value) async {
-                              if (value == 'edit') {
-                                await _showUserDialog(existingUser: user);
-                              } else if (value == 'delete') {
-                                _confirmDelete(
-                                  title: 'Hapus user',
-                                  message: 'Hapus akun ${user.name}? Tindakan ini tidak bisa dibatalkan.',
-                                  onConfirm: () async {
-                                    final success = await context.read<AuthProvider>().deleteUser(user.id);
-                                    if (success) {
-                                      await _reloadAll();
-                                    }
-                                    if (!mounted) {
-                                      return;
-                                    }
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(success ? 'User dihapus.' : 'Gagal menghapus user.')),
-                                    );
-                                  },
-                                );
-                              }
-                            },
-                            itemBuilder: (context) => const [
-                              PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(value: 'delete', child: Text('Hapus')),
-                            ],
-                          ),
+                          // Edit / deactivate existing accounts: Super Admin only.
+                          if (canModify && user.id != auth.currentUser?.id)
+                            PopupMenuButton<String>(
+                              onSelected: (value) async {
+                                if (value == 'edit') {
+                                  await _showUserDialog(existingUser: user);
+                                } else if (value == 'deactivate') {
+                                  _confirmDelete(
+                                    title: 'Nonaktifkan user',
+                                    message: 'Nonaktifkan akun ${user.name}? Akun tidak bisa login, '
+                                        'tetapi riwayat datanya tetap tersimpan dan bisa diaktifkan kembali.',
+                                    onConfirm: () async {
+                                      final success = await auth.deactivateUser(user.id);
+                                      if (success) {
+                                        await _reloadAll();
+                                      }
+                                      if (!mounted) {
+                                        return;
+                                      }
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(success
+                                              ? 'User dinonaktifkan.'
+                                              : 'Gagal menonaktifkan user. ${auth.lastMessage ?? ''}'),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                PopupMenuItem(value: 'deactivate', child: Text('Nonaktifkan')),
+                              ],
+                            ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -1176,18 +1244,12 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                       const SizedBox(height: 12),
                       LinearProgressIndicator(value: completeness),
                       const SizedBox(height: 12),
-                      if (user.hasRole('jemaat') && user.membershipStatus == 'pending')
+                      if (user.hasRole('jemaat') && user.membershipStatus == 'pending' && canApproveUser)
                         Row(
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  final auth = context.read<AuthProvider>();
-                                  final ok = await auth.verifyUser(userId: user.id, approved: false);
-                                  if (ok) {
-                                    await _reloadAll();
-                                  }
-                                },
+                                onPressed: () => _setMemberStatus(user, approved: false),
                                 icon: const Icon(Icons.close),
                                 label: const Text('Tolak'),
                               ),
@@ -1195,20 +1257,14 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  final auth = context.read<AuthProvider>();
-                                  final ok = await auth.verifyUser(userId: user.id, approved: true);
-                                  if (ok) {
-                                    await _reloadAll();
-                                  }
-                                },
+                                onPressed: () => _setMemberStatus(user, approved: true),
                                 icon: const Icon(Icons.check),
                                 label: const Text('Verifikasi'),
                               ),
                             ),
                           ],
                         )
-                      else
+                      else if (canModify)
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton.icon(
@@ -1228,6 +1284,9 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
   }
 
   Widget _buildDevotionalTab() {
+    final auth = context.read<AuthProvider>();
+    final canCreate = auth.can(AppModule.renungan, PermissionAction.create);
+    final canModify = auth.canModifyExisting;
     final filteredDevotionals = _filteredDevotionals;
 
     return RefreshIndicator(
@@ -1237,14 +1296,16 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
         children: [
           Row(
             children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _showDevotionalDialog(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tambah Renungan'),
+              if (canCreate) ...[
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showDevotionalDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tambah Renungan'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _reloadAll,
@@ -1303,6 +1364,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                               ],
                             ),
                           ),
+                          if (canModify)
                           PopupMenuButton<String>(
                             onSelected: (value) async {
                               if (value == 'edit') {
@@ -1350,15 +1412,17 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                         maxLines: 5,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () => _showDevotionalDialog(existing: devotional),
-                          icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Edit'),
+                      if (canModify) ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => _showDevotionalDialog(existing: devotional),
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Edit'),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -1370,6 +1434,11 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
   }
 
   Widget _buildQuestTab() {
+    final auth = context.read<AuthProvider>();
+    final canCreate = auth.can(AppModule.quest, PermissionAction.create);
+    // Changing the target, resetting or editing the plan alters existing
+    // data: Super Admin only.
+    final canModify = auth.canModifyExisting;
     final filteredQuests = _filteredQuests;
 
     return RefreshIndicator(
@@ -1379,6 +1448,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
         children: [
           Row(
             children: [
+              if (canCreate)
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () => _showQuestDialog(),
@@ -1386,7 +1456,8 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                   label: const Text('Tambah Quest'),
                 ),
               ),
-              const SizedBox(width: 12),
+              if (canCreate && canModify) const SizedBox(width: 12),
+              if (canModify)
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () async {
@@ -1403,15 +1474,17 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _dailyTargetController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Target bacaan harian',
-              helperText: 'Dipakai saat plan bawaan dihasilkan ulang',
+          if (canModify) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _dailyTargetController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Target bacaan harian',
+                helperText: 'Dipakai saat plan bawaan dihasilkan ulang',
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -1432,7 +1505,8 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              if (canModify) const SizedBox(width: 12),
+              if (canModify)
               OutlinedButton.icon(
                 onPressed: () async {
                   final shouldReset = await showDialog<bool>(
@@ -1490,6 +1564,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
+                          if (canModify)
                           PopupMenuButton<String>(
                             onSelected: (value) async {
                               if (value == 'edit') {
@@ -1525,15 +1600,17 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                         _questSubtitle(quest),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () => _showQuestDialog(existing: quest),
-                          icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Edit'),
+                      if (canModify) ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => _showQuestDialog(existing: quest),
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Edit'),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -1756,6 +1833,10 @@ class _AdminEventTabState extends State<_AdminEventTab> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
+    final auth = context.watch<AuthProvider>();
+    final canCreate = auth.can(AppModule.event, PermissionAction.create);
+    final canRead = auth.can(AppModule.event, PermissionAction.read);
+    final canModify = auth.canModifyExisting;
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -1763,6 +1844,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
         padding: const EdgeInsets.all(16),
         children: [
           // Create button
+          if (canCreate)
           ElevatedButton.icon(
             onPressed: () => _showEventDialog(),
             icon: const Icon(Icons.add_rounded),
@@ -1790,10 +1872,10 @@ class _AdminEventTabState extends State<_AdminEventTab> {
           else
             ..._events.map((event) => _AdminEventCard(
                   event: event,
-                  onEdit: () => _showEventDialog(existing: event),
-                  onDelete: () => _confirmDelete(event),
-                  onToggle: () => _toggleActive(event),
-                  onViewRegistrations: () => _showRegistrations(event),
+                  onEdit: canModify ? () => _showEventDialog(existing: event) : null,
+                  onDelete: canModify ? () => _confirmDelete(event) : null,
+                  onToggle: canModify ? () => _toggleActive(event) : null,
+                  onViewRegistrations: canRead ? () => _showRegistrations(event) : null,
                 )),
         ],
       ),
@@ -1928,6 +2010,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
     final capacity = int.tryParse(capacityCtrl.text.trim());
 
     bool ok;
+    var notified = true;
     if (existing == null) {
       ok = await _service.createEvent(
         title: title,
@@ -1936,6 +2019,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
         location: locationCtrl.text.trim(),
         maxCapacity: capacity,
       );
+      if (ok && mounted) notified = await _announceEvent(title, selectedDate);
     } else {
       ok = await _service.updateEvent(existing.copyWith(
         title: title,
@@ -1948,13 +2032,34 @@ class _AdminEventTabState extends State<_AdminEventTab> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Event tersimpan.' : 'Gagal menyimpan event.'),
+        content: Text(!ok
+            ? 'Gagal menyimpan event.'
+            : notified
+                ? 'Event tersimpan.'
+                : 'Event tersimpan, namun pengumuman notifikasi gagal dikirim.'),
         backgroundColor: ok ? const Color(0xFF2563EB) : Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
       if (ok) await _load();
     }
+  }
+
+  /// In-app announcement of a new event to every approved account.
+  Future<bool> _announceEvent(String title, DateTime date) async {
+    final auth = context.read<AuthProvider>();
+    final notifications = context.read<NotificationProvider>();
+    final users = await auth.getAllUsers();
+    final recipients = users
+        .where((u) => AuthProvider.isApprovedStatus(u.membershipStatus))
+        .map((u) => u.id);
+    return notifications.notifyUsers(
+      userIds: recipients,
+      title: 'Kegiatan Gereja Baru',
+      message: '"$title" pada ${DateFormat('EEEE, dd MMM yyyy • HH:mm', 'id_ID').format(date)}. '
+          'Lihat menu Event Gereja untuk mendaftar.',
+      type: 'event',
+    );
   }
 
   Future<void> _confirmDelete(ChurchEvent event) async {
@@ -2198,17 +2303,18 @@ class _AdminEventTabState extends State<_AdminEventTab> {
 
 class _AdminEventCard extends StatelessWidget {
   final ChurchEvent event;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-  final VoidCallback onToggle;
-  final VoidCallback onViewRegistrations;
+  // Null = the action is not permitted for this account (hidden).
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final VoidCallback? onToggle;
+  final VoidCallback? onViewRegistrations;
 
   const _AdminEventCard({
     required this.event,
-    required this.onEdit,
-    required this.onDelete,
-    required this.onToggle,
-    required this.onViewRegistrations,
+    this.onEdit,
+    this.onDelete,
+    this.onToggle,
+    this.onViewRegistrations,
   });
 
   @override
@@ -2274,14 +2380,17 @@ class _AdminEventCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onEdit != null || onDelete != null || onToggle != null ||
+                  onViewRegistrations != null)
               PopupMenuButton<String>(
                 onSelected: (v) {
-                  if (v == 'edit') onEdit();
-                  if (v == 'delete') onDelete();
-                  if (v == 'toggle') onToggle();
-                  if (v == 'registrations') onViewRegistrations();
+                  if (v == 'edit') onEdit?.call();
+                  if (v == 'delete') onDelete?.call();
+                  if (v == 'toggle') onToggle?.call();
+                  if (v == 'registrations') onViewRegistrations?.call();
                 },
                 itemBuilder: (_) => [
+                  if (onViewRegistrations != null)
                   const PopupMenuItem(
                       value: 'registrations',
                       child: Row(children: [
@@ -2289,6 +2398,7 @@ class _AdminEventCard extends StatelessWidget {
                         SizedBox(width: 8),
                         Text('Lihat Pendaftaran')
                       ])),
+                  if (onEdit != null)
                   const PopupMenuItem(
                       value: 'edit',
                       child: Row(children: [
@@ -2296,6 +2406,7 @@ class _AdminEventCard extends StatelessWidget {
                         SizedBox(width: 8),
                         Text('Edit')
                       ])),
+                  if (onToggle != null)
                   PopupMenuItem(
                       value: 'toggle',
                       child: Row(children: [
@@ -2309,6 +2420,7 @@ class _AdminEventCard extends StatelessWidget {
                             ? 'Nonaktifkan'
                             : 'Aktifkan')
                       ])),
+                  if (onDelete != null)
                   const PopupMenuItem(
                       value: 'delete',
                       child: Row(children: [

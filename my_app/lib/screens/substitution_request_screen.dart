@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/service_schedule.dart';
 import '../models/substitution_request.dart';
 import '../providers/auth_provider.dart';
+import '../providers/pelayan_provider.dart';
 import '../providers/service_schedule_provider.dart';
 import '../providers/substitution_request_provider.dart';
 import '../utils/app_theme.dart';
@@ -28,6 +29,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
   late AuthProvider _authProvider;
   late SubstitutionRequestProvider _substitutionProvider;
   late ServiceScheduleProvider _scheduleProvider;
+  late PelayaniProvider _pelayanProvider;
 
   @override
   void initState() {
@@ -36,11 +38,20 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
     _authProvider = context.read<AuthProvider>();
     _substitutionProvider = context.read<SubstitutionRequestProvider>();
     _scheduleProvider = context.read<ServiceScheduleProvider>();
+    _pelayanProvider = context.read<PelayaniProvider>();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+  }
+
+  Future<void> _loadData() async {
     final user = _authProvider.currentUser;
-    if (user != null) {
-      _substitutionProvider.loadUserRequests(user.id);
-    }
+    if (user == null) return;
+    await Future.wait([
+      _substitutionProvider.loadUserRequests(user.id),
+      _scheduleProvider.loadAllSchedules(),
+      if (_pelayanProvider.allPelayan.isEmpty) _pelayanProvider.loadAllPelayan(),
+    ]);
+    if (mounted) setState(() {});
   }
 
   @override
@@ -49,19 +60,34 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
     super.dispose();
   }
 
+  /// Upcoming duties of the logged-in user. `schedules.pelayan_id` points at
+  /// `pelayans.id`, so the user is first resolved to their Pelayan record
+  /// via `pelayans.user_id` (comparing against `users.id` never matches).
   List<ServiceSchedule> get _assignedSchedules {
-    final currentUserId = _authProvider.currentUser?.id;
-    if (currentUserId == null) return [];
+    final myPelayan = _pelayanProvider.pelayanForUser(_authProvider.currentUser?.id);
+    if (myPelayan == null) return [];
+    final cutoff = DateTime.now().subtract(const Duration(hours: 3));
     return _scheduleProvider.allSchedules
         .where((schedule) =>
-            schedule.pelayaniId == currentUserId &&
-            schedule.serviceDate.isAfter(DateTime.now().subtract(const Duration(hours: 3))))
-        .toList();
+            schedule.pelayaniId == myPelayan.id && schedule.serviceDate.isAfter(cutoff))
+        .toList()
+      ..sort((a, b) => a.serviceDate.compareTo(b.serviceDate));
   }
 
   Future<void> _showCreateRequestSheet(ServiceSchedule schedule) async {
+    final userId = _authProvider.currentUser?.id;
+    if (userId != null && _substitutionProvider.hasPendingRequestFor(userId, schedule.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Anda sudah memiliki permohonan yang menunggu untuk jadwal ini.'),
+        ),
+      );
+      return;
+    }
+
     final reasonController = TextEditingController();
     final replacementNameController = TextEditingController();
+    var submitting = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -70,7 +96,8 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
         padding: EdgeInsets.only(
           left: 20,
           right: 20,
@@ -181,7 +208,10 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                     variant: AppButtonVariant.primary,
                     icon: Icons.send_rounded,
                     height: 48,
-                    onPressed: () async {
+                    isLoading: submitting,
+                    onPressed: submitting
+                        ? null
+                        : () async {
                       final reason = reasonController.text.trim();
                       if (reason.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -190,26 +220,31 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                         return;
                       }
 
-                      Navigator.pop(ctx);
+                      setSheetState(() => submitting = true);
+                      final suggestion = replacementNameController.text.trim();
                       final request = SubstitutionRequest(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        id: '',
                         serviceScheduleId: schedule.id,
                         requestedByUserId: _authProvider.currentUser!.id,
                         requestedByName: _authProvider.currentUser!.name,
                         reason: reason,
-                        replacementName: replacementNameController.text.trim().isEmpty
-                            ? null
-                            : replacementNameController.text.trim(),
+                        // The requester's suggestion; the admin picks the
+                        // actual replacement (replacement_name/_user_id).
+                        requestedReplacementName: suggestion.isEmpty ? null : suggestion,
                         createdAt: DateTime.now(),
                       );
 
-                      await _substitutionProvider.createSubstitutionRequest(request);
+                      final ok = await _substitutionProvider.createSubstitutionRequest(request);
 
                       if (!mounted) return;
+                      if (ok && ctx.mounted) Navigator.pop(ctx);
+                      if (!ok) setSheetState(() => submitting = false);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Permintaan penggantian berhasil diajukan'),
-                          backgroundColor: AppTheme.emerald,
+                        SnackBar(
+                          content: Text(ok
+                              ? 'Permintaan penggantian berhasil diajukan'
+                              : 'Gagal mengajukan permintaan. Periksa koneksi lalu coba lagi.'),
+                          backgroundColor: ok ? AppTheme.emerald : AppTheme.errorColor,
                         ),
                       );
                     },
@@ -219,6 +254,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -445,15 +481,39 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                       ],
                     ),
                   ),
-                  if (request.replacementName != null && request.replacementName!.isNotEmpty) ...[
+                  if (request.requestedReplacementName != null &&
+                      request.requestedReplacementName!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         const Icon(Icons.person_outline_rounded, size: 14, color: AppTheme.neutralMedium),
                         const SizedBox(width: 6),
-                        Text(
-                          'Pengganti disarankan: ${request.replacementName}',
-                          style: const TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
+                        Expanded(
+                          child: Text(
+                            'Pengganti disarankan: ${request.requestedReplacementName}',
+                            style: const TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (request.status == 'approved' &&
+                      request.replacementName != null &&
+                      request.replacementName!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.how_to_reg_rounded, size: 14, color: AppTheme.emerald),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Digantikan oleh: ${request.replacementName}',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: AppTheme.darkCharcoal,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),

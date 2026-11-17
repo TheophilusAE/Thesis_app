@@ -4,9 +4,14 @@ import 'package:provider/provider.dart';
 
 import '../models/attendance_confirmation.dart';
 import '../providers/attendance_confirmation_provider.dart';
+import '../providers/auth_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/attendance_labels.dart';
+import '../utils/permissions.dart';
+import '../widgets/permission_guard.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
+import '../widgets/common/app_error_state.dart';
 import '../widgets/common/app_status_badge.dart';
 
 class AdminAttendanceMonitoringScreen extends StatefulWidget {
@@ -20,17 +25,41 @@ class AdminAttendanceMonitoringScreen extends StatefulWidget {
 class _AdminAttendanceMonitoringScreenState
     extends State<AdminAttendanceMonitoringScreen> {
   String _filterStatus = 'all'; // all, confirmed, pending
+  String _roleFilter = roleFilterAll; // all, pelayan, jemaat
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+
+  // users.id → current roles / name, used to label rows (attendance stores
+  // no role of its own).
+  Map<String, List<String>> _rolesByUser = {};
+  Map<String, String> _namesByUser = {};
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<AttendanceConfirmationProvider>();
-      provider.loadAllConfirmations();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    final provider = context.read<AttendanceConfirmationProvider>();
+    final auth = context.read<AuthProvider>();
+    final usersFuture = auth.getAllUsers();
+    await provider.loadAllConfirmations();
+    final users = await usersFuture;
+    if (!mounted) return;
+    setState(() {
+      _rolesByUser = {for (final u in users) u.id: u.roles};
+      _namesByUser = {for (final u in users) u.id: u.name};
     });
   }
+
+  String _groupOf(AttendanceConfirmation c) => attendeeGroup(_rolesByUser[c.userId]);
+
+  String _methodOf(AttendanceConfirmation c) => checkInMethodLabel(
+        c.checkInMethod,
+        checkedInBy: c.checkedInBy,
+        checkerName: c.checkedInBy == null ? null : _namesByUser[c.checkedInBy],
+      );
 
   @override
   void dispose() {
@@ -50,6 +79,11 @@ class _AdminAttendanceMonitoringScreenState
       filtered = filtered.where((c) => !c.confirmed).toList();
     }
 
+    // Filter by attendee group (current role)
+    if (_roleFilter != roleFilterAll) {
+      filtered = filtered.where((c) => _groupOf(c) == _roleFilter).toList();
+    }
+
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -66,11 +100,15 @@ class _AdminAttendanceMonitoringScreenState
   Widget _buildSummaryCard(List<AttendanceConfirmation> all) {
     final confirmed = all.where((c) => c.confirmed).length;
     final pending = all.length - confirmed;
+    final pelayanCount = all.where((c) => c.confirmed && _groupOf(c) == rolePelayan).length;
+    final jemaatCount = confirmed - pelayanCount;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: AppCard(
-        child: Row(
+        child: Column(
+          children: [
+            Row(
           children: [
             Expanded(
               child: _MetricItem(
@@ -100,6 +138,25 @@ class _AdminAttendanceMonitoringScreenState
             ),
           ],
         ),
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: AppTheme.neutralBorder),
+            const SizedBox(height: 8),
+            Text(
+              'Hadir: $jemaatCount jemaat • $pelayanCount pelayan',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.darkCharcoal,
+              ),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'Peran dihitung dari peran akun saat ini, bukan saat presensi.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: AppTheme.neutralMuted),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -116,7 +173,7 @@ class _AdminAttendanceMonitoringScreenState
               setState(() => _searchQuery = value);
             },
             decoration: InputDecoration(
-              hintText: 'Cari nama pelayan atau tanggal...',
+              hintText: 'Cari nama atau tanggal...',
               hintStyle: TextStyle(
                 color: AppTheme.neutralMuted.withValues(alpha: 0.8),
                 fontSize: 13.5,
@@ -165,8 +222,39 @@ class _AdminAttendanceMonitoringScreenState
               ],
             ),
           ),
+          const SizedBox(height: 6),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildRoleChip(roleFilterAll, 'Semua Peran'),
+                const SizedBox(width: 8),
+                _buildRoleChip(roleJemaat, 'Jemaat'),
+                const SizedBox(width: 8),
+                _buildRoleChip(rolePelayan, 'Pelayan'),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRoleChip(String value, String label) {
+    final isSelected = _roleFilter == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _roleFilter = value),
+      labelStyle: TextStyle(
+        fontSize: 12.5,
+        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        color: isSelected ? AppTheme.primary : AppTheme.darkCharcoal,
+      ),
+      backgroundColor: Colors.white,
+      selectedColor: AppTheme.primaryLight,
+      side: BorderSide(color: isSelected ? AppTheme.primary : AppTheme.neutralBorder),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 
@@ -269,6 +357,20 @@ class _AdminAttendanceMonitoringScreenState
                       ),
                     ],
                   ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _Tag(
+                        attendeeGroupLabel(_groupOf(confirmation)),
+                        color: _groupOf(confirmation) == rolePelayan
+                            ? AppTheme.primary
+                            : AppTheme.goldDark,
+                      ),
+                      _Tag(_methodOf(confirmation), color: AppTheme.neutralMedium),
+                    ],
+                  ),
                   if (confirmation.notes != null &&
                       confirmation.notes!.isNotEmpty) ...[
                     const SizedBox(height: 4),
@@ -308,7 +410,11 @@ class _AdminAttendanceMonitoringScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _detailRow('Nama Pelayan', confirmation.userName),
+              _detailRow('Nama', confirmation.userName),
+              const SizedBox(height: 10),
+              _detailRow('Peran (saat ini)', attendeeGroupLabel(_groupOf(confirmation))),
+              const SizedBox(height: 10),
+              _detailRow('Metode Presensi', _methodOf(confirmation)),
               const SizedBox(height: 10),
               _detailRow(
                 'Jadwal',
@@ -372,11 +478,19 @@ class _AdminAttendanceMonitoringScreenState
 
   @override
   Widget build(BuildContext context) {
+    return PermissionGuard(
+      module: AppModule.kehadiran,
+      title: 'Monitoring Kehadiran',
+      child: _buildScreen(context),
+    );
+  }
+
+  Widget _buildScreen(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
         title: const Text(
-          'Monitor Kehadiran Pelayan',
+          'Monitoring Kehadiran',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
             fontWeight: FontWeight.bold,
@@ -393,6 +507,16 @@ class _AdminAttendanceMonitoringScreenState
           final filteredConfirmations =
               _getFilteredConfirmations(allConfirmations);
 
+          if (provider.isLoading && allConfirmations.isEmpty) {
+            return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+          }
+          if (provider.error != null && allConfirmations.isEmpty) {
+            return AppErrorState(
+              message: 'Gagal memuat data kehadiran. Periksa koneksi lalu coba lagi.',
+              onRetry: _load,
+            );
+          }
+
           return Column(
             children: [
               _buildSummaryCard(allConfirmations),
@@ -406,15 +530,13 @@ class _AdminAttendanceMonitoringScreenState
                               ? 'Belum Ada Data Kehadiran'
                               : 'Tidak Ada Data yang Cocok',
                           description: allConfirmations.isEmpty
-                              ? 'Data presensi pelayan akan muncul setelah ada jadwal aktif.'
-                              : 'Coba ubah kata kunci pencarian atau filter status.',
+                              ? 'Data presensi jemaat dan pelayan akan muncul setelah ada presensi.'
+                              : 'Coba ubah kata kunci pencarian atau filter.',
                         ),
                       )
                     : RefreshIndicator(
                         color: AppTheme.primary,
-                        onRefresh: () async {
-                          await provider.loadAllConfirmations();
-                        },
+                        onRefresh: _load,
                         child: ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: filteredConfirmations.length,
@@ -428,6 +550,28 @@ class _AdminAttendanceMonitoringScreenState
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _Tag extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _Tag(this.label, {required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: color),
       ),
     );
   }

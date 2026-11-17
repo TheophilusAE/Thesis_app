@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/notification_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/user.dart';
 import '../utils/app_theme.dart';
@@ -241,9 +242,13 @@ class _ProfileBody extends StatelessWidget {
                   onPressed: () async {
                     Navigator.pop(ctx);
                     final auth = context.read<AuthProvider>();
+                    context.read<NotificationProvider>().clearForSignOut();
                     await auth.logout();
+                    // Return to the root _AuthGate, which now shows the guest
+                    // home. (Replacing the root with '/login' used to remove
+                    // the gate, so a later login never reached HomeScreen.)
                     if (context.mounted) {
-                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+                      Navigator.of(context).popUntil((route) => route.isFirst);
                     }
                   },
                   child: const Text('Keluar'),

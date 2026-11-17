@@ -3,8 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/prayer_request.dart';
+import '../providers/auth_provider.dart';
 import '../providers/prayer_request_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
+import '../widgets/permission_guard.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import '../widgets/common/app_status_badge.dart';
@@ -63,7 +66,13 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
       ),
     );
     if (newStatus == null || !mounted) return;
-    await context.read<PrayerRequestProvider>().updateStatus(request.id, newStatus);
+    final ok = await context.read<PrayerRequestProvider>().updateStatus(request.id, newStatus);
+    if (!mounted || ok) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Gagal mengubah status. Pastikan Anda memiliki izin persetujuan Pokok Doa.'),
+      ),
+    );
   }
 
   Widget _statusOption(BuildContext context, String statusKey, String label, IconData icon, Color color) {
@@ -132,7 +141,14 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final auth = context.watch<AuthProvider>();
+    // Status change = approve permission (RPC); delete = Super Admin only.
+    final canChangeStatus = auth.can(AppModule.prayer, PermissionAction.approve);
+    final canDelete = auth.canModifyExisting;
+    return PermissionGuard(
+      module: AppModule.prayer,
+      title: 'Doa Jemaat',
+      child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
         title: const Text(
@@ -256,6 +272,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                                   label: request.status.toUpperCase(),
                                   isSmall: true,
                                 ),
+                                if (canChangeStatus || canDelete) ...[
                                 const SizedBox(width: 4),
                                 PopupMenuButton<String>(
                                   icon: const Icon(Icons.more_vert, color: AppTheme.mutedCharcoal),
@@ -264,8 +281,9 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                                     if (value == 'status') _updateStatus(request);
                                     if (value == 'delete') _confirmDelete(request);
                                   },
-                                  itemBuilder: (context) => const [
-                                    PopupMenuItem(
+                                  itemBuilder: (context) => [
+                                    if (canChangeStatus)
+                                    const PopupMenuItem(
                                       value: 'status',
                                       child: Row(
                                         children: [
@@ -275,7 +293,8 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                                         ],
                                       ),
                                     ),
-                                    PopupMenuItem(
+                                    if (canDelete)
+                                    const PopupMenuItem(
                                       value: 'delete',
                                       child: Row(
                                         children: [
@@ -287,6 +306,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                                     ),
                                   ],
                                 ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 12),
@@ -332,6 +352,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
             ),
           ),
         ],
+      ),
       ),
     );
   }

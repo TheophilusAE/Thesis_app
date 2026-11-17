@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/event.dart';
 import '../models/event_registration.dart';
+import '../utils/event_capacity.dart';
 
 class EventService {
   static final _db = Supabase.instance.client;
@@ -100,6 +101,10 @@ class EventService {
 
   // ── Registrations ─────────────────────────────────────────
 
+  /// The user's registration for an event. `event_registrations` has no
+  /// unique key on (event_id, user_id), and older app versions could create
+  /// duplicates, so this reads the earliest row instead of `maybeSingle()`
+  /// (which throws when more than one row exists).
   Future<EventRegistration?> getUserRegistration(
       String eventId, String userId) async {
     try {
@@ -108,34 +113,74 @@ class EventService {
           .select()
           .eq('event_id', eventId)
           .eq('user_id', userId)
-          .maybeSingle();
-      if (data == null) return null;
-      return EventRegistration.fromJson(data as Map<String, dynamic>);
+          .order('registered_at')
+          .limit(1);
+      final rows = data as List;
+      if (rows.isEmpty) return null;
+      return EventRegistration.fromJson(rows.first as Map<String, dynamic>);
     } catch (e) {
       debugPrint('getUserRegistration error: $e');
       return null;
     }
   }
 
-  Future<bool> registerForEvent({
+  /// Registers (or updates the existing registration of) [userId].
+  /// Returns null on success, or a user-facing error message.
+  ///
+  /// Capacity is re-checked against a fresh headcount right before writing.
+  /// See `utils/event_capacity.dart` for why this is best-effort only.
+  Future<String?> registerForEvent({
     required String eventId,
     required String userId,
     required List<FamilyMember> familyMembers,
+    int? maxCapacity,
     String? notes,
   }) async {
+    final total = 1 + familyMembers.length;
+    final cleanNotes = notes?.trim().isEmpty == true ? null : notes?.trim();
     try {
-      await _db.from('event_registrations').upsert({
-        'event_id': eventId,
-        'user_id': userId,
-        'family_members':
-            familyMembers.map((m) => m.toJson()).toList(),
-        'total_count': 1 + familyMembers.length,
-        'notes': notes?.trim().isEmpty == true ? null : notes?.trim(),
-      });
-      return true;
+      final existing = await getUserRegistration(eventId, userId);
+
+      if (maxCapacity != null) {
+        final current = await getRegisteredCountOrNull(eventId);
+        if (current == null) {
+          return 'Tidak dapat memeriksa kuota acara. Periksa koneksi lalu coba lagi.';
+        }
+        if (!fitsCapacity(
+          maxCapacity: maxCapacity,
+          currentCount: current,
+          requestedTotal: total,
+          existingTotal: existing?.totalCount ?? 0,
+        )) {
+          final left = remainingCapacity(
+            maxCapacity: maxCapacity,
+            currentCount: current,
+            existingTotal: existing?.totalCount ?? 0,
+          );
+          return 'Kuota tidak mencukupi. Sisa kuota: ${left ?? 0} orang.';
+        }
+      }
+
+      final fields = {
+        'family_members': familyMembers.map((m) => m.toJson()).toList(),
+        'total_count': total,
+        'notes': cleanNotes,
+      };
+      if (existing != null) {
+        // Update by primary key and never rewrite event_id/user_id, so an
+        // edit can't move or reassign the registration row.
+        await _db.from('event_registrations').update(fields).eq('id', existing.id);
+      } else {
+        await _db.from('event_registrations').insert({
+          'event_id': eventId,
+          'user_id': userId,
+          ...fields,
+        });
+      }
+      return null;
     } catch (e) {
       debugPrint('registerForEvent error: $e');
-      return false;
+      return 'Pendaftaran gagal disimpan. Periksa koneksi lalu coba lagi.';
     }
   }
 
@@ -158,6 +203,12 @@ class EventService {
   /// the aggregate capacity count even though row-level access to other
   /// users' registrations is restricted.
   Future<int> getRegisteredCount(String eventId) async {
+    return await getRegisteredCountOrNull(eventId) ?? 0;
+  }
+
+  /// Like [getRegisteredCount] but returns null on failure, so a capacity
+  /// check never mistakes "couldn't load" for "nobody registered yet".
+  Future<int?> getRegisteredCountOrNull(String eventId) async {
     try {
       final result = await _db.rpc(
         'get_event_registration_count',
@@ -166,7 +217,7 @@ class EventService {
       return (result as num?)?.toInt() ?? 0;
     } catch (e) {
       debugPrint('getRegisteredCount error: $e');
-      return 0;
+      return null;
     }
   }
 

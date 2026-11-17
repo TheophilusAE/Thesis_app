@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/training_schedule.dart';
 import '../providers/training_schedule_provider.dart';
+import '../providers/notification_provider.dart';
 import '../providers/pelayan_provider.dart';
 import '../utils/app_theme.dart';
 
@@ -294,6 +295,24 @@ class _AddEditTrainingScheduleScreenState
     }
   }
 
+  String _dateLabel() => DateFormat('EEEE, dd MMM yyyy', 'id_ID').format(_selectedDate);
+
+  /// Notifies the linked accounts of the selected Pelayan. `related_schedule_id`
+  /// is left null for new rows: this screen doesn't get the new training id back.
+  Future<bool> _notifyParticipants(String title, String message, String? relatedId) {
+    final pelayan = context.read<PelayaniProvider>().allPelayan;
+    final userIds = pelayan
+        .where((p) => _selectedPelayaniIds.contains(p.id) && p.hasUserAccount)
+        .map((p) => p.userId);
+    return context.read<NotificationProvider>().notifyUsers(
+          userIds: userIds,
+          title: title,
+          message: message,
+          type: 'training',
+          relatedScheduleId: relatedId,
+        );
+  }
+
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -318,12 +337,30 @@ class _AddEditTrainingScheduleScreenState
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,
         );
 
-        if (success && mounted) {
+        if (!mounted) return;
+        if (!success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Jadwal berhasil diperbarui')),
+            const SnackBar(
+              content: Text('Gagal memperbarui jadwal latihan. Periksa koneksi lalu coba lagi.'),
+              backgroundColor: AppTheme.errorColor,
+            ),
           );
-          Navigator.pop(context);
+          return;
         }
+        final notified = await _notifyParticipants(
+          'Jadwal Latihan Diperbarui',
+          'Latihan "${_namaController.text.trim()}" pada ${_dateLabel()} telah diperbarui.',
+          widget.schedule!.id,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(notified
+                ? 'Jadwal berhasil diperbarui'
+                : 'Jadwal diperbarui, namun notifikasi gagal dikirim.'),
+          ),
+        );
+        Navigator.pop(context);
       } else {
         final success = await provider.addTrainingSchedule(
           nama: _namaController.text.trim(),
@@ -336,12 +373,31 @@ class _AddEditTrainingScheduleScreenState
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,
         );
 
-        if (success && mounted) {
+        if (!mounted) return;
+        if (!success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Jadwal berhasil ditambahkan')),
+            const SnackBar(
+              content: Text('Gagal menyimpan jadwal latihan. Periksa koneksi lalu coba lagi.'),
+              backgroundColor: AppTheme.errorColor,
+            ),
           );
-          Navigator.pop(context);
+          return;
         }
+        final notified = await _notifyParticipants(
+          'Jadwal Latihan Baru',
+          'Anda terdaftar pada latihan "${_namaController.text.trim()}" pada ${_dateLabel()} '
+              '(${_startTimeController.text} - ${_endTimeController.text}).',
+          null,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(notified
+                ? 'Jadwal berhasil ditambahkan'
+                : 'Jadwal ditambahkan, namun notifikasi gagal dikirim.'),
+          ),
+        );
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {

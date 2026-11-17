@@ -64,9 +64,6 @@ dependencies:
   # Permissions
   permission_handler: ^11.2.0
   
-  # Image Picker
-  image_picker: ^1.0.7
-  
   # UUID Generation
   uuid: ^4.0.0
 

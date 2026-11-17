@@ -1,2 +1,6 @@
-# Local-only Claude Code project notes — not for the repo
-CLAUDE.md
+# Private thesis compliance audit — keep local, do not commit
+/docs/private-audit/THESIS_COMPLIANCE_AUDIT.md
+/docs/private-audit/IMPLEMENTATION_PROGRESS.md
+
+# Thesis draft document — keep local, do not push
+/Thesis draft/

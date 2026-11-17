@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/komsel.dart';
+import '../providers/auth_provider.dart';
 import '../providers/komsel_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
+import '../widgets/permission_guard.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import '../widgets/common/app_status_badge.dart';
@@ -96,7 +99,13 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final auth = context.watch<AuthProvider>();
+    final canCreate = auth.can(AppModule.group, PermissionAction.create);
+    final canModify = auth.canModifyExisting;
+    return PermissionGuard(
+      module: AppModule.group,
+      title: 'Kelola Komsel',
+      child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
         title: const Text(
@@ -241,17 +250,19 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                                             type: komsel.isActive ? BadgeType.success : BadgeType.neutral,
                                             isSmall: true,
                                           ),
-                                          const SizedBox(width: 4),
-                                          IconButton(
-                                            icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
-                                            visualDensity: VisualDensity.compact,
-                                            onPressed: () => _edit(komsel),
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.errorColor),
-                                            visualDensity: VisualDensity.compact,
-                                            onPressed: () => _delete(komsel),
-                                          ),
+                                          if (canModify) ...[
+                                            const SizedBox(width: 4),
+                                            IconButton(
+                                              icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
+                                              visualDensity: VisualDensity.compact,
+                                              onPressed: () => _edit(komsel),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.errorColor),
+                                              visualDensity: VisualDensity.compact,
+                                              onPressed: () => _delete(komsel),
+                                            ),
+                                          ],
                                         ],
                                       ),
                                       const SizedBox(height: 12),
@@ -310,12 +321,13 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: !canCreate ? null : FloatingActionButton.extended(
         onPressed: _addNew,
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Tambah Komsel', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
       ),
     );
   }

@@ -54,14 +54,33 @@ class LocalNotificationService {
     tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const settings = InitializationSettings(android: androidSettings);
+    // iOS: without Darwin settings the plugin throws at initialize(). The
+    // permission prompt is deferred to requestPermission() so it isn't shown
+    // at every cold start.
+    const darwinSettings = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    const settings = InitializationSettings(
+      android: androidSettings,
+      iOS: darwinSettings,
+    );
     await _plugin.initialize(settings);
     _initialized = true;
   }
 
+  /// Asks for notification permission (Android 13+ / iOS). Never throws: a
+  /// platform failure is logged and treated as "not granted" so the app keeps
+  /// working without reminders.
   Future<bool> requestPermission() async {
-    final status = await Permission.notification.request();
-    return status.isGranted;
+    try {
+      final status = await Permission.notification.request();
+      return status.isGranted || status.isProvisional;
+    } catch (e) {
+      debugPrint('Error requesting notification permission: $e');
+      return false;
+    }
   }
 
   int _notificationId(String scheduleId, int hoursBefore) {
@@ -86,6 +105,10 @@ class LocalNotificationService {
           _channelName,
           importance: Importance.high,
           priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentSound: true,
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,

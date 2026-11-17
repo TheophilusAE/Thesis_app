@@ -14,7 +14,10 @@ class PendingApprovalScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final rejected = auth.blockedStatus == 'rejected';
+    final inactive = auth.blockedStatus == 'inactive';
+    // A deactivated account is treated like a rejected one: no self-service
+    // re-check, only "contact the church".
+    final rejected = auth.blockedStatus == 'rejected' || inactive;
 
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
@@ -33,7 +36,11 @@ class PendingApprovalScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  rejected ? 'Pendaftaran Ditolak' : 'Registrasi Berhasil',
+                  inactive
+                      ? 'Akun Dinonaktifkan'
+                      : rejected
+                          ? 'Pendaftaran Ditolak'
+                          : 'Registrasi Berhasil',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 22,
@@ -43,9 +50,11 @@ class PendingApprovalScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  rejected
-                      ? 'Pendaftaran akun Anda ditolak. Silakan hubungi admin gereja.'
-                      : 'Akun Anda sedang menunggu verifikasi admin gereja.',
+                  inactive
+                      ? 'Akun Anda telah dinonaktifkan. Silakan hubungi admin gereja.'
+                      : rejected
+                          ? 'Pendaftaran akun Anda ditolak. Silakan hubungi admin gereja.'
+                          : 'Akun Anda sedang menunggu verifikasi admin gereja.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 15,

@@ -56,20 +56,33 @@ class PelayaniProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Add new Pelayan to Supabase
+  /// The Pelayan record linked to an app account via `pelayans.user_id`.
+  /// Schedules reference `pelayans.id`, never `users.id`, so this is the
+  /// only correct way to find "my" schedules for the logged-in user.
+  Pelayan? pelayanForUser(String? userId) {
+    if (userId == null || userId.isEmpty) return null;
+    for (final p in _allPelayan) {
+      if (p.userId == userId) return p;
+    }
+    return null;
+  }
+
+  /// Add new Pelayan to Supabase. [userId] is the linked account
+  /// (`users.id`); pass null for a Pelayan without an app account.
   Future<bool> addPelayan({
     required String nama,
     required String noTelepon,
     required String posisi,
     String? userId,
+    bool isAktif = true,
   }) async {
     try {
       await _supabaseService.addPelayan({
         'nama': nama,
         'no_telepon': noTelepon,
         'posisi': posisi,
-        'is_aktif': true,
-        'user_id': userId,
+        'is_aktif': isAktif,
+        'user_id': (userId == null || userId.isEmpty) ? null : userId,
       });
 
       await loadAllPelayan();
@@ -87,6 +100,8 @@ class PelayaniProvider extends ChangeNotifier {
     String? noTelepon,
     String? posisi,
     bool? isAktif,
+    bool updateUserLink = false,
+    String? userId,
   }) async {
     try {
       final updateData = <String, dynamic>{};
@@ -94,6 +109,9 @@ class PelayaniProvider extends ChangeNotifier {
       if (noTelepon != null) updateData['no_telepon'] = noTelepon;
       if (posisi != null) updateData['posisi'] = posisi;
       if (isAktif != null) updateData['is_aktif'] = isAktif;
+      if (updateUserLink) {
+        updateData['user_id'] = (userId == null || userId.isEmpty) ? null : userId;
+      }
 
       await _supabaseService.updatePelayan(id, updateData);
 
@@ -104,6 +122,7 @@ class PelayaniProvider extends ChangeNotifier {
           noTelepon: noTelepon,
           posisi: posisi,
           isAktif: isAktif,
+          userId: updateUserLink ? (userId ?? '') : null,
         );
         _filteredPelayan = _allPelayan;
         notifyListeners();

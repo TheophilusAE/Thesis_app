@@ -70,16 +70,19 @@ class EventProvider extends ChangeNotifier {
           String eventId, String userId) =>
       _service.getUserRegistration(eventId, userId);
 
-  Future<bool> registerForEvent({
+  /// Returns null on success, or a user-facing error message.
+  Future<String?> registerForEvent({
     required String eventId,
     required String userId,
     required List<FamilyMember> familyMembers,
+    int? maxCapacity,
     String? notes,
   }) =>
       _service.registerForEvent(
         eventId: eventId,
         userId: userId,
         familyMembers: familyMembers,
+        maxCapacity: maxCapacity,
         notes: notes,
       );
 

@@ -6,6 +6,7 @@ import '../models/training_schedule.dart';
 import '../providers/auth_provider.dart';
 import '../providers/training_schedule_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import 'add_edit_training_schedule_screen.dart';
@@ -45,7 +46,10 @@ class _TrainingScheduleManagementScreenState
 
   @override
   Widget build(BuildContext context) {
-    final canManage = context.watch<AuthProvider>().isAdminMode;
+    final auth = context.watch<AuthProvider>();
+    // Admin: create only; edit/delete existing trainings is Super Admin only.
+    final canCreate = auth.can(AppModule.jadwalPelayanan, PermissionAction.create);
+    final canModify = auth.canModifyExisting;
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
@@ -121,8 +125,8 @@ class _TrainingScheduleManagementScreenState
                       icon: Icons.school_rounded,
                       title: 'Tidak Ada Jadwal Latihan',
                       description: 'Belum ada agenda pelatihan atau gladi bersih yang terdaftar.',
-                      actionLabel: canManage ? 'Tambah Jadwal Latihan' : null,
-                      onAction: canManage ? _addNewSchedule : null,
+                      actionLabel: canCreate ? 'Tambah Jadwal Latihan' : null,
+                      onAction: canCreate ? _addNewSchedule : null,
                     ),
                   );
                 }
@@ -156,8 +160,8 @@ class _TrainingScheduleManagementScreenState
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _TrainingScheduleCard(
                         schedule: schedule,
-                        onEdit: canManage ? () => _editSchedule(schedule) : null,
-                        onDelete: canManage ? () => _deleteSchedule(schedule) : null,
+                        onEdit: canModify ? () => _editSchedule(schedule) : null,
+                        onDelete: canModify ? () => _deleteSchedule(schedule) : null,
                       ),
                     );
                   },
@@ -167,7 +171,7 @@ class _TrainingScheduleManagementScreenState
           ),
         ],
       ),
-      floatingActionButton: !canManage ? null : FloatingActionButton.extended(
+      floatingActionButton: !canCreate ? null : FloatingActionButton.extended(
         onPressed: _addNewSchedule,
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,

@@ -19,6 +19,10 @@ class Pelayan {
     required this.updatedAt,
   });
 
+  /// Whether this Pelayan record is linked to a real app account
+  /// (`pelayans.user_id`). Unlinked rows have an empty [userId].
+  bool get hasUserAccount => userId.isNotEmpty;
+
   /// Convert Pelayan object to JSON
   Map<String, dynamic> toJson() {
     return {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/pelayan.dart';
+import '../models/user.dart';
+import '../providers/auth_provider.dart';
 import '../providers/pelayan_provider.dart';
 import '../utils/app_theme.dart';
 
@@ -21,6 +23,11 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
   late bool _isAktif;
   bool _isLoading = false;
 
+  // Linked app account (pelayans.user_id). Empty string = no account.
+  String _linkedUserId = '';
+  List<User> _linkableUsers = [];
+  bool _loadingUsers = true;
+
   // Default positions
   static const List<String> positions = [
     'Opsir',
@@ -40,6 +47,34 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
     _noTeleponController = TextEditingController(text: widget.pelayan?.noTelepon ?? '');
     _posisiController = TextEditingController(text: widget.pelayan?.posisi ?? '');
     _isAktif = widget.pelayan?.isAktif ?? true;
+    _linkedUserId = widget.pelayan?.userId ?? '';
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadLinkableUsers());
+  }
+
+  /// Approved accounts that are not already linked to a different Pelayan.
+  Future<void> _loadLinkableUsers() async {
+    final auth = context.read<AuthProvider>();
+    final pelayanProvider = context.read<PelayaniProvider>();
+    final users = await auth.getAllUsers();
+    final linkedElsewhere = pelayanProvider.allPelayan
+        .where((p) => p.hasUserAccount && p.id != widget.pelayan?.id)
+        .map((p) => p.userId)
+        .toSet();
+    if (!mounted) return;
+    setState(() {
+      _linkableUsers = users
+          .where((u) =>
+              u.id == _linkedUserId ||
+              (AuthProvider.isApprovedStatus(u.membershipStatus) &&
+                  !linkedElsewhere.contains(u.id)))
+          .toList();
+      // A link to an account that no longer exists can't be shown as a
+      // dropdown value; fall back to "no account" instead of crashing.
+      if (_linkedUserId.isNotEmpty && !_linkableUsers.any((u) => u.id == _linkedUserId)) {
+        _linkedUserId = '';
+      }
+      _loadingUsers = false;
+    });
   }
 
   @override
@@ -100,6 +135,47 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Linked app account (pelayans.user_id)
+              DropdownButtonFormField<String>(
+                key: ValueKey('user-link-$_loadingUsers'),
+                initialValue: _linkedUserId,
+                isExpanded: true,
+                decoration: _inputDecoration(
+                  label: _loadingUsers ? 'Memuat akun pengguna...' : 'Akun Pengguna',
+                  prefixIcon: const Icon(Icons.account_circle_outlined, color: AppTheme.primary),
+                ),
+                items: [
+                  const DropdownMenuItem(value: '', child: Text('Tanpa akun aplikasi')),
+                  ..._linkableUsers.map((u) => DropdownMenuItem(
+                        value: u.id,
+                        child: Text(
+                          '${u.name} (${u.email})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      )),
+                ],
+                onChanged: _loadingUsers
+                    ? null
+                    : (value) {
+                        setState(() => _linkedUserId = value ?? '');
+                        final user = _linkableUsers.where((u) => u.id == value).firstOrNull;
+                        if (user == null) return;
+                        if (_namaController.text.trim().isEmpty) _namaController.text = user.name;
+                        if (_noTeleponController.text.trim().isEmpty) {
+                          _noTeleponController.text = user.phone;
+                        }
+                      },
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(4, 6, 4, 0),
+                child: Text(
+                  'Hubungkan ke akun agar pelayan dapat melihat jadwalnya, mengajukan '
+                  'pergantian, dan menerima pengingat.',
+                  style: TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // Nama field
               TextFormField(
                 controller: _namaController,
@@ -254,32 +330,39 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
           noTelepon: _noTeleponController.text.trim(),
           posisi: _posisiController.text,
           isAktif: _isAktif,
+          updateUserLink: true,
+          userId: _linkedUserId,
         );
 
-        if (success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pelayan berhasil diperbarui')),
-          );
-          Navigator.pop(context);
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success
+                ? 'Pelayan berhasil diperbarui'
+                : 'Gagal memperbarui pelayan. Periksa koneksi dan hak akses admin.'),
+            backgroundColor: success ? null : AppTheme.errorColor,
+          ),
+        );
+        if (success) Navigator.pop(context);
       } else {
-        // For adding new Pelayan, we need a userId
-        // In this case, we'll use a temporary ID - should be updated based on logged-in user
-        final userId = 'admin-user'; // This should come from auth provider
-
         final success = await provider.addPelayan(
-          userId: userId,
+          userId: _linkedUserId,
           nama: _namaController.text.trim(),
           noTelepon: _noTeleponController.text.trim(),
           posisi: _posisiController.text,
+          isAktif: _isAktif,
         );
 
-        if (success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pelayan berhasil ditambahkan')),
-          );
-          Navigator.pop(context);
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success
+                ? 'Pelayan berhasil ditambahkan'
+                : 'Gagal menambahkan pelayan. Periksa koneksi dan hak akses admin.'),
+            backgroundColor: success ? null : AppTheme.errorColor,
+          ),
+        );
+        if (success) Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {

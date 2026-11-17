@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/devotional.dart';
+import '../providers/auth_provider.dart';
+import '../services/devotional_bookmarks.dart';
 import '../services/devotional_service.dart';
 import '../utils/app_theme.dart';
 import '../widgets/common/app_button.dart';
@@ -18,15 +23,109 @@ class DevotionalScreen extends StatefulWidget {
 
 class _DevotionalScreenState extends State<DevotionalScreen> {
   final DevotionalService _devotionalService = DevotionalService();
+  final DevotionalBookmarks _bookmarks = DevotionalBookmarks();
   late Future<Devotional> _todayFuture;
   Devotional? _activeDevotional;
   Devotional? _todayDevotional;
   double _fontSize = 16.0;
+  Set<String> _savedIds = {};
+  bool _savingBookmark = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadBookmarks());
+  }
+
+  String? get _userId => context.read<AuthProvider>().currentUser?.id;
+
+  Future<void> _loadBookmarks() async {
+    final uid = _userId;
+    if (uid == null) return;
+    final saved = await _bookmarks.load(uid);
+    if (mounted) setState(() => _savedIds = saved);
+  }
+
+  Future<void> _toggleBookmark(Devotional devotional) async {
+    final uid = _userId;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan login untuk menyimpan renungan.')),
+      );
+      return;
+    }
+    setState(() => _savingBookmark = true);
+    try {
+      final nowSaved = await _bookmarks.toggle(uid, devotional.id);
+      if (!mounted) return;
+      setState(() {
+        nowSaved ? _savedIds.add(devotional.id) : _savedIds.remove(devotional.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(nowSaved
+              ? 'Renungan disimpan di perangkat ini'
+              : 'Renungan dihapus dari daftar simpanan'),
+          backgroundColor: AppTheme.primary,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menyimpan renungan. Coba lagi.'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _savingBookmark = false);
+    }
+  }
+
+  String _shareText(Devotional d) => '${d.title}\n\n'
+      '"${d.verse}"\n— ${d.verseReference}\n\n'
+      '${d.content}\n\n'
+      'Renungan Harian GPdI Persadamas';
+
+  void _showShareSheet(Devotional devotional) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.copy_rounded, color: AppTheme.primary),
+              title: const Text('Salin teks renungan'),
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                await Clipboard.setData(ClipboardData(text: _shareText(devotional)));
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Teks renungan disalin')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_rounded, color: AppTheme.emerald),
+              title: const Text('Bagikan via WhatsApp'),
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                final uri = Uri.https('wa.me', '/', {'text': _shareText(devotional)});
+                final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                if (!opened && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Tidak dapat membuka WhatsApp')),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _loadData() {
@@ -173,29 +272,19 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                           label: 'Bagikan',
                           icon: Icons.share_outlined,
                           variant: AppButtonVariant.outline,
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Fitur berbagi renungan akan segera hadir'),
-                              ),
-                            );
-                          },
+                          onPressed: () => _showShareSheet(devotional),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: AppButton(
-                          label: 'Simpan',
-                          icon: Icons.bookmark_border_rounded,
+                          label: _savedIds.contains(devotional.id) ? 'Tersimpan' : 'Simpan',
+                          icon: _savedIds.contains(devotional.id)
+                              ? Icons.bookmark_rounded
+                              : Icons.bookmark_border_rounded,
                           variant: AppButtonVariant.primary,
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Renungan disimpan ke daftar bacaan'),
-                                backgroundColor: AppTheme.primary,
-                              ),
-                            );
-                          },
+                          isLoading: _savingBookmark,
+                          onPressed: () => _toggleBookmark(devotional),
                         ),
                       ),
                     ],

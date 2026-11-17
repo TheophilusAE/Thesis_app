@@ -3,7 +3,10 @@ import '../models/substitution_request.dart';
 import '../services/supabase_service.dart';
 
 class SubstitutionRequestProvider extends ChangeNotifier {
-  final SupabaseService _service = SupabaseService();
+  SubstitutionRequestProvider({SupabaseService? service})
+      : _service = service ?? SupabaseService();
+
+  final SupabaseService _service;
 
   List<SubstitutionRequest> _allRequests = [];
   List<SubstitutionRequest> _filteredRequests = [];
@@ -72,6 +75,15 @@ class SubstitutionRequestProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// True when [userId] already has a pending request for [scheduleId] in the
+  /// loaded history — used to stop duplicate submissions for the same duty.
+  bool hasPendingRequestFor(String userId, String scheduleId) {
+    return _userRequests.any((r) =>
+        r.requestedByUserId == userId &&
+        r.serviceScheduleId == scheduleId &&
+        r.status == 'pending');
+  }
+
   Future<bool> createSubstitutionRequest(SubstitutionRequest request) async {
     try {
       final result = await _service.addSubstitutionRequest(request.toSupabaseJson());
@@ -88,25 +100,25 @@ class SubstitutionRequestProvider extends ChangeNotifier {
     }
   }
 
+  /// Approves the request AND moves the duty to [replacementPelayanId] in a
+  /// single database transaction (`review_substitution` RPC). The reviewing
+  /// admin is taken from the session server-side, never from the client.
+  /// Requires the `jadwal_pelayanan:approve` permission.
   Future<bool> approveRequest({
     required String requestId,
-    required String replacementUserId,
-    required String replacementName,
+    required String replacementPelayanId,
     String? adminNotes,
   }) async {
     try {
-      final now = DateTime.now().toIso8601String();
-      await _service.updateSubstitutionRequest(requestId, {
-        'status': 'approved',
-        'replacement_user_id': replacementUserId,
-        'replacement_name': replacementName,
-        'admin_notes': adminNotes,
-        'reviewed_at': now,
-        'updated_at': now,
-      });
+      final result = await _service.reviewSubstitution(
+        requestId: requestId,
+        approve: true,
+        replacementPelayanId: replacementPelayanId,
+        adminNotes: adminNotes,
+      );
       _updateLocalRequest(requestId, status: 'approved',
-          replacementUserId: replacementUserId,
-          replacementName: replacementName,
+          replacementUserId: result['replacement_user_id'] as String?,
+          replacementName: result['replacement_name'] as String?,
           adminNotes: adminNotes);
       return true;
     } catch (e) {
@@ -116,15 +128,16 @@ class SubstitutionRequestProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> rejectRequest({required String requestId, String? adminNotes}) async {
+  Future<bool> rejectRequest({
+    required String requestId,
+    String? adminNotes,
+  }) async {
     try {
-      final now = DateTime.now().toIso8601String();
-      await _service.updateSubstitutionRequest(requestId, {
-        'status': 'rejected',
-        'admin_notes': adminNotes,
-        'reviewed_at': now,
-        'updated_at': now,
-      });
+      await _service.reviewSubstitution(
+        requestId: requestId,
+        approve: false,
+        adminNotes: adminNotes,
+      );
       _updateLocalRequest(requestId, status: 'rejected', adminNotes: adminNotes);
       return true;
     } catch (e) {
@@ -136,10 +149,7 @@ class SubstitutionRequestProvider extends ChangeNotifier {
 
   Future<bool> cancelRequest(String requestId) async {
     try {
-      await _service.updateSubstitutionRequest(requestId, {
-        'status': 'cancelled',
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+      await _service.cancelSubstitutionRequest(requestId);
       _updateLocalRequest(requestId, status: 'cancelled');
       return true;
     } catch (e) {

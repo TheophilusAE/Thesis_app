@@ -1,115 +1,167 @@
-# GPDI Church App
+# GPdI App — GPdI Persadamas Banjarmasin
 
-A mobile church management application built with Flutter and Supabase, designed for GPDI (Gereja Pantekosta di Indonesia) congregations. Supports three roles — Jemaat, Pelayan, and Admin — each with a dedicated interface, switchable within a single account.
+A mobile church application built with Flutter and Supabase for GPdI (Gereja Pantekosta di Indonesia) Persadamas Banjarmasin. It digitalizes member administration, service scheduling, attendance, church information and spiritual content, and gives church leaders data-based activity recommendations. Developed as an undergraduate thesis project (skripsi): *"Rancang Bangun Aplikasi Digitalisasi Gereja Berbasis Mobile untuk Meningkatkan Efektivitas Pelayanan di GPDI Persadamas Banjarmasin."*
+
+Three roles — **Jemaat**, **Pelayan**, **Admin** — share one account system. A user can hold several roles and switch between them in the app.
 
 ---
 
 ## Tech Stack
 
+Versions are the constraints declared in `pubspec.yaml`.
+
 | Layer | Technology |
 |-------|-----------|
-| Framework | Flutter (Dart SDK ^3.10.4) |
-| Backend | Supabase (PostgreSQL + Auth + RLS + Realtime) |
-| State management | Provider |
-| Offline Bible DB | sqflite / sqflite_common_ffi (desktop) + xml parsing |
-| Small local caches | SharedPreferences |
-| QR | qr_flutter (generate) + mobile_scanner (scan) |
-| Notifications | flutter_local_notifications + timezone (local OS reminders only, no Firebase/FCM) |
-| Links | url_launcher (sermon media, WhatsApp) |
-| Fonts / Design | Poppins (Google Fonts), Material 3, red/gold "Merah Pantekosta" theme |
-| Testing | mocktail (mocks `SupabaseService` directly) |
+| Framework | Flutter (Dart SDK `^3.10.4`; developed with Flutter 3.41 / Dart 3.11) |
+| Backend | Supabase (`supabase_flutter ^1.10.0`) — PostgreSQL, Auth, Row Level Security, Realtime |
+| State management | Provider (`^6.1.1`) |
+| Offline Bible | `sqflite` / `sqflite_common_ffi` (desktop) + `xml` parsing of a bundled Indonesian Bible |
+| Local storage | `shared_preferences` (caches, per-account reading progress and bookmarks) |
+| QR | `qr_flutter` (generate) + `mobile_scanner` (scan) |
+| Reminders | `flutter_local_notifications` + `timezone` (on-device only, no Firebase/FCM) |
+| Links / sharing | `url_launcher` (sermon media, playlist links, WhatsApp) |
+| Design | Poppins (`google_fonts`), Material 3, light theme with GPdI burgundy `#A62639` and gold `#C89B3C` |
+| Testing | `flutter_test` + `mocktail` (mocks `SupabaseService`) |
 
 ---
 
-## Roles & Features
+## Features
+
+### Tamu (Guest, no account)
+- Opens straight to a public home: worship schedule (no pelayan names), church events, daily devotional, sermon library and the offline Bible.
+- Personal features (member card/QR, komsel, prayer requests, Quest Baca) ask the visitor to sign in or register.
 
 ### Jemaat (Congregation Member)
-- **Home dashboard** — banner carousel, verse of the day, worship schedule, announcements
-- **Alkitab** — full offline Indonesian Bible with chapter navigation and search
-- **Renungan Harian** — daily devotional content
-- **Quest Baca** — Bible reading challenge with progress tracking
-- **Playlist Pujian** — admin-published "today's playlist" (song titles, not audio streaming)
-- **Perpustakaan Khotbah** — sermon/media library; thumbnail grid, opens YouTube/audio/livestream links externally
-- **Komsel** — small group directory; browse and contact a group leader via WhatsApp (directory only, no join workflow)
-- **Kartu Anggota Digital** — digital membership card with a structured QR payload for attendance check-in
-- **Daftar Event** — register for church events (RSVP-style, no payment/ticketing), including family members in one registration
-- **Permintaan Doa** — submit prayer requests and track their status (private to the submitter + admins)
-- **Persembahan** — static info only (bank transfer details, QRIS label) — no payment gateway, intentionally out of scope
-- **Feedback** — submit feedback on events, facilities, and hospitality
-- **Notifikasi** — in-app notification inbox (realtime)
-- **Profil** — view and edit personal profile, switch roles, logout
+- **Registration and login** — email/password via Supabase Auth. New accounts wait for admin approval before they can sign in.
+- **Profile and digital member card** — the QR code on the card is used for attendance.
+- **Alkitab** — offline Indonesian Bible with chapter navigation and search.
+- **Quest Baca** — annual Bible reading plan with progress and a calendar-day streak. Progress is stored **per account on the device** (see Known Limitations).
+- **Renungan Harian** — admin-managed daily devotional. Can be saved on the device or shared (copy text or WhatsApp).
+- **Playlist Pujian** — admin-managed worship playlist. Songs with a link open in an external app; there is no built-in audio player.
+- **Event Gereja** — event registration (RSVP) including family members, with a quota check, edit and cancel, plus event feedback.
+- **QR attendance** — show your own QR to an usher, or scan the service QR shown by an admin or pelayan to check yourself in.
+- **Prayer requests**, **komsel directory** (contact leaders via WhatsApp), **sermon/media library** (opens links externally).
+- **Feedback** — rate events, facilities and hospitality. The "anonymous" option hides your name from church leaders; the account is still recorded (see Known Limitations).
+- **Notifications** — in-app inbox (realtime) for schedule changes, substitution decisions and new events.
 
-### Pelayan (Church Minister)
-- **Beranda** — dashboard with stats, quick actions, and recent notifications
-- **Jadwal** — view service schedules and training schedules with toggle
-- **Konfirmasi Kehadiran** — manual self-check-in for assigned services
-- **QR Check-in** — scan a member's card to check them into today's schedule (writes to the same attendance table, tagged by scanning pelayan)
-- **Permintaan Substitusi** — request and track service substitutions
-- **Pengingat Otomatis** — local device reminders (1h/3h/24h before an upcoming service/training schedule)
-- **Profil** — profile management, switch roles
+### Pelayan (Service Minister)
+- Service and training schedules, with attendance confirmation for assigned services.
+- **QR check-in** — scan a member's card to record their attendance.
+- **Substitution requests** — request a replacement for an assigned duty and follow its status.
+- **Automatic reminders** — local device notifications 24h, 3h and 1h before an upcoming duty.
+
+### Super Admin
+- Full create, read, update and delete on every module.
+- **Kelola Admin & Izin** — promote members to Admin, choose per module whether each Admin may *view*, *add* or *approve*, and limit an Admin to administrative categories (Umum, Pemuda, Sekolah Minggu, or new ones).
+- The only role that may change roles, edit or delete existing records, or deactivate accounts.
 
 ### Admin
-- **Dashboard** — user stats, feedback ratings, and quick actions
-- **Kelola Data** — CRUD across all domains: users/roles, pelayan, service & training schedules, substitutions, attendance monitoring, events, feedback, prayer requests, komsel groups, sermons/media
-- **Monitoring Kehadiran** — unified view of both manual and QR check-ins
-- **Profil** — admin profile and logout
-
-> Users can hold multiple roles simultaneously (`jemaat` / `pelayan` / `admin`) and switch between them using the role switcher in the app.
-
----
-
-## Database Setup
-
-> ⚠️ Both SQL files are excluded from this repository (see `.gitignore`).
-> Contact the project owner for the SQL files.
-
-- **`database_setup.sql`** — full from-scratch reset script (drops + recreates everything, seeds the default admin account). Use for a brand-new Supabase project.
-- **`migration_new_features.sql`** — additive-only, safe to run against an existing live project without losing data. Adds QR attendance columns/policy and the prayer request / komsel / sermon tables.
-
-1. Open [Supabase Dashboard](https://supabase.com) → your project → **SQL Editor**
-2. Paste the contents of the appropriate file
-3. Click **Run All**
-4. Default admin (fresh setup only): `admin@gereja.com` / `Admin@123` *(change after first login)*
-
-### Tables
-`users` · `pelayans` · `schedules` · `training_schedules` · `substitution_requests` · `attendance` · `notifications` · `feedback` · `bible_verses` · `church_events` · `event_registrations` · `prayer_requests` · `komsels` · `sermons`
+- **Create and read only**, limited to the modules and categories granted by the Super Admin. Approving members, reviewing substitutions and updating prayer-request status need an explicit *approve* permission.
+- **Dashboard** with live counts; menus show only the modules the admin may open.
+- Manage users and roles (including approving new members), pelayan (linked to their app account), service schedules (including **recurring schedules**, generated 90 days ahead), training schedules, events, devotionals, playlists, komsel and sermons.
+- **Substitution review** — choose the replacement pelayan. Approval moves the duty to that pelayan and notifies the people involved.
+- **Attendance monitoring** — all check-ins with role (Jemaat/Pelayan), check-in method (manual / self QR / QR by an usher) and filters.
+- **Feedback** and **prayer request** review.
+- **Rekomendasi Kegiatan** (decision support) — explainable, rule-based recommendations computed from attendance history, building capacity, event registrations and feedback. Each recommendation shows the numbers it is based on.
 
 ---
 
 ## Project Structure
 
+The Flutter project lives in **`my_app/`**; all commands below run from there.
+
 ```
-lib/
-├── main.dart                  # App entry point, Provider setup, auth gate
-├── models/                    # Data models
-├── providers/                 # State management (ChangeNotifier, per feature)
-├── screens/                   # UI screens
-├── services/                  # Supabase gateway + Bible/local notification services
-├── utils/                     # Theme, QR payload encoding, constants
-└── widgets/                   # Reusable components
+my_app/
+├── lib/
+│   ├── main.dart        # App entry, Supabase init, Provider registration, auth gate
+│   ├── models/          # Typed data models (one per table)
+│   ├── providers/       # ChangeNotifier state, one per feature
+│   ├── screens/         # UI screens (home_screen.dart hosts the per-role tabs)
+│   ├── services/        # SupabaseService (main DB gateway), Bible, events, reminders,
+│   │                    # recommendation engine, local bookmarks
+│   ├── utils/           # Theme, QR payloads, recurrence, capacity, church config
+│   └── widgets/         # Shared UI components
+├── assets/              # Bible XML, images
+├── test/                # Unit and widget tests
+└── android/ ios/        # Platform projects
 ```
 
 ---
 
-## Running the App
+## Prerequisites
+
+- Flutter SDK compatible with Dart `^3.10.4`.
+- Android SDK / Android Studio for Android builds. Android is the primary target.
+- A Supabase project with the app's schema (see Database Notes).
+
+## Setup
 
 ```bash
+cd my_app
 flutter pub get
-flutter run
+flutter run            # with an Android device or emulator connected
 ```
 
-Requires Flutter 3.x and a configured Supabase project. The Supabase URL and anon key are configured in `lib/main.dart`.
+### Configuration
 
-```bash
-flutter analyze   # should report "No issues found"
-flutter test
-```
+The Supabase project URL and **public anon key** are set in `lib/main.dart` (`Supabase.initialize`). The anon key is designed to be public; data is protected by Row Level Security. **Never put a Supabase service-role key or any other secret in the app.**
+
+The seating capacity used by *Rekomendasi Kegiatan* is set in `lib/utils/church_config.dart` (`ChurchConfig.buildingCapacity`). It is `null` until the church provides the verified number. While it is null, capacity-based recommendations are skipped and the screen says so.
 
 ---
 
-## Notes
+## Database Notes
 
-- Developed as a thesis project (skripsi) for a church management system
-- Role-based access control enforced both in-app and at the database level via Supabase RLS policies
-- All sensitive credentials and SQL setup files are excluded from version control
-- Push notifications when the app is fully closed require Firebase/FCM, which is deliberately out of scope — reminders are local, on-device only
+- The app is written against the **existing** Supabase schema. **Future work must not change the database schema, RLS policies, functions, triggers or grants without explicit approval from the project owner** — adapt the app code to the schema instead.
+- SQL scripts are kept out of version control (`*.sql` in `.gitignore`). Ask the project owner for them; do not run schema-changing scripts on the live project without approval.
+- **Pending owner action (RBAC v2 + guest access):** run `migration_rbac_v2.sql` (after entering the Super Admin's email in its first section), then `migration_guest_access.sql`, **before** installing this app version. `rls_tests_checkpoint1.sql` checks each role's access and rolls itself back. Until the migration runs, the app keeps the previous admin behaviour.
+- **Pending owner action:** `migration_fix_substitution_fk.sql` corrects the live foreign key on `substitution_requests.service_schedule_id`, which currently points at `training_schedules` instead of `schedules`. Until it is run, substitution requests fail to save in production. Run its orphan-check query first.
+- Credentials of any seeded admin account are not documented here. If a default admin password was ever used, change it.
+
+---
+
+## Testing and Static Analysis
+
+```bash
+cd my_app
+flutter analyze        # expected: "No issues found!"
+flutter test           # unit + widget tests
+```
+
+As of 2026-11-17: `flutter analyze` reports no issues and `flutter test` passes 192/192. All tests use mocks and local storage; **no test talks to a live Supabase project**. Camera, notification delivery, offline behaviour and end-to-end flows require manual testing on a device.
+
+## Android Build
+
+```bash
+cd my_app
+flutter build apk --release      # APK in build/app/outputs/flutter-apk/
+```
+
+Before publishing:
+- The release build is currently **signed with the debug key**. Add your own keystore and `signingConfigs` (keep `key.properties` and keystores out of git — they are already ignored).
+- The `applicationId` is still the placeholder `com.mycompany.my_app`. Choose the final ID before the first store upload; it cannot be changed afterwards.
+- iOS sources are prepared but **have never been built or tested** (no Mac available).
+- Google Play requires apps with account creation to offer account deletion; the app has no self-service deletion yet. A privacy policy and the Play data-safety form are also needed.
+
+A debug-signed `flutter build apk --release` was verified to compile on 2026-10-23. Device testing is still required.
+
+---
+
+## Known Limitations
+
+- **Reading progress (Quest Baca)** is stored on the device per account. It does not sync across devices and is lost if the app is reinstalled. The daily target and admin-edited plan apply to the device where they were set.
+- **Saved devotionals** are stored on the device.
+- **Recurring schedules** are created as individual occurrences for 90 days. Editing one occurrence does not change the others.
+- **Event quota** is checked before each registration, but two people registering at exactly the same moment can still exceed the quota (the database has no capacity constraint).
+- **Anonymous feedback** hides the name from church leaders, but the submitting account is still stored, as the database security rules require.
+- **Notifications** are in-app (and local reminders). Nothing is pushed while the app is fully closed. Only admin actions create notifications for other users.
+- **Attendance roles** in monitoring reflect each person's current role, not the role at check-in time.
+- **Persembahan (giving) is not implemented.**
+- **Recommendations** are rule-based guidance for church leaders, not automatic decisions. They need enough recorded data (at least 3 data points per rule) and a configured building capacity.
+
+## Development Guidelines
+
+- Follow the existing layering: screen → provider (`ChangeNotifier`) → `SupabaseService` → model. New providers accept an optional `{SupabaseService? service}` for test injection.
+- Keep user-facing text in Indonesian and colors in `AppTheme`.
+- Never show success before an operation actually succeeds.
+- Run `flutter analyze` and `flutter test` before committing.

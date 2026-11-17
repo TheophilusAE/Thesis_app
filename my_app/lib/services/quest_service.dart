@@ -3,10 +3,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/reading_quest.dart';
 import 'bible_service.dart';
 
+/// Annual Bible reading plan + per-user progress (KF-12).
+///
+/// There is no reading-progress table in the database (and the schema must
+/// not change), so progress is stored on the device — but scoped per
+/// account, so two people sharing a phone never see each other's progress.
+/// The daily target and the admin-edited plan are device-level settings.
 class QuestService {
-  static const String _progressKey = 'reading_quest_progress';
+  /// Pre-per-user storage key; migrated once into the first account that
+  /// loads progress on this device.
+  static const String legacyProgressKey = 'reading_quest_progress';
   static const String _targetKey = 'reading_daily_target';
   static const String _customPlanKey = 'reading_quest_custom_plan';
+
+  static String progressKeyFor(String userId) => 'reading_quest_progress_$userId';
+  static String datesKeyFor(String userId) => 'reading_quest_dates_$userId';
 
   Future<List<ReadingQuest>?> _loadCustomPlan() async {
     final prefs = await SharedPreferences.getInstance();
@@ -109,44 +120,82 @@ class QuestService {
     return quests;
   }
 
-  Future<void> markDayCompleted(int day) async {
-    final prefs = await SharedPreferences.getInstance();
-    final completed = await getCompletedDays();
-    if (!completed.contains(day)) {
-      completed.add(day);
-      await prefs.setString(_progressKey, jsonEncode(completed));
+  /// Moves pre-per-user progress into [userId]'s key, once. Runs only when
+  /// that user has no progress yet, so existing per-user data is never
+  /// overwritten.
+  Future<void> _migrateLegacyProgress(SharedPreferences prefs, String userId) async {
+    final legacy = prefs.getString(legacyProgressKey);
+    if (legacy == null) return;
+    if (prefs.getString(progressKeyFor(userId)) == null) {
+      await prefs.setString(progressKeyFor(userId), legacy);
     }
+    await prefs.remove(legacyProgressKey);
   }
 
-  Future<List<int>> getCompletedDays() async {
+  /// Marks [day] of the plan done for [userId], recording [completedOn]
+  /// (defaults to now) so the streak reflects real calendar days.
+  Future<void> markDayCompleted(String userId, int day, {DateTime? completedOn}) async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_progressKey);
+    final completed = await getCompletedDays(userId);
+    if (completed.contains(day)) return;
+    completed.add(day);
+    await prefs.setString(progressKeyFor(userId), jsonEncode(completed));
+
+    final dates = await _loadCompletionDates(prefs, userId);
+    dates['$day'] = (completedOn ?? DateTime.now()).toIso8601String();
+    await prefs.setString(datesKeyFor(userId), jsonEncode(dates));
+  }
+
+  Future<List<int>> getCompletedDays(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await _migrateLegacyProgress(prefs, userId);
+    final jsonStr = prefs.getString(progressKeyFor(userId));
     if (jsonStr != null) {
       return List<int>.from(jsonDecode(jsonStr));
     }
     return [];
   }
 
-  Future<double> getProgress() async {
-    final completed = await getCompletedDays();
+  Future<Map<String, String>> _loadCompletionDates(SharedPreferences prefs, String userId) async {
+    final raw = prefs.getString(datesKeyFor(userId));
+    if (raw == null || raw.isEmpty) return {};
+    return Map<String, String>.from(jsonDecode(raw) as Map);
+  }
+
+  Future<double> getProgress(String userId) async {
+    final completed = await getCompletedDays(userId);
     return completed.length / 365.0;
   }
 
-  Future<int> getCurrentStreak() async {
-    final completed = await getCompletedDays();
-    if (completed.isEmpty) return 0;
+  /// Consecutive calendar days (ending today or yesterday) on which the user
+  /// completed at least one reading. Progress saved before completion dates
+  /// were recorded has no dates, so it can't count toward a streak.
+  Future<int> getCurrentStreak(String userId, {DateTime? today}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final dates = await _loadCompletionDates(prefs, userId);
+    return calendarStreak(
+      dates.values.map(DateTime.parse),
+      today ?? DateTime.now(),
+    );
+  }
 
-    completed.sort();
-    int streak = 1;
-    
-    for (int i = completed.length - 1; i > 0; i--) {
-      if (completed[i] - completed[i - 1] == 1) {
-        streak++;
-      } else {
-        break;
-      }
+  /// Pure streak calculation, exposed for tests.
+  static int calendarStreak(Iterable<DateTime> completionTimes, DateTime today) {
+    final days = completionTimes
+        .map((d) => DateTime(d.year, d.month, d.day))
+        .toSet();
+    if (days.isEmpty) return 0;
+    var cursor = DateTime(today.year, today.month, today.day);
+    // A streak is still alive if the last reading was yesterday.
+    if (!days.contains(cursor)) {
+      cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
+      if (!days.contains(cursor)) return 0;
     }
-    
+    var streak = 0;
+    while (days.contains(cursor)) {
+      streak++;
+      cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
+    }
     return streak;
   }
 

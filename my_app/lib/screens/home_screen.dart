@@ -20,10 +20,13 @@ import '../providers/service_schedule_provider.dart';
 import '../providers/training_schedule_provider.dart';
 import '../services/local_notification_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/common/compact_feature_tile.dart';
 import '../widgets/role_switcher.dart';
+import 'admin_access_management_screen.dart';
 import 'admin_management_screen.dart';
+import 'activity_recommendation_screen.dart';
 import 'admin_attendance_monitoring_screen.dart';
 import 'admin_substitution_review_screen.dart';
 import 'attendance_confirmation_screen.dart';
@@ -40,6 +43,7 @@ import 'pelayan_management_screen.dart';
 import 'prayer_request_management_screen.dart';
 import 'prayer_request_screen.dart';
 import 'profile_screen.dart';
+import 'qr_shortcut_screen.dart';
 import 'quest_screen.dart';
 import 'role_management_screen.dart';
 import 'sermon_library_screen.dart';
@@ -166,6 +170,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
   ];
 
+  // Index 2 is a reserved placeholder slot — it has no visible icon/label of
+  // its own because the floating QR button in build() is drawn on top of it.
+  // Tapping it is intercepted in onDestinationSelected before it ever
+  // becomes the selected tab.
   static const _jemaatDests = [
     NavigationDestination(
       icon: Icon(Icons.home_outlined),
@@ -176,6 +184,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       icon: Icon(Icons.grid_view_outlined),
       selectedIcon: Icon(Icons.grid_view_rounded),
       label: 'Jelajahi',
+    ),
+    NavigationDestination(
+      icon: SizedBox.shrink(),
+      label: '',
     ),
     NavigationDestination(
       icon: Icon(Icons.menu_book_outlined),
@@ -212,13 +224,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         default: return const _ProfileTab();
       }
     }
-    // jemaat
+    // jemaat (index 2 is the reserved QR-button slot — never selected, see
+    // _jemaatDests above)
     switch (idx) {
       case 0: return const _JemaatBeranda();
       case 1: return const _JemaatKomunitasTab();
-      case 2: return const _JemaatIbadahTab();
-      default: return const _ProfileTab();
+      case 3: return const _JemaatIbadahTab();
+      case 4: return const _ProfileTab();
+      default: return const _JemaatBeranda();
     }
+  }
+
+  void _onDestinationSelected(String role, int i) {
+    if (role == 'jemaat' && i == 2) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const QrShortcutScreen()));
+      return;
+    }
+    setState(() => _index = i);
   }
 
   @override
@@ -235,40 +257,91 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
         return Scaffold(
           body: _body(role, _index),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-              border: const Border(
-                top: BorderSide(color: AppTheme.neutralBorder, width: 1),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 16,
-                  offset: const Offset(0, -4),
+          bottomNavigationBar: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  border: const Border(
+                    top: BorderSide(color: AppTheme.neutralBorder, width: 1),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: NavigationBar(
+                    selectedIndex: _index,
+                    onDestinationSelected: (i) => _onDestinationSelected(role, i),
+                    destinations: _dests(role),
+                    height: 68,
+                    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  ),
+                ),
               ),
-              child: NavigationBar(
-                selectedIndex: _index,
-                onDestinationSelected: (i) => setState(() => _index = i),
-                destinations: _dests(role),
-                height: 68,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              ),
-            ),
+              if (role == 'jemaat')
+                Positioned(
+                  top: -22,
+                  child: _QrNavButton(
+                    onTap: () => _onDestinationSelected(role, 2),
+                  ),
+                ),
+            ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Floating center button on the jemaat bottom nav — quick access to the
+/// QR shortcut sheet (show own QR / scan an ibadah QR). Drawn on top of the
+/// reserved placeholder destination in `_jemaatDests` so it visually reads
+/// as the center nav item without being one of NavigationBar's own
+/// destinations.
+class _QrNavButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _QrNavButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: AppTheme.goldGradient,
+          border: Border.all(color: Colors.white, width: 4),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.goldDark.withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.qr_code_scanner_rounded,
+          color: Colors.white,
+          size: 26,
+        ),
+      ),
     );
   }
 }
@@ -424,8 +497,25 @@ class _Blob extends StatelessWidget {
   }
 }
 
-class _NotificationBell extends StatelessWidget {
+class _NotificationBell extends StatefulWidget {
   const _NotificationBell();
+
+  @override
+  State<_NotificationBell> createState() => _NotificationBellState();
+}
+
+class _NotificationBellState extends State<_NotificationBell> {
+  @override
+  void initState() {
+    super.initState();
+    // Load the unread badge (and start realtime) as soon as the bell is
+    // shown, not only after the first tap.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final userId = context.read<AuthProvider>().currentUser?.id;
+      if (userId != null) context.read<NotificationProvider>().ensureLoadedFor(userId);
+    });
+  }
 
   void _openSheet(BuildContext context) {
     final auth = context.read<AuthProvider>();
@@ -452,8 +542,26 @@ class _NotificationBell extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Notifikasi',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Notifikasi',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                      ),
+                      if (np.unreadCount > 0 && userId != null)
+                        TextButton(
+                          onPressed: () async {
+                            final ok = await np.markAllAsRead(userId);
+                            if (!ok && ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(content: Text('Gagal menandai notifikasi.')),
+                              );
+                            }
+                          },
+                          child: const Text('Tandai semua dibaca'),
+                        ),
+                    ],
+                  ),
                   const SizedBox(height: 14),
                   if (np.isLoading)
                     const Padding(
@@ -483,7 +591,10 @@ class _NotificationBell extends StatelessWidget {
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (_, i) {
                           final n = np.allNotifications[i];
-                          return Container(
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: n.isRead ? null : () => np.markAsRead(n.id),
+                            child: Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: n.isRead
@@ -513,11 +624,19 @@ class _NotificationBell extends StatelessWidget {
                                       Text(n.message,
                                           style: TextStyle(
                                               fontSize: 13, color: Colors.grey.shade600)),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        DateFormat('dd MMM yyyy • HH:mm', 'id_ID')
+                                            .format(n.createdAt.toLocal()),
+                                        style: TextStyle(
+                                            fontSize: 11, color: Colors.grey.shade500),
+                                      ),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
+                          ),
                           );
                         },
                       ),
@@ -805,10 +924,11 @@ class _AdminDashboardState extends State<_AdminDashboard> {
 
     final pending = users.where((u) => u.membershipStatus == 'pending').length;
 
+    // Real counts only — an empty church shows 0, never a placeholder.
     return {
       'users': users.length,
-      'pelayan': pelayan.isNotEmpty ? pelayan.length : 86,
-      'schedulesToday': todaySchedules > 0 ? todaySchedules : (schedules.isNotEmpty ? schedules.length : 4),
+      'pelayan': pelayan.where((p) => p.isAktif).length,
+      'schedulesToday': todaySchedules,
       'feedback': feedback.length,
       'pending': pending,
     };
@@ -828,7 +948,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
             greeting: _greeting(),
             name: user?.name ?? 'Admin',
             subtitle: 'Selamat datang di Panel Kontrol Gereja',
-            roleLabel: 'Admin',
+            roleLabel: auth.isSuperAdmin ? 'Super Admin' : 'Admin',
             userRoles: auth.userRoles,
           ),
         ),
@@ -888,7 +1008,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                           color: const Color(0xFFEF4444),
                         ),
                         _StatCard(
-                          label: 'Kehadiran / Review',
+                          label: 'Feedback Masuk',
                           value: '${d['feedback'] ?? 0}',
                           icon: Icons.fact_check_rounded,
                           color: const Color(0xFFF59E0B),
@@ -900,8 +1020,11 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                 const SizedBox(height: 12),
                 const _SectionTitle('Menu Administrasi'),
                 const SizedBox(height: 6),
-                CompactFeatureGrid(
+                // Each tile appears only when the admin holds a permission
+                // for its module (Super Admin sees everything).
+                _AdminTileGrid(
                   tiles: [
+                    if (auth.canAccess(AppModule.users))
                     CompactFeatureTile(
                       icon: Icons.manage_accounts_rounded,
                       title: 'Pengguna',
@@ -912,6 +1035,18 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                         MaterialPageRoute(builder: (_) => const AdminManagementScreen()),
                       ),
                     ),
+                    if (auth.isSuperAdmin)
+                    CompactFeatureTile(
+                      icon: Icons.verified_user_rounded,
+                      title: 'Admin & Izin',
+                      actionLabel: 'Atur hak admin →',
+                      accentColor: AppTheme.goldDark,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminAccessManagementScreen()),
+                      ),
+                    ),
+                    if (auth.isSuperAdmin)
                     CompactFeatureTile(
                       icon: Icons.admin_panel_settings_rounded,
                       title: 'Role',
@@ -922,6 +1057,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                         MaterialPageRoute(builder: (_) => const RoleManagementScreen()),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.pelayan))
                     CompactFeatureTile(
                       icon: Icons.people_alt_rounded,
                       title: 'Pelayan',
@@ -932,6 +1068,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                         MaterialPageRoute(builder: (_) => const PelayaniManagementScreen()),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.jadwalPelayanan))
                     CompactFeatureTile(
                       icon: Icons.calendar_month_rounded,
                       title: 'Jadwal',
@@ -944,6 +1081,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                         ),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.kehadiran))
                     CompactFeatureTile(
                       icon: Icons.fact_check_rounded,
                       title: 'Kehadiran',
@@ -956,6 +1094,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                         ),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.event))
                     CompactFeatureTile(
                       icon: Icons.event_available_rounded,
                       title: 'Event Gereja',
@@ -966,6 +1105,7 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                         MaterialPageRoute(builder: (_) => const EventListScreen()),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.feedback))
                     CompactFeatureTile(
                       icon: Icons.rate_review_rounded,
                       title: 'Feedback',
@@ -976,6 +1116,18 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                         MaterialPageRoute(builder: (_) => const FeedbackManagementScreen()),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.rekomendasi))
+                    CompactFeatureTile(
+                      icon: Icons.insights_rounded,
+                      title: 'Rekomendasi',
+                      actionLabel: 'Analisis data →',
+                      accentColor: const Color(0xFF7C3AED),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ActivityRecommendationScreen()),
+                      ),
+                    ),
+                    if (auth.canAccess(AppModule.prayer))
                     CompactFeatureTile(
                       icon: Icons.volunteer_activism_rounded,
                       title: 'Doa Jemaat',
@@ -1004,7 +1156,7 @@ class _AdminKelolaTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.read<AuthProvider>();
+    final auth = context.watch<AuthProvider>();
     final user = auth.currentUser;
 
     return CustomScrollView(
@@ -1014,7 +1166,7 @@ class _AdminKelolaTab extends StatelessWidget {
             greeting: 'Manajemen Data',
             name: user?.name ?? 'Admin',
             subtitle: 'Kelola data pengguna, pelayan, dan komunitas',
-            roleLabel: 'Admin',
+            roleLabel: auth.isSuperAdmin ? 'Super Admin' : 'Admin',
             userRoles: auth.userRoles,
           ),
         ),
@@ -1024,10 +1176,10 @@ class _AdminKelolaTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _SectionTitle('Data Pengguna & Akses'),
-                const SizedBox(height: 6),
-                CompactFeatureGrid(
+                _AdminTileSection(
+                  title: 'Data Pengguna & Akses',
                   tiles: [
+                    if (auth.canAccess(AppModule.users))
                     CompactFeatureTile(
                       icon: Icons.manage_accounts_rounded,
                       title: 'Manajemen Pengguna',
@@ -1038,6 +1190,18 @@ class _AdminKelolaTab extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const AdminManagementScreen()),
                       ),
                     ),
+                    if (auth.isSuperAdmin)
+                    CompactFeatureTile(
+                      icon: Icons.verified_user_rounded,
+                      title: 'Kelola Admin & Izin',
+                      actionLabel: 'Atur hak admin →',
+                      accentColor: AppTheme.goldDark,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminAccessManagementScreen()),
+                      ),
+                    ),
+                    if (auth.isSuperAdmin)
                     CompactFeatureTile(
                       icon: Icons.admin_panel_settings_rounded,
                       title: 'Manajemen Role',
@@ -1050,11 +1214,10 @@ class _AdminKelolaTab extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                const _SectionTitle('Pelayanan & Komunitas'),
-                const SizedBox(height: 6),
-                CompactFeatureGrid(
+                _AdminTileSection(
+                  title: 'Pelayanan & Komunitas',
                   tiles: [
+                    if (auth.canAccess(AppModule.pelayan))
                     CompactFeatureTile(
                       icon: Icons.people_alt_rounded,
                       title: 'Manajemen Pelayan',
@@ -1065,6 +1228,7 @@ class _AdminKelolaTab extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const PelayaniManagementScreen()),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.group))
                     CompactFeatureTile(
                       icon: Icons.groups_rounded,
                       title: 'Kelola Komsel',
@@ -1075,6 +1239,7 @@ class _AdminKelolaTab extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const KomselManagementScreen()),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.prayer))
                     CompactFeatureTile(
                       icon: Icons.volunteer_activism_rounded,
                       title: 'Doa Jemaat',
@@ -1087,6 +1252,7 @@ class _AdminKelolaTab extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.sermon))
                     CompactFeatureTile(
                       icon: Icons.ondemand_video_rounded,
                       title: 'Kelola Khotbah',
@@ -1099,11 +1265,10 @@ class _AdminKelolaTab extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                const _SectionTitle('Feedback & Aspirasi'),
-                const SizedBox(height: 6),
-                CompactFeatureGrid(
+                _AdminTileSection(
+                  title: 'Feedback & Aspirasi',
                   tiles: [
+                    if (auth.canAccess(AppModule.feedback))
                     CompactFeatureTile(
                       icon: Icons.rate_review_rounded,
                       title: 'Tinjau Feedback',
@@ -1114,8 +1279,20 @@ class _AdminKelolaTab extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const FeedbackManagementScreen()),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.rekomendasi))
+                    CompactFeatureTile(
+                      icon: Icons.insights_rounded,
+                      title: 'Rekomendasi Kegiatan',
+                      actionLabel: 'Analisis data →',
+                      accentColor: const Color(0xFF7C3AED),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ActivityRecommendationScreen()),
+                      ),
+                    ),
                   ],
                 ),
+                if (!_anyAdminAccess(auth)) const _NoPermissionNote(),
               ],
             ),
           ),
@@ -1130,7 +1307,7 @@ class _AdminJadwalTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.read<AuthProvider>();
+    final auth = context.watch<AuthProvider>();
     final user = auth.currentUser;
 
     return CustomScrollView(
@@ -1140,7 +1317,7 @@ class _AdminJadwalTab extends StatelessWidget {
             greeting: 'Jadwal & Presensi',
             name: user?.name ?? 'Admin',
             subtitle: 'Kelola jadwal ibadah, pembekalan, dan kehadiran',
-            roleLabel: 'Admin',
+            roleLabel: auth.isSuperAdmin ? 'Super Admin' : 'Admin',
             userRoles: auth.userRoles,
           ),
         ),
@@ -1150,10 +1327,10 @@ class _AdminJadwalTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _SectionTitle('Jadwal Pelayanan & Pembekalan'),
-                const SizedBox(height: 6),
-                CompactFeatureGrid(
+                _AdminTileSection(
+                  title: 'Jadwal Pelayanan & Pembekalan',
                   tiles: [
+                    if (auth.canAccess(AppModule.jadwalPelayanan))
                     CompactFeatureTile(
                       icon: Icons.calendar_month_rounded,
                       title: 'Jadwal Pelayanan',
@@ -1166,6 +1343,7 @@ class _AdminJadwalTab extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.jadwalPelayanan))
                     CompactFeatureTile(
                       icon: Icons.school_rounded,
                       title: 'Jadwal Latihan',
@@ -1180,11 +1358,10 @@ class _AdminJadwalTab extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                const _SectionTitle('Monitoring Presensi & Pergantian'),
-                const SizedBox(height: 6),
-                CompactFeatureGrid(
+                _AdminTileSection(
+                  title: 'Monitoring Presensi & Pergantian',
                   tiles: [
+                    if (auth.canAccess(AppModule.kehadiran))
                     CompactFeatureTile(
                       icon: Icons.fact_check_rounded,
                       title: 'Monitoring Kehadiran',
@@ -1197,6 +1374,7 @@ class _AdminJadwalTab extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.jadwalPelayanan))
                     CompactFeatureTile(
                       icon: Icons.swap_horizontal_circle_rounded,
                       title: 'Permintaan Penggantian',
@@ -1221,15 +1399,103 @@ class _AdminJadwalTab extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PELAYAN TABS
+// ADMIN TILE HELPERS (permission-filtered menus)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// True when the admin can open at least one admin module.
+bool _anyAdminAccess(AuthProvider auth) =>
+    auth.isSuperAdmin || AppModule.all.any(auth.canAccess);
+
+/// Grid of already permission-filtered tiles; shows a hint when empty.
+class _AdminTileGrid extends StatelessWidget {
+  final List<CompactFeatureTile> tiles;
+  const _AdminTileGrid({required this.tiles});
+
+  @override
+  Widget build(BuildContext context) {
+    if (tiles.isEmpty) return const _NoPermissionNote();
+    return CompactFeatureGrid(tiles: tiles);
+  }
+}
+
+/// Titled section of permission-filtered tiles; renders nothing when the
+/// admin has no access to any tile in it.
+class _AdminTileSection extends StatelessWidget {
+  final String title;
+  final List<CompactFeatureTile> tiles;
+  const _AdminTileSection({required this.title, required this.tiles});
+
+  @override
+  Widget build(BuildContext context) {
+    if (tiles.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionTitle(title),
+          const SizedBox(height: 6),
+          CompactFeatureGrid(tiles: tiles),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoPermissionNote extends StatelessWidget {
+  const _NoPermissionNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lock_outline_rounded, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Akun admin Anda belum diberi izin modul apa pun. '
+              'Hubungi Super Admin untuk mengatur hak akses.',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PELAYANAN TABS
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _PelayananDutyHeroCard extends StatelessWidget {
+class _PelayananDutyHeroCard extends StatefulWidget {
   const _PelayananDutyHeroCard();
+
+  @override
+  State<_PelayananDutyHeroCard> createState() => _PelayananDutyHeroCardState();
+}
+
+class _PelayananDutyHeroCardState extends State<_PelayananDutyHeroCard> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final pelayan = context.read<PelayaniProvider>();
+      final schedules = context.read<ServiceScheduleProvider>();
+      if (pelayan.allPelayan.isEmpty) pelayan.loadAllPelayan();
+      if (schedules.allSchedules.isEmpty) schedules.loadAllSchedules();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1237,9 +1503,13 @@ class _PelayananDutyHeroCard extends StatelessWidget {
     final user = auth.currentUser;
     final scheduleProvider = context.watch<ServiceScheduleProvider>();
 
-    final currentUserId = user?.id;
+    // schedules.pelayan_id is a pelayans.id, so resolve the user's Pelayan
+    // record first (via pelayans.user_id) instead of comparing to users.id.
+    final myPelayan = context.watch<PelayaniProvider>().pelayanForUser(user?.id);
     final allSchedules = scheduleProvider.allSchedules;
-    final userSchedules = allSchedules.where((s) => s.pelayaniId == currentUserId).toList();
+    final userSchedules = myPelayan == null
+        ? <ServiceSchedule>[]
+        : allSchedules.where((s) => s.pelayaniId == myPelayan.id).toList();
     userSchedules.sort((a, b) => a.serviceDate.compareTo(b.serviceDate));
 
     final now = DateTime.now();
@@ -4004,10 +4274,13 @@ class _ProfileTab extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true) {
+    if (confirmed == true && context.mounted) {
+      context.read<NotificationProvider>().clearForSignOut();
       await auth.logout();
+      // Back to the root _AuthGate (guest home). Replacing the root with
+      // '/login' removed the gate, so logging in again never reached Home.
       if (context.mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     }
   }

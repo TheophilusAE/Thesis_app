@@ -38,4 +38,26 @@ void main() {
       expect(decoded.name, '');
     });
   });
+
+  group('encodeServiceCheckinPayload / decodeServiceCheckinPayload', () {
+    test('round trips a schedule id', () {
+      final raw = encodeServiceCheckinPayload(scheduleId: 'sched-42');
+      expect(raw, 'CHURCH_SERVICE|SID:sched-42');
+      expect(decodeServiceCheckinPayload(raw)!.scheduleId, 'sched-42');
+    });
+
+    test('ignores whitespace and key case', () {
+      expect(decodeServiceCheckinPayload(' CHURCH_SERVICE | sid: abc ')!.scheduleId, 'abc');
+    });
+
+    test('rejects a member-card payload (different QR direction)', () {
+      expect(decodeServiceCheckinPayload('CHURCH_MEMBER|UID:u1|NAME:Budi'), isNull);
+    });
+
+    test('rejects malformed or empty payloads', () {
+      expect(decodeServiceCheckinPayload(''), isNull);
+      expect(decodeServiceCheckinPayload('CHURCH_SERVICE'), isNull);
+      expect(decodeServiceCheckinPayload('CHURCH_SERVICE|SID:'), isNull);
+    });
+  });
 }

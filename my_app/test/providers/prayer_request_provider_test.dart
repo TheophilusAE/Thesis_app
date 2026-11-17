@@ -60,13 +60,25 @@ void main() {
             'created_at': '2026-01-01T00:00:00.000Z',
           },
         ]);
-    when(() => mockService.updatePrayerRequest(any(), any())).thenAnswer((_) async {});
+    when(() => mockService.updatePrayerStatus(any(), any())).thenAnswer((_) async {});
 
     await provider.loadAllRequests();
     final success = await provider.updateStatus('pr-3', 'terjawab');
 
     expect(success, isTrue);
     expect(provider.allRequests.first.status, 'terjawab');
+    // Goes through the permission-checked RPC, not a direct table UPDATE.
+    verify(() => mockService.updatePrayerStatus('pr-3', 'terjawab')).called(1);
+    verifyNever(() => mockService.updatePrayerRequest(any(), any()));
+  });
+
+  test('updateStatus reports failure when the RPC refuses (no approve permission)', () async {
+    when(() => mockService.updatePrayerStatus(any(), any()))
+        .thenThrow(Exception('Anda tidak memiliki izin mengubah status pokok doa.'));
+
+    final success = await provider.updateStatus('pr-3', 'didoakan');
+
+    expect(success, isFalse);
   });
 
   test('deleteRequest removes the request from local state', () async {

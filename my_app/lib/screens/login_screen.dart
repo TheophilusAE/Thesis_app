@@ -63,8 +63,11 @@ class _LoginScreenState extends State<LoginScreen> {
       final msg = authProvider.lastMessage ?? 'Login gagal. Silakan coba lagi.';
       setState(() => _errorMessage = msg);
       if (mounted) _showErrorSnackBar(context, msg);
+      return;
     }
-    // On success, _AuthGate in main.dart automatically switches to HomeScreen
+    // On success _AuthGate (the root route) switches to HomeScreen. When this
+    // screen was pushed from guest mode, pop back down to that root.
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   Future<void> _forgotPassword() async {
@@ -152,8 +155,23 @@ class _LoginScreenState extends State<LoginScreen> {
     final isCompact = mediaQuery.size.height < 720;
     final hPad = mediaQuery.size.width < 380 ? 18.0 : 24.0;
 
+    // Opened from guest mode (pushed on top of the guest home): offer a way
+    // back without signing in.
+    final canGoBack = Navigator.of(context).canPop();
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF141214) : AppTheme.background,
+      appBar: canGoBack
+          ? AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                tooltip: 'Kembali sebagai tamu',
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -321,9 +339,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 18),
 
-                                // Password Input with Forgot Password Action
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                // Password Input with Forgot Password Action.
+                                // Wrap (not Row) so large system text wraps
+                                // instead of overflowing on narrow phones.
+                                Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     Text(
                                       'Kata Sandi',
@@ -389,8 +410,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Register Link
                     Padding(
                       padding: EdgeInsets.only(top: isCompact ? 16 : 24, bottom: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
                             'Belum punya akun? ',

@@ -5,8 +5,11 @@ import '../models/service_schedule.dart';
 import '../models/pelayan.dart';
 import '../providers/service_schedule_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/notification_provider.dart';
 import '../providers/pelayan_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
+import '../utils/recurrence.dart';
 
 class AddEditServiceScheduleScreen extends StatefulWidget {
   final ServiceSchedule? schedule;
@@ -41,12 +44,6 @@ class _AddEditServiceScheduleScreenState
     'Lainnya',
   ];
 
-  static const List<String> recurringPatterns = [
-    'WEEKLY',
-    'BI_WEEKLY',
-    'MONTHLY',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -61,15 +58,21 @@ class _AddEditServiceScheduleScreenState
     _selectedDate = widget.schedule?.serviceDate;
     _selectedPelayan = null;
     _isRecurring = widget.schedule?.isRecurring ?? false;
+    // Existing rows may store '' — never hand the dropdown a value it has
+    // no item for (that trips Flutter's dropdown assertion).
+    final storedPattern = widget.schedule?.recurringPattern ?? '';
     _recurringPattern =
-        widget.schedule?.recurringPattern ?? 'WEEKLY';
+        recurrencePatterns.contains(storedPattern) ? storedPattern : recurrenceWeekly;
 
-    if (widget.schedule == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<PelayaniProvider>().loadAllPelayan();
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<PelayaniProvider>().loadAllPelayan();
+    });
   }
+
+  /// Occurrence dates a new recurring schedule would create, for the preview.
+  List<DateTime> get _previewDates => _selectedDate == null
+      ? const []
+      : generateRecurrenceDates(_selectedDate!, _recurringPattern);
 
   @override
   void dispose() {
@@ -84,12 +87,19 @@ class _AddEditServiceScheduleScreenState
   Widget build(BuildContext context) {
     final isEditing = widget.schedule != null;
 
-    if (!context.watch<AuthProvider>().isAdminMode) {
+    // New duty = create permission; editing an existing one = Super Admin.
+    final auth = context.watch<AuthProvider>();
+    final allowed = isEditing
+        ? auth.canModifyExisting
+        : auth.can(AppModule.jadwalPelayanan, PermissionAction.create);
+    if (!allowed) {
       return Scaffold(
         backgroundColor: AppTheme.warmIvory,
         appBar: AppBar(title: const Text('Jadwal')),
-        body: const Center(
-          child: Text('Akses ditolak. Hanya admin yang dapat mengelola jadwal.'),
+        body: Center(
+          child: Text(isEditing
+              ? 'Akses ditolak. Hanya Super Admin yang dapat mengubah jadwal yang sudah dibuat.'
+              : 'Akses ditolak. Akun Anda belum diberi izin menambah jadwal pelayanan.'),
         ),
       );
     }
@@ -334,10 +344,10 @@ class _AddEditServiceScheduleScreenState
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  items: recurringPatterns
+                  items: recurrencePatterns
                       .map((pattern) => DropdownMenuItem(
                             value: pattern,
-                            child: Text(pattern),
+                            child: Text(recurrencePatternLabel(pattern)),
                           ))
                       .toList(),
                   onChanged: (value) {
@@ -346,7 +356,21 @@ class _AddEditServiceScheduleScreenState
                     }
                   },
                 ),
-              if (_isRecurring) const SizedBox(height: 16),
+              if (_isRecurring) ...[
+                const SizedBox(height: 8),
+                Text(
+                  widget.schedule != null
+                      ? 'Perubahan hanya berlaku untuk jadwal ini. Jadwal lain dalam pola '
+                          'yang sama tidak ikut berubah.'
+                      : _previewDates.isEmpty
+                          ? 'Pilih tanggal untuk melihat jumlah jadwal yang akan dibuat.'
+                          : 'Akan dibuat ${_previewDates.length} jadwal '
+                              '(${recurrencePatternLabel(_recurringPattern).toLowerCase()}) hingga '
+                              '${DateFormat('dd MMM yyyy', 'id_ID').format(_previewDates.last)}.',
+                  style: const TextStyle(fontSize: 12.5, color: AppTheme.neutralMedium),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // Notes
               TextFormField(
@@ -382,6 +406,28 @@ class _AddEditServiceScheduleScreenState
         ),
       ),
     );
+  }
+
+  String _dateLabel(DateTime date) =>
+      DateFormat('EEEE, dd MMM yyyy', 'id_ID').format(date);
+
+  /// In-app notification to the assigned Pelayan's linked account. A Pelayan
+  /// without an app account simply isn't notified (returns true — nothing
+  /// failed). Returns false only when sending was attempted and failed.
+  Future<bool> _notifyPelayan(
+    Pelayan? pelayan, {
+    required String title,
+    required String message,
+    required String relatedScheduleId,
+  }) async {
+    if (pelayan == null || !pelayan.hasUserAccount) return true;
+    return context.read<NotificationProvider>().notifyUsers(
+          userIds: [pelayan.userId],
+          title: title,
+          message: message,
+          type: 'schedule',
+          relatedScheduleId: relatedScheduleId,
+        );
   }
 
   int _toMinutes(String hhmm) {
@@ -433,24 +479,42 @@ class _AddEditServiceScheduleScreenState
           endTime: _endTimeController.text,
           serviceType: _namaJenisController.text,
           isRecurring: _isRecurring,
-          recurringPattern: _recurringPattern,
+          recurringPattern: _isRecurring ? _recurringPattern : '',
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,
         );
+        if (!mounted) return;
 
-        if (success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Jadwal berhasil diperbarui')),
-          );
-          Navigator.pop(context);
-        }
-
-        if (!success && mounted) {
+        if (!success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Gagal menyimpan jadwal. Pastikan Anda admin lalu coba lagi.'),
+              backgroundColor: AppTheme.errorColor,
             ),
           );
+          return;
         }
+
+        final assigned = context
+            .read<PelayaniProvider>()
+            .allPelayan
+            .where((p) => p.id == widget.schedule!.pelayaniId)
+            .firstOrNull;
+        final notified = await _notifyPelayan(
+          assigned,
+          title: 'Jadwal Pelayanan Diperbarui',
+          message: '${_namaJenisController.text} pada ${_dateLabel(_selectedDate!)} '
+              '(${_startTimeController.text} - ${_endTimeController.text}) telah diperbarui.',
+          relatedScheduleId: widget.schedule!.id,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(notified
+                ? 'Jadwal berhasil diperbarui'
+                : 'Jadwal diperbarui, namun notifikasi gagal dikirim.'),
+          ),
+        );
+        Navigator.pop(context);
       } else {
         if (_selectedPelayan == null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -459,7 +523,7 @@ class _AddEditServiceScheduleScreenState
           return;
         }
 
-        final success = await provider.addServiceSchedule(
+        final result = await provider.addServiceSchedule(
           pelayaniId: _selectedPelayan!.id,
           pelayaniName: _selectedPelayan!.nama,
           pelayaniPosition: _selectedPelayan!.posisi,
@@ -471,21 +535,50 @@ class _AddEditServiceScheduleScreenState
           recurringPattern: _recurringPattern,
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,
         );
+        if (!mounted) return;
 
-        if (success && mounted) {
+        if (!result.anySaved) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Jadwal berhasil ditambahkan')),
-          );
-          Navigator.pop(context);
-        }
-
-        if (!success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Gagal menyimpan jadwal. Pastikan Anda admin lalu coba lagi.'),
+            SnackBar(
+              content: Text(result.skippedDuplicates == result.requested
+                  ? 'Jadwal yang sama sudah ada, tidak ada jadwal baru yang dibuat.'
+                  : 'Gagal menyimpan jadwal. Pastikan Anda admin lalu coba lagi.'),
+              backgroundColor: AppTheme.errorColor,
             ),
           );
+          return;
         }
+
+        final first = result.created.first;
+        final count = result.created.length;
+        final notified = await _notifyPelayan(
+          _selectedPelayan,
+          title: 'Jadwal Pelayanan Baru',
+          message: count == 1
+              ? 'Anda dijadwalkan bertugas sebagai ${_selectedPelayan!.posisi} untuk '
+                  '${first.serviceType} pada ${_dateLabel(first.serviceDate)} '
+                  '(${first.startTime} - ${first.endTime}).'
+              : 'Anda dijadwalkan bertugas sebagai ${_selectedPelayan!.posisi} untuk '
+                  '${first.serviceType} sebanyak $count kali '
+                  '(${recurrencePatternLabel(_recurringPattern).toLowerCase()}), mulai '
+                  '${_dateLabel(first.serviceDate)}.',
+          relatedScheduleId: first.id,
+        );
+        if (!mounted) return;
+
+        final parts = <String>[
+          count == 1 ? 'Jadwal berhasil ditambahkan' : '$count jadwal berhasil ditambahkan',
+          if (result.skippedDuplicates > 0) '${result.skippedDuplicates} duplikat dilewati',
+          if (!result.allSaved) 'sebagian gagal disimpan',
+          if (!notified) 'notifikasi gagal dikirim',
+        ];
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(parts.join(' • ')),
+            backgroundColor: result.allSaved ? null : AppTheme.errorColor,
+          ),
+        );
+        Navigator.pop(context);
       }
     } catch (e) {
       debugPrint('Error saving service schedule: $e');
