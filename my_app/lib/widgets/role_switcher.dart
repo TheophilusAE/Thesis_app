@@ -48,7 +48,7 @@ class RoleSwitcher extends StatelessWidget {
         return 'Lihat jadwal tugas, konfirmasi kehadiran, scan QR, dan jadwal latihan';
       case 'jemaat':
       default:
-        return 'Ikuti ibadah, renungan harian, pembacaan Alkitab, event, dan komsel';
+        return 'Ikuti ibadah, renungan harian, pembacaan Alkitab, event, dan group';
     }
   }
 

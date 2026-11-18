@@ -11,6 +11,9 @@ class AttendanceConfirmation {
   final String? checkedInBy; // user id of the pelayan who scanned, if any
   final DateTime createdAt;
   final DateTime? updatedAt;
+  /// Worship-date attendance (scheduling v2). Such rows have an empty
+  /// [serviceScheduleId]; legacy rows have no occurrence.
+  final String? occurrenceId;
 
   AttendanceConfirmation({
     required this.id,
@@ -25,6 +28,7 @@ class AttendanceConfirmation {
     this.checkedInBy,
     required this.createdAt,
     this.updatedAt,
+    this.occurrenceId,
   });
 
   factory AttendanceConfirmation.fromJson(Map<String, dynamic> json) {
@@ -47,6 +51,7 @@ class AttendanceConfirmation {
       updatedAt: (json['updated_at'] ?? json['updatedAt']) != null
           ? DateTime.parse((json['updated_at'] ?? json['updatedAt']) as String)
           : null,
+      occurrenceId: json['occurrence_id'] as String?,
     );
   }
 
@@ -54,7 +59,8 @@ class AttendanceConfirmation {
     return {
       'user_id': userId,
       'user_name': userName,
-      'service_schedule_id': serviceScheduleId,
+      'service_schedule_id': serviceScheduleId.isEmpty ? null : serviceScheduleId,
+      if (occurrenceId != null) 'occurrence_id': occurrenceId,
       'schedule_date': scheduleDate.toIso8601String(),
       'confirmed': confirmed,
       'confirmed_at': confirmedAt?.toIso8601String(),

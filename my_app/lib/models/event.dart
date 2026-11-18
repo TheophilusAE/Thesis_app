@@ -7,6 +7,11 @@ class ChurchEvent {
   final int? maxCapacity;
   final bool isActive;
   final DateTime createdAt;
+  /// Optional YouTube (Live) link, validated before saving.
+  final String? youtubeUrl;
+  /// Administrative category (admin_categories); limits which admins may
+  /// create it. Null = uncategorized.
+  final String? categoryId;
 
   const ChurchEvent({
     required this.id,
@@ -17,7 +22,11 @@ class ChurchEvent {
     this.maxCapacity,
     required this.isActive,
     required this.createdAt,
+    this.youtubeUrl,
+    this.categoryId,
   });
+
+  bool get hasLive => youtubeUrl != null && youtubeUrl!.trim().isNotEmpty;
 
   factory ChurchEvent.fromJson(Map<String, dynamic> json) => ChurchEvent(
         id: json['id'] as String,
@@ -28,6 +37,8 @@ class ChurchEvent {
         maxCapacity: json['max_capacity'] as int?,
         isActive: (json['is_active'] as bool?) ?? true,
         createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+        youtubeUrl: json['youtube_url'] as String?,
+        categoryId: json['category_id'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -37,6 +48,8 @@ class ChurchEvent {
         'location': location,
         'max_capacity': maxCapacity,
         'is_active': isActive,
+        'youtube_url': (youtubeUrl?.trim().isEmpty ?? true) ? null : youtubeUrl!.trim(),
+        'category_id': categoryId,
       };
 
   ChurchEvent copyWith({
@@ -46,6 +59,8 @@ class ChurchEvent {
     String? location,
     int? maxCapacity,
     bool? isActive,
+    String? youtubeUrl,
+    String? categoryId,
   }) =>
       ChurchEvent(
         id: id,
@@ -56,5 +71,7 @@ class ChurchEvent {
         maxCapacity: maxCapacity ?? this.maxCapacity,
         isActive: isActive ?? this.isActive,
         createdAt: createdAt,
+        youtubeUrl: youtubeUrl ?? this.youtubeUrl,
+        categoryId: categoryId ?? this.categoryId,
       );
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/checkin_provider.dart';
+import '../providers/group_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/user.dart';
@@ -143,8 +145,9 @@ class _ProfileBody extends StatelessWidget {
                     ),
                     _InfoRow(
                       icon: Icons.group_outlined,
-                      label: 'Kelompok Keluarga',
-                      value: user.familyGroup ?? '-',
+                      label: 'Group',
+                      value: context.watch<GroupProvider>().groupById(user.groupId)?.nama ??
+                          (user.groupId == null ? '-' : '…'),
                     ),
                     _InfoRow(
                       icon: Icons.event_available_rounded,
@@ -154,7 +157,7 @@ class _ProfileBody extends StatelessWidget {
                   ],
                 ),
                 if (user.identityNumber == null ||
-                    user.familyGroup == null ||
+                    user.groupId == null ||
                     user.baptismDate == null ||
                     user.address == null) ...[
                   const SizedBox(height: 14),
@@ -243,6 +246,7 @@ class _ProfileBody extends StatelessWidget {
                     Navigator.pop(ctx);
                     final auth = context.read<AuthProvider>();
                     context.read<NotificationProvider>().clearForSignOut();
+                    context.read<CheckinProvider>().clear();
                     await auth.logout();
                     // Return to the root _AuthGate, which now shows the guest
                     // home. (Replacing the root with '/login' used to remove
@@ -639,7 +643,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _addressCtrl;
   late final TextEditingController _nikCtrl;
-  late final TextEditingController _familyGroupCtrl;
+  String? _groupId;
   String? _baptism;
   bool _saving = false;
 
@@ -652,9 +656,15 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _phoneCtrl = TextEditingController(text: widget.user.phone);
     _addressCtrl = TextEditingController(text: widget.user.address ?? '');
     _nikCtrl = TextEditingController(text: widget.user.identityNumber ?? '');
-    _familyGroupCtrl = TextEditingController(text: widget.user.familyGroup ?? '');
+    _groupId = widget.user.groupId;
     final b = widget.user.baptismDate;
     _baptism = (b == 'Sudah' || b == 'Belum') ? b : null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final groups = context.read<GroupProvider>();
+      groups.loadActiveGroups();
+      groups.loadCategories();
+    });
   }
 
   @override
@@ -663,7 +673,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _phoneCtrl.dispose();
     _addressCtrl.dispose();
     _nikCtrl.dispose();
-    _familyGroupCtrl.dispose();
     super.dispose();
   }
 
@@ -697,7 +706,9 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       roles: u.roles,
       membershipStatus: u.membershipStatus,
       identityNumber: _blankToNull(nik),
-      familyGroup: _blankToNull(_familyGroupCtrl.text),
+      // family_group is no longer edited in the app (kept as-is in the DB).
+      familyGroup: u.familyGroup,
+      groupId: _groupId,
       membershipType: u.membershipType,
       memberCardNumber: u.memberCardNumber,
       profileImage: u.profileImage,
@@ -770,13 +781,30 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 14),
-          TextFormField(
-            controller: _familyGroupCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Kelompok Keluarga / Komsel (opsional)',
-              prefixIcon: Icon(Icons.groups_outlined),
-            ),
-          ),
+          Builder(builder: (context) {
+            final groups = context.watch<GroupProvider>();
+            final options = groups.activeGroups;
+            return DropdownButtonFormField<String?>(
+              initialValue: options.any((g) => g.id == _groupId) ? _groupId : null,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Group (opsional)',
+                prefixIcon: Icon(Icons.groups_outlined),
+              ),
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('Belum ikut group')),
+                for (final g in options)
+                  DropdownMenuItem<String?>(
+                    value: g.id,
+                    child: Text(
+                      g.categoryId == null ? g.nama : '${g.nama} · ${groups.categoryLabel(g.categoryId)}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (v) => setState(() => _groupId = v),
+            );
+          }),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
             initialValue: _baptism,

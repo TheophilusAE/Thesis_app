@@ -54,7 +54,7 @@ class AppModule {
       case quest:
         return 'Quest Baca';
       case group:
-        return 'Group / Komsel';
+        return 'Group';
       case sermon:
         return 'Khotbah & Media';
       case prayer:

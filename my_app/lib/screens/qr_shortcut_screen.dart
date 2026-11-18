@@ -1,138 +1,152 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/auth_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
+import '../widgets/member_qr_image.dart';
 import 'event_qr_scan_screen.dart';
-import 'my_qr_screen.dart';
+import 'qr_attendance_scan_screen.dart';
 
-/// Entry point opened from the jemaat bottom navigation bar's center QR
-/// button — a quick-access fork between showing one's own member QR and
-/// scanning an ibadah/event QR to self-check-in.
-class QrShortcutScreen extends StatelessWidget {
-  const QrShortcutScreen({super.key});
+/// What the "Scan QR" button opens for the signed-in account.
+enum QrScanMode {
+  /// Jemaat: scan the check-in code shown at a service or event.
+  selfCheckIn,
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.warmIvory,
-      appBar: AppBar(
-        title: const Text('Akses QR'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppTheme.darkCharcoal,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Pilih salah satu fitur QR di bawah ini',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.neutralMedium,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 20),
-              _QrOptionCard(
-                icon: Icons.qr_code_2_rounded,
-                title: 'QR Jemaat Saya',
-                subtitle: 'Tampilkan kode QR pribadi untuk presensi kehadiran.',
-                accentColor: AppTheme.goldDark,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MyQrScreen()),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _QrOptionCard(
-                icon: Icons.qr_code_scanner_rounded,
-                title: 'Scan QR Ibadah',
-                subtitle: 'Pindai kode QR ibadah/acara untuk mencatat kehadiran Anda.',
-                accentColor: AppTheme.primary,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const EventQrScanScreen()),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  /// Pelayan / admin with `kehadiran:create`: scan members' cards.
+  staff,
 }
 
-class _QrOptionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color accentColor;
-  final VoidCallback onTap;
+/// Same rule as the database's `is_checkin_staff()`: pelayan or kehadiran:create.
+QrScanMode qrScanModeFor(AuthProvider auth) {
+  final role = auth.currentDisplayRole;
+  if (role == 'jemaat') return QrScanMode.selfCheckIn;
+  final staff = auth.isPelayan || auth.can(AppModule.kehadiran, PermissionAction.create);
+  return staff ? QrScanMode.staff : QrScanMode.selfCheckIn;
+}
 
-  const _QrOptionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.accentColor,
-    required this.onTap,
-  });
+/// Opens the QR sheet from the center button of the bottom navigation bar:
+/// the member's own QR (large) and a "Scan QR" button.
+Future<void> showQrAccessSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => const QrAccessSheet(),
+  );
+}
+
+class QrAccessSheet extends StatelessWidget {
+  const QrAccessSheet({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.neutralBorder),
-            boxShadow: AppTheme.cardShadow(),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
+    final auth = context.watch<AuthProvider>();
+    final user = auth.currentUser;
+    final mode = qrScanModeFor(auth);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final muted = theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7);
+    final qrSize = (MediaQuery.sizeOf(context).width * 0.62).clamp(200.0, 280.0);
+
+    void close() => Navigator.of(context).pop();
+
+    void scan() {
+      final navigator = Navigator.of(context);
+      navigator.pop();
+      navigator.push(MaterialPageRoute(
+        builder: (_) => mode == QrScanMode.staff ? const QrAttendanceScanScreen() : const EventQrScanScreen(),
+      ));
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.dialogTheme.backgroundColor ?? scheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(8, 8, 8, 16 + MediaQuery.paddingOf(context).bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  tooltip: 'Kembali',
+                  icon: const Icon(Icons.chevron_left_rounded, size: 28),
+                  onPressed: close,
                 ),
-                child: Icon(icon, color: accentColor, size: 28),
+                Expanded(
+                  child: Text(
+                    'QR Saya',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Tutup',
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: close,
+                ),
+              ],
+            ),
+            Text('Kode QR pribadi Anda', style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppTheme.neutralBorder),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.darkCharcoal,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: AppTheme.neutralMedium,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
+              child: user == null
+                  ? SizedBox(
+                      width: qrSize,
+                      height: qrSize,
+                      child: const Center(child: Text('QR belum tersedia', style: TextStyle(color: Colors.black54))),
+                    )
+                  : MemberQrImage(user: user, size: qrSize),
+            ),
+            const SizedBox(height: 24),
+            Text('Kode QR Anda', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Tunjukkan kode QR ini untuk dipindai.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: scan,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  icon: const Icon(Icons.qr_code_scanner_rounded),
+                  label: const Text('Scan QR'),
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: AppTheme.neutralMuted),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              mode == QrScanMode.staff
+                  ? 'Untuk memindai kartu anggota jemaat (presensi ibadah/event).'
+                  : 'Untuk memindai QR presensi ibadah atau event.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(color: muted),
+            ),
+          ],
         ),
       ),
     );

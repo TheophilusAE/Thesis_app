@@ -162,6 +162,7 @@ class AuthProvider with ChangeNotifier {
       memberSince: p['member_since'] as String?,
       address: p['address'] as String?,
       baptismDate: p['baptism_date'] as String?,
+      groupId: p['group_id'] as String?,
     );
   }
 
@@ -456,8 +457,10 @@ class AuthProvider with ChangeNotifier {
           // Extended Jemaat data is optional: blank -> NULL, never a placeholder.
           'address': updatedUser.address,
           'identity_number': updatedUser.identityNumber,
-          'family_group': updatedUser.familyGroup,
           'baptism_date': updatedUser.baptismDate,
+          // The Group picker replaces the old free-text family_group, which
+          // is left untouched in the database. Only sent when it changed.
+          if (updatedUser.groupId != _currentUser?.groupId) 'group_id': updatedUser.groupId,
         },
       );
       _currentUser = updatedUser;
@@ -608,6 +611,7 @@ class AuthProvider with ChangeNotifier {
         'baptism_date': updatedUser.baptismDate,
         'membership_status': updatedUser.membershipStatus,
         'membership_type': updatedUser.membershipType,
+        'group_id': updatedUser.groupId,
       });
       if (_currentUser?.id == updatedUser.id) {
         _currentUser = updatedUser;

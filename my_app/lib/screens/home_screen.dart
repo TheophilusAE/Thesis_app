@@ -26,6 +26,10 @@ import '../widgets/common/compact_feature_tile.dart';
 import '../widgets/role_switcher.dart';
 import 'admin_access_management_screen.dart';
 import 'admin_management_screen.dart';
+import 'ibadah_management_screen.dart';
+import 'kas_screen.dart';
+import 'public_schedule_screen.dart';
+import '../providers/checkin_provider.dart';
 import 'activity_recommendation_screen.dart';
 import 'admin_attendance_monitoring_screen.dart';
 import 'admin_substitution_review_screen.dart';
@@ -35,8 +39,8 @@ import 'bible_screen.dart';
 import 'devotional_screen.dart';
 import 'feedback_management_screen.dart';
 import 'feedback_screen.dart';
-import 'komsel_directory_screen.dart';
-import 'komsel_management_screen.dart';
+import 'group_directory_screen.dart';
+import 'group_management_screen.dart';
 import 'member_card_screen.dart';
 import 'event_list_screen.dart';
 import 'pelayan_management_screen.dart';
@@ -136,6 +140,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       label: 'Kelola',
     ),
     NavigationDestination(
+      icon: SizedBox.shrink(),
+      label: '',
+    ),
+    NavigationDestination(
       icon: Icon(Icons.calendar_month_outlined),
       selectedIcon: Icon(Icons.calendar_month_rounded),
       label: 'Jadwal',
@@ -159,6 +167,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       label: 'Jadwal',
     ),
     NavigationDestination(
+      icon: SizedBox.shrink(),
+      label: '',
+    ),
+    NavigationDestination(
       icon: Icon(Icons.how_to_reg_outlined),
       selectedIcon: Icon(Icons.how_to_reg_rounded),
       label: 'Kehadiran',
@@ -170,10 +182,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
   ];
 
-  // Index 2 is a reserved placeholder slot — it has no visible icon/label of
-  // its own because the floating QR button in build() is drawn on top of it.
-  // Tapping it is intercepted in onDestinationSelected before it ever
-  // becomes the selected tab.
+  // In every role's list, index 2 is a reserved placeholder slot — it has no
+  // visible icon/label of its own because the floating QR button in build()
+  // is drawn on top of it. Tapping it is intercepted in
+  // _onDestinationSelected before it ever becomes the selected tab.
   static const _jemaatDests = [
     NavigationDestination(
       icon: Icon(Icons.home_outlined),
@@ -212,16 +224,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       switch (idx) {
         case 0: return const _AdminDashboard();
         case 1: return const _AdminKelolaTab();
-        case 2: return const _AdminJadwalTab();
-        default: return const _ProfileTab();
+        case 3: return const _AdminJadwalTab();
+        case 4: return const _ProfileTab();
+        default: return const _AdminDashboard();
       }
     }
     if (role == 'pelayan') {
       switch (idx) {
         case 0: return const _PelayananBeranda();
         case 1: return const _PelayananJadwalTab();
-        case 2: return const _PelayananKehadiranTab();
-        default: return const _ProfileTab();
+        case 3: return const _PelayananKehadiranTab();
+        case 4: return const _ProfileTab();
+        default: return const _PelayananBeranda();
       }
     }
     // jemaat (index 2 is the reserved QR-button slot — never selected, see
@@ -236,8 +250,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _onDestinationSelected(String role, int i) {
-    if (role == 'jemaat' && i == 2) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const QrShortcutScreen()));
+    // Index 2 is the center QR slot for every role: open the QR sheet
+    // instead of switching tabs.
+    if (i == 2) {
+      showQrAccessSheet(context);
       return;
     }
     setState(() => _index = i);
@@ -293,8 +309,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              if (role == 'jemaat')
-                Positioned(
+              Positioned(
                   top: -22,
                   child: _QrNavButton(
                     onTap: () => _onDestinationSelected(role, 2),
@@ -1068,10 +1083,32 @@ class _AdminDashboardState extends State<_AdminDashboard> {
                         MaterialPageRoute(builder: (_) => const PelayaniManagementScreen()),
                       ),
                     ),
+                    if (auth.canAccess(AppModule.jadwalIbadah))
+                    CompactFeatureTile(
+                      icon: Icons.church_rounded,
+                      title: 'Jadwal Ibadah',
+                      actionLabel: 'Ibadah & QR →',
+                      accentColor: const Color(0xFF7C2D12),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const IbadahManagementScreen()),
+                      ),
+                    ),
+                    if (auth.canAccess(AppModule.kas) || auth.canAccess(AppModule.rekening))
+                    CompactFeatureTile(
+                      icon: Icons.account_balance_wallet_rounded,
+                      title: 'Kas Keuangan',
+                      actionLabel: 'Kas & rekening →',
+                      accentColor: const Color(0xFF047857),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const KasScreen()),
+                      ),
+                    ),
                     if (auth.canAccess(AppModule.jadwalPelayanan))
                     CompactFeatureTile(
                       icon: Icons.calendar_month_rounded,
-                      title: 'Jadwal',
+                      title: 'Jadwal Pelayanan',
                       actionLabel: 'Atur jadwal →',
                       accentColor: const Color(0xFFEF4444),
                       onTap: () => Navigator.push(
@@ -1231,12 +1268,12 @@ class _AdminKelolaTab extends StatelessWidget {
                     if (auth.canAccess(AppModule.group))
                     CompactFeatureTile(
                       icon: Icons.groups_rounded,
-                      title: 'Kelola Komsel',
+                      title: 'Kelola Group',
                       actionLabel: 'Kelola sel →',
                       accentColor: const Color(0xFFB45309),
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const KomselManagementScreen()),
+                        MaterialPageRoute(builder: (_) => const GroupManagementScreen()),
                       ),
                     ),
                     if (auth.canAccess(AppModule.prayer))
@@ -1261,6 +1298,22 @@ class _AdminKelolaTab extends StatelessWidget {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const SermonManagementScreen()),
+                      ),
+                    ),
+                  ],
+                ),
+                _AdminTileSection(
+                  title: 'Keuangan',
+                  tiles: [
+                    if (auth.canAccess(AppModule.kas) || auth.canAccess(AppModule.rekening))
+                    CompactFeatureTile(
+                      icon: Icons.account_balance_wallet_rounded,
+                      title: 'Kas Keuangan & Rekening',
+                      actionLabel: 'Kelola kas →',
+                      accentColor: const Color(0xFF047857),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const KasScreen()),
                       ),
                     ),
                   ],
@@ -1330,6 +1383,17 @@ class _AdminJadwalTab extends StatelessWidget {
                 _AdminTileSection(
                   title: 'Jadwal Pelayanan & Pembekalan',
                   tiles: [
+                    if (auth.canAccess(AppModule.jadwalIbadah) || auth.canAccess(AppModule.jadwalPelayanan))
+                    CompactFeatureTile(
+                      icon: Icons.church_rounded,
+                      title: 'Jadwal Ibadah',
+                      actionLabel: 'Tanggal, tugas & QR →',
+                      accentColor: const Color(0xFF7C2D12),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const IbadahManagementScreen()),
+                      ),
+                    ),
                     if (auth.canAccess(AppModule.jadwalPelayanan))
                     CompactFeatureTile(
                       icon: Icons.calendar_month_rounded,
@@ -1852,6 +1916,16 @@ class _PelayananBeranda extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (_) => const ServiceScheduleManagementScreen(),
                         ),
+                      ),
+                    ),
+                    CompactFeatureTile(
+                      icon: Icons.qr_code_2_rounded,
+                      title: 'QR Presensi Ibadah',
+                      actionLabel: 'Tampilkan QR →',
+                      accentColor: const Color(0xFF7C2D12),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const IbadahManagementScreen()),
                       ),
                     ),
                     CompactFeatureTile(
@@ -2689,13 +2763,23 @@ class _JemaatBerandaState extends State<_JemaatBeranda> {
                         ),
                       ),
                       CompactFeatureTile(
+                        icon: Icons.church_rounded,
+                        title: 'Jadwal Ibadah',
+                        actionLabel: 'Lihat & live →',
+                        accentColor: const Color(0xFF7C2D12),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PublicScheduleScreen()),
+                        ),
+                      ),
+                      CompactFeatureTile(
                         icon: Icons.groups_rounded,
-                        title: 'Komsel / Sel',
-                        actionLabel: 'Cari komsel →',
+                        title: 'Group',
+                        actionLabel: 'Cari group →',
                         accentColor: const Color(0xFFB45309),
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const KomselDirectoryScreen()),
+                          MaterialPageRoute(builder: (_) => const GroupDirectoryScreen()),
                         ),
                       ),
                       CompactFeatureTile(
@@ -3688,12 +3772,12 @@ class _JemaatKomunitasTab extends StatelessWidget {
                     ),
                     CompactFeatureTile(
                       icon: Icons.groups_rounded,
-                      title: 'Komsel / Kelompok Sel',
-                      actionLabel: 'Cari komsel →',
+                      title: 'Group',
+                      actionLabel: 'Cari group →',
                       accentColor: const Color(0xFFB45309),
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const KomselDirectoryScreen()),
+                        MaterialPageRoute(builder: (_) => const GroupDirectoryScreen()),
                       ),
                     ),
                     CompactFeatureTile(
@@ -4276,6 +4360,7 @@ class _ProfileTab extends StatelessWidget {
     );
     if (confirmed == true && context.mounted) {
       context.read<NotificationProvider>().clearForSignOut();
+      context.read<CheckinProvider>().clear();
       await auth.logout();
       // Back to the root _AuthGate (guest home). Replacing the root with
       // '/login' removed the gate, so logging in again never reached Home.

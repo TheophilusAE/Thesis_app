@@ -1,6 +1,7 @@
 import '../models/attendance_confirmation.dart';
 import '../models/event.dart';
 import '../models/feedback.dart';
+import '../models/ibadah.dart';
 import '../models/service_schedule.dart';
 
 /// Rule-based, explainable decision support for church activity planning
@@ -49,6 +50,9 @@ class RecommendationInput {
   final List<EventWithRegistration> events;
   final DateTime now;
   final int? buildingCapacity;
+  /// Worship dates (scheduling v2). Attendance rows with an occurrence id
+  /// are counted per these dates; legacy rows still go through [schedules].
+  final List<IbadahOccurrence> ibadah;
 
   const RecommendationInput({
     required this.schedules,
@@ -57,6 +61,7 @@ class RecommendationInput {
     required this.events,
     required this.now,
     required this.buildingCapacity,
+    this.ibadah = const [],
   });
 }
 
@@ -161,9 +166,14 @@ class RecommendationEngine {
   static Map<String, List<ServiceOccurrence>> serviceOccurrences(RecommendationInput input) {
     final today = DateTime(input.now.year, input.now.month, input.now.day);
     final attendeesBySchedule = <String, Set<String>>{};
+    final attendeesByOccurrence = <String, Set<String>>{};
     for (final a in input.attendance) {
       if (!a.confirmed) continue;
-      attendeesBySchedule.putIfAbsent(a.serviceScheduleId, () => {}).add(a.userId);
+      if (a.occurrenceId != null) {
+        attendeesByOccurrence.putIfAbsent(a.occurrenceId!, () => {}).add(a.userId);
+      } else if (a.serviceScheduleId.isNotEmpty) {
+        attendeesBySchedule.putIfAbsent(a.serviceScheduleId, () => {}).add(a.userId);
+      }
     }
 
     final grouped = <String, Map<DateTime, Set<String>>>{};
@@ -175,6 +185,16 @@ class RecommendationEngine {
       grouped
           .putIfAbsent(s.serviceType, () => {})
           .putIfAbsent(day, () => <String>{})
+          .addAll(people);
+    }
+    // Worship dates (v2): one occurrence = one service; QR check-ins point here.
+    for (final o in input.ibadah) {
+      if (o.isCancelled || o.tanggal.isAfter(today)) continue;
+      final people = attendeesByOccurrence[o.id];
+      if (people == null || people.isEmpty) continue;
+      grouped
+          .putIfAbsent(o.jenis, () => {})
+          .putIfAbsent(o.tanggal, () => <String>{})
           .addAll(people);
     }
 

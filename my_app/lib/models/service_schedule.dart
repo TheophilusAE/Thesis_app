@@ -12,6 +12,9 @@ class ServiceSchedule {
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
+  /// Worship date this duty belongs to (scheduling v2). When set, the
+  /// database fills date/time/type from that occurrence.
+  final String? occurrenceId;
 
   ServiceSchedule({
     required this.id,
@@ -27,6 +30,7 @@ class ServiceSchedule {
     this.notes,
     required this.createdAt,
     required this.updatedAt,
+    this.occurrenceId,
   });
 
   factory ServiceSchedule.fromJson(Map<String, dynamic> json) {
@@ -48,11 +52,13 @@ class ServiceSchedule {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : DateTime.now()),
+      occurrenceId: json['occurrence_id'] as String?,
     );
   }
 
   Map<String, dynamic> toSupabaseJson() {
     return {
+      if (occurrenceId != null) 'occurrence_id': occurrenceId,
       'pelayan_id': pelayaniId,
       'pelayan_name': pelayaniName,
       'pelayan_position': pelayaniPosition,
@@ -113,6 +119,7 @@ class ServiceSchedule {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      occurrenceId: occurrenceId,
     );
   }
 }

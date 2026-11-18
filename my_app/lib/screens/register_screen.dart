@@ -171,7 +171,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Setelah mendaftar, akun Anda akan diverifikasi oleh admin gereja. Data jemaat lainnya (NIK, komsel, baptis, alamat) dapat dilengkapi di Profil setelah akun disetujui.',
+                          'Setelah mendaftar, akun Anda akan diverifikasi oleh admin gereja. Data jemaat lainnya (NIK, group, baptis, alamat) dapat dilengkapi di Profil setelah akun disetujui.',
                           style: TextStyle(
                             color: isDark ? const Color(0xFF2C3E50) : const Color(0xFF1E3A5F),
                             fontSize: 13.5,

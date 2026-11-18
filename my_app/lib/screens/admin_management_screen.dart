@@ -4,6 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../models/devotional.dart';
 import '../models/event.dart';
+import '../models/event_registration.dart';
+import '../providers/group_provider.dart';
+import '../utils/qr_payload.dart';
+import '../utils/youtube_url.dart';
+import 'checkin_qr_display_screen.dart';
 import '../models/reading_quest.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
@@ -146,7 +151,6 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
         user.email,
         user.phone,
         user.identityNumber ?? '',
-        user.familyGroup ?? '',
         user.membershipType ?? '',
         user.address ?? '',
         user.memberCardNumber ?? '',
@@ -241,7 +245,6 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     final phoneController = TextEditingController(text: existingUser?.phone ?? '');
     final passwordController = TextEditingController();
     final identityController = TextEditingController(text: existingUser?.identityNumber ?? '');
-    final familyController = TextEditingController(text: existingUser?.familyGroup ?? '');
     final membershipTypeController = TextEditingController(text: existingUser?.membershipType ?? '');
     final memberCardController = TextEditingController(text: existingUser?.memberCardNumber ?? '');
     final addressController = TextEditingController(text: existingUser?.address ?? '');
@@ -356,10 +359,6 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
           const SizedBox(height: 8),
           _dialogTextField(controller: identityController, label: 'NIK'),
           _dialogTextField(
-            controller: familyController,
-            label: 'Komunitas / Family Group',
-          ),
-          _dialogTextField(
             controller: membershipTypeController,
             label: 'Tipe Keanggotaan',
           ),
@@ -386,7 +385,10 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
         roles: selectedRoles.isEmpty ? ['jemaat'] : selectedRoles,
         membershipStatus: membershipStatus,
         identityNumber: identityController.text.trim().isEmpty ? null : identityController.text.trim(),
-        familyGroup: familyController.text.trim().isEmpty ? null : familyController.text.trim(),
+        // family_group is no longer edited (replaced by the member's Group);
+        // existing values are carried through unchanged.
+        familyGroup: existingUser?.familyGroup,
+        groupId: existingUser?.groupId,
         membershipType: membershipTypeController.text.trim().isEmpty ? null : membershipTypeController.text.trim(),
         memberCardNumber: memberCardController.text.trim().isEmpty ? null : memberCardController.text.trim(),
         address: addressController.text.trim().isEmpty ? null : addressController.text.trim(),
@@ -1235,7 +1237,6 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
                       const SizedBox(height: 12),
                       Text('Telepon: ${user.phone}'),
                       Text('NIK: ${user.identityNumber ?? '-'}'),
-                      Text('Komunitas: ${user.familyGroup ?? '-'}'),
                       Text('Tipe Keanggotaan: ${user.membershipType ?? '-'}'),
                       Text('Kartu Anggota: ${user.memberCardNumber ?? '-'}'),
                       Text('Alamat: ${user.address ?? '-'}'),
@@ -1795,7 +1796,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
       user.phone.trim().isNotEmpty,
       (user.identityNumber ?? '').trim().isNotEmpty,
       (user.address ?? '').trim().isNotEmpty,
-      (user.familyGroup ?? '').trim().isNotEmpty,
+      user.groupId != null,
       (user.memberCardNumber ?? '').trim().isNotEmpty,
     ];
     return checks.where((value) => value).length / checks.length;
@@ -1822,12 +1823,29 @@ class _AdminEventTabState extends State<_AdminEventTab> {
   void initState() {
     super.initState();
     _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<GroupProvider>().loadCategories();
+    });
   }
 
   Future<void> _load() async {
     setState(() => _loading = true);
     _events = await _service.getAllEvents();
     if (mounted) setState(() => _loading = false);
+  }
+
+  void _showCheckinQr(ChurchEvent event) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CheckinQrDisplayScreen(
+          targetType: CheckinTarget.event,
+          targetId: event.id,
+          title: event.title,
+          subtitle: DateFormat('EEEE, d MMM yyyy • HH:mm', 'id_ID').format(event.date),
+        ),
+      ),
+    );
   }
 
   @override
@@ -1837,6 +1855,8 @@ class _AdminEventTabState extends State<_AdminEventTab> {
     final canCreate = auth.can(AppModule.event, PermissionAction.create);
     final canRead = auth.can(AppModule.event, PermissionAction.read);
     final canModify = auth.canModifyExisting;
+    // Same rule as issue_checkin_token(): pelayan or kehadiran:create.
+    final canShowQr = auth.isPelayan || auth.can(AppModule.kehadiran, PermissionAction.create);
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -1876,6 +1896,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                   onDelete: canModify ? () => _confirmDelete(event) : null,
                   onToggle: canModify ? () => _toggleActive(event) : null,
                   onViewRegistrations: canRead ? () => _showRegistrations(event) : null,
+                  onShowQr: canShowQr && event.isActive ? () => _showCheckinQr(event) : null,
                 )),
         ],
       ),
@@ -1888,7 +1909,16 @@ class _AdminEventTabState extends State<_AdminEventTab> {
     final locationCtrl = TextEditingController(text: existing?.location ?? '');
     final capacityCtrl = TextEditingController(
         text: existing?.maxCapacity?.toString() ?? '');
+    final youtubeCtrl = TextEditingController(text: existing?.youtubeUrl ?? '');
     DateTime selectedDate = existing?.date ?? DateTime.now().add(const Duration(days: 7));
+    String? categoryId = existing?.categoryId;
+    final auth = context.read<AuthProvider>();
+    // Only categories this admin may create events in (Super Admin: all).
+    final categories = context
+        .read<GroupProvider>()
+        .categories
+        .where((c) => auth.can(AppModule.event, PermissionAction.create, categoryId: c.id))
+        .toList();
 
     final result = await showModalBottomSheet<bool>(
       context: context,
@@ -1922,6 +1952,23 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                 const SizedBox(height: 10),
                 _field(capacityCtrl, 'Kapasitas Maksimal (opsional)',
                     keyboardType: TextInputType.number),
+                const SizedBox(height: 10),
+                _field(youtubeCtrl, 'Link YouTube Live (opsional)',
+                    keyboardType: TextInputType.url),
+                if (categories.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String?>(
+                    initialValue: categories.any((c) => c.id == categoryId) ? categoryId : null,
+                    decoration: const InputDecoration(labelText: 'Kategori (opsional)'),
+                    items: [
+                      if (auth.can(AppModule.event, PermissionAction.create))
+                        const DropdownMenuItem<String?>(value: null, child: Text('Tanpa kategori')),
+                      for (final c in categories)
+                        DropdownMenuItem<String?>(value: c.id, child: Text(c.nama)),
+                    ],
+                    onChanged: (v) => setSheet(() => categoryId = v),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 // Date picker row
                 GestureDetector(
@@ -2008,6 +2055,14 @@ class _AdminEventTabState extends State<_AdminEventTab> {
     final title = titleCtrl.text.trim();
     if (title.isEmpty) return;
     final capacity = int.tryParse(capacityCtrl.text.trim());
+    final youtube = youtubeCtrl.text.trim();
+    final youtubeError = validateYoutubeUrl(youtube);
+    if (youtubeError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Event tidak disimpan: $youtubeError')),
+      );
+      return;
+    }
 
     bool ok;
     var notified = true;
@@ -2018,15 +2073,22 @@ class _AdminEventTabState extends State<_AdminEventTab> {
         date: selectedDate,
         location: locationCtrl.text.trim(),
         maxCapacity: capacity,
+        youtubeUrl: youtube,
+        categoryId: categoryId,
       );
       if (ok && mounted) notified = await _announceEvent(title, selectedDate);
     } else {
-      ok = await _service.updateEvent(existing.copyWith(
+      ok = await _service.updateEvent(ChurchEvent(
+        id: existing.id,
         title: title,
         description: descCtrl.text.trim(),
         date: selectedDate,
         location: locationCtrl.text.trim(),
         maxCapacity: capacity,
+        isActive: existing.isActive,
+        createdAt: existing.createdAt,
+        youtubeUrl: youtube.isEmpty ? null : youtube,
+        categoryId: categoryId,
       ));
     }
 
@@ -2129,7 +2191,10 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1F2937))),
-                        Text('${regs.length} keluarga terdaftar',
+                        Text(
+                            '${regs.where((r) => r.isActive).length} pendaftaran aktif • '
+                            '${regs.where((r) => r.isAttended).length} sudah check-in • '
+                            '${regs.where((r) => !r.isActive).length} batal',
                             style: const TextStyle(
                                 fontSize: 12, color: Color(0xFF6B7280))),
                       ],
@@ -2143,7 +2208,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '${regs.fold<int>(0, (s, r) => s + r.totalCount)} peserta',
+                      '${regs.where((r) => r.isActive).fold<int>(0, (s, r) => s + r.totalCount)} peserta',
                       style: const TextStyle(
                           color: Color(0xFF1E3A8A),
                           fontWeight: FontWeight.w700,
@@ -2208,6 +2273,15 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                                               style: const TextStyle(
                                                   fontSize: 11.5,
                                                   color: Color(0xFF6B7280))),
+                                        Text(RegistrationStatus.label(r.status),
+                                            style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: r.isAttended
+                                                    ? const Color(0xFF059669)
+                                                    : r.isActive
+                                                        ? const Color(0xFF6B7280)
+                                                        : Colors.red)),
                                       ],
                                     ),
                                   ),
@@ -2308,6 +2382,7 @@ class _AdminEventCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onToggle;
   final VoidCallback? onViewRegistrations;
+  final VoidCallback? onShowQr;
 
   const _AdminEventCard({
     required this.event,
@@ -2315,6 +2390,7 @@ class _AdminEventCard extends StatelessWidget {
     this.onDelete,
     this.onToggle,
     this.onViewRegistrations,
+    this.onShowQr,
   });
 
   @override
@@ -2381,15 +2457,24 @@ class _AdminEventCard extends StatelessWidget {
                 ),
               ),
               if (onEdit != null || onDelete != null || onToggle != null ||
-                  onViewRegistrations != null)
+                  onViewRegistrations != null || onShowQr != null)
               PopupMenuButton<String>(
                 onSelected: (v) {
                   if (v == 'edit') onEdit?.call();
                   if (v == 'delete') onDelete?.call();
                   if (v == 'toggle') onToggle?.call();
                   if (v == 'registrations') onViewRegistrations?.call();
+                  if (v == 'qr') onShowQr?.call();
                 },
                 itemBuilder: (_) => [
+                  if (onShowQr != null)
+                  const PopupMenuItem(
+                      value: 'qr',
+                      child: Row(children: [
+                        Icon(Icons.qr_code_2_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Tampilkan QR Check-in')
+                      ])),
                   if (onViewRegistrations != null)
                   const PopupMenuItem(
                       value: 'registrations',

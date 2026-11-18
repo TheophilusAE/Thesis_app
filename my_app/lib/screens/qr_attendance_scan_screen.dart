@@ -3,20 +3,31 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
-import '../models/attendance_confirmation.dart';
-import '../models/service_schedule.dart';
-import '../providers/attendance_confirmation_provider.dart';
-import '../providers/auth_provider.dart';
-import '../providers/service_schedule_provider.dart';
-import '../services/supabase_service.dart';
+import '../models/event.dart';
+import '../providers/checkin_provider.dart';
+import '../providers/ibadah_provider.dart';
+import '../services/event_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/qr_payload.dart';
 import '../widgets/common/app_empty_state.dart';
 
-/// Pelayan-facing screen: pick today's service schedule, then scan a
-/// member's QR card to mark them present.
+/// One thing a pelayan can check people in to today.
+class _Target {
+  final String type; // CheckinTarget.occurrence / .event
+  final String id;
+  final String label;
+  const _Target(this.type, this.id, this.label);
+}
+
+/// Pelayan/admin screen: choose today's worship service or event, then scan
+/// members' card QRs. The database (`staff_check_in`) verifies the card's
+/// secret, the time window and — for events — that the member booked, and
+/// never records the same person twice.
 class QrAttendanceScanScreen extends StatefulWidget {
-  const QrAttendanceScanScreen({super.key});
+  /// Loads today's events; injectable for tests.
+  final Future<List<ChurchEvent>> Function()? eventLoader;
+
+  const QrAttendanceScanScreen({super.key, this.eventLoader});
 
   @override
   State<QrAttendanceScanScreen> createState() => _QrAttendanceScanScreenState();
@@ -24,14 +35,15 @@ class QrAttendanceScanScreen extends StatefulWidget {
 
 class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
   final MobileScannerController _controller = MobileScannerController();
-  final SupabaseService _supabaseService = SupabaseService();
 
   bool _permissionGranted = false;
   bool _permissionPermanentlyDenied = false;
   bool _checkingPermission = true;
   bool _isProcessing = false;
   bool _torchOn = false;
-  ServiceSchedule? _selectedSchedule;
+  bool _loadingTargets = true;
+  List<_Target> _targets = [];
+  _Target? _selected;
 
   @override
   void initState() {
@@ -47,14 +59,30 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
     if (!mounted) return;
     setState(() {
       _permissionGranted = status.isGranted;
-      // iOS never re-prompts after a denial, so the only way forward is the
-      // system Settings page.
       _permissionPermanentlyDenied = status.isPermanentlyDenied || status.isRestricted;
       _checkingPermission = false;
     });
-    if (_permissionGranted) {
-      await context.read<ServiceScheduleProvider>().loadSchedulesByDate(DateTime.now());
-    }
+    await _loadTargets();
+  }
+
+  Future<void> _loadTargets() async {
+    final ibadah = context.read<IbadahProvider>();
+    final now = DateTime.now();
+    await ibadah.load(from: now, days: 1);
+    final events = await (widget.eventLoader ?? EventService().getActiveEvents)();
+    if (!mounted) return;
+    bool sameDay(DateTime d) => d.year == now.year && d.month == now.month && d.day == now.day;
+    final targets = <_Target>[
+      for (final o in ibadah.occurrencesOn(now))
+        _Target(CheckinTarget.occurrence, o.id, '${o.nama} (${o.timeLabel})'),
+      for (final e in events.where((e) => sameDay(e.date)))
+        _Target(CheckinTarget.event, e.id, 'Event: ${e.title}'),
+    ];
+    setState(() {
+      _targets = targets;
+      _selected = targets.isEmpty ? null : targets.first;
+      _loadingTargets = false;
+    });
   }
 
   @override
@@ -65,177 +93,44 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
 
   Future<void> _toggleTorch() async {
     await _controller.toggleTorch();
-    setState(() {
-      _torchOn = !_torchOn;
-    });
+    setState(() => _torchOn = !_torchOn);
   }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
-    if (_isProcessing || _selectedSchedule == null) return;
-    final raw = capture.barcodes.firstOrNull?.rawValue;
+    final target = _selected;
+    if (_isProcessing || target == null) return;
+    final raw = capture.barcodes.isEmpty ? null : capture.barcodes.first.rawValue;
     if (raw == null) return;
 
-    final payload = decodeMemberPayload(raw);
-    if (payload == null) return;
-
+    final checkin = context.read<CheckinProvider>();
     setState(() => _isProcessing = true);
     await _controller.stop();
-
-    final profile = await _supabaseService.getUserProfile(payload.userId);
-    final memberName = (profile?['nama'] as String?) ?? payload.name;
-
+    final r = await checkin.staffCheckIn(targetType: target.type, targetId: target.id, rawQr: raw);
     if (!mounted) return;
-    await _confirmCheckIn(userId: payload.userId, name: memberName);
 
+    final scheme = Theme.of(context).colorScheme;
+    final name = r.memberName ?? 'Jemaat';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(!r.ok
+            ? r.error!
+            : r.alreadyCheckedIn
+                ? '$name sudah tercatat hadir sebelumnya.'
+                : '$name berhasil ditandai hadir.'),
+        backgroundColor: !r.ok
+            ? scheme.error
+            : r.alreadyCheckedIn
+                ? Colors.orange.shade800
+                : AppTheme.emerald,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+    // Short pause so the same card isn't read again immediately.
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
     setState(() => _isProcessing = false);
     await _controller.start();
-  }
-
-  Future<void> _confirmCheckIn({required String userId, required String name}) async {
-    final schedule = _selectedSchedule!;
-    final confirm = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.person_rounded, color: AppTheme.primary, size: 22),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Konfirmasi Presensi',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppTheme.warmIvory,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.neutralBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.darkCharcoal,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.church_rounded, size: 14, color: AppTheme.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        schedule.serviceType,
-                        style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.schedule_rounded, size: 14, color: AppTheme.neutralMedium),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${schedule.startTime} - ${schedule.endTime} WIB',
-                        style: const TextStyle(fontSize: 13, color: AppTheme.neutralMedium),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Tandai kehadiran jemaat ini pada jadwal ibadah yang dipilih?',
-              style: TextStyle(fontSize: 13, color: AppTheme.neutralMedium, height: 1.4),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Batal', style: TextStyle(color: AppTheme.neutralMedium)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.emerald,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            ),
-            child: const Text('Tandai Hadir'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true || !mounted) return;
-
-    final auth = context.read<AuthProvider>();
-    final provider = context.read<AttendanceConfirmationProvider>();
-    final now = DateTime.now();
-    final success = await provider.createOrUpdateConfirmation(
-      AttendanceConfirmation(
-        id: '',
-        userId: userId,
-        userName: name,
-        serviceScheduleId: schedule.id,
-        scheduleDate: schedule.serviceDate,
-        confirmed: true,
-        confirmedAt: now,
-        checkInMethod: 'qr',
-        checkedInBy: auth.currentUser?.id,
-        createdAt: now,
-      ),
-    );
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              success ? Icons.check_circle_rounded : Icons.error_outline_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                success ? '$name berhasil ditandai hadir' : 'Gagal mencatat kehadiran',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: success ? AppTheme.emerald : AppTheme.errorColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
   }
 
   @override
@@ -268,81 +163,34 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
                 )
               : Column(
                   children: [
-                    // Schedule Picker Header
                     Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.all(16),
-                      color: AppTheme.warmIvory,
-                      child: Consumer<ServiceScheduleProvider>(
-                        builder: (context, scheduleProvider, _) {
-                          final todaysSchedules = scheduleProvider.filteredSchedules;
-                          if (todaysSchedules.isEmpty) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFFDE68A)),
-                              ),
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.info_outline_rounded, color: Color(0xFF92400E), size: 18),
-                                  SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      'Tidak ada jadwal ibadah terdaftar untuk hari ini.',
-                                      style: TextStyle(
-                                        color: Color(0xFF92400E),
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
+                      color: Theme.of(context).colorScheme.surface,
+                      child: _loadingTargets
+                          ? const LinearProgressIndicator()
+                          : _targets.isEmpty
+                              ? const Text(
+                                  'Tidak ada ibadah atau event hari ini. Check-in hanya dapat '
+                                  'dilakukan pada hari acara.',
+                                )
+                              : DropdownButtonFormField<_Target>(
+                                  initialValue: _selected,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Catat kehadiran untuk',
+                                    prefixIcon: Icon(Icons.church_rounded),
                                   ),
-                                ],
-                              ),
-                            );
-                          }
-
-                          _selectedSchedule ??= todaysSchedules.first;
-
-                          return DropdownButtonFormField<ServiceSchedule>(
-                            initialValue: todaysSchedules.contains(_selectedSchedule)
-                                ? _selectedSchedule
-                                : todaysSchedules.first,
-                            decoration: InputDecoration(
-                              labelText: 'Ibadah yang Berlangsung',
-                              labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                              prefixIcon: const Icon(Icons.church_rounded, color: AppTheme.primary, size: 20),
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppTheme.neutralBorder),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: AppTheme.neutralBorder),
-                              ),
-                            ),
-                            items: todaysSchedules
-                                .map((s) => DropdownMenuItem(
-                                      value: s,
-                                      child: Text(
-                                        '${s.serviceType} (${s.startTime} - ${s.endTime})',
-                                        style: const TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                  items: [
+                                    for (final t in _targets)
+                                      DropdownMenuItem(
+                                        value: t,
+                                        child: Text(t.label, overflow: TextOverflow.ellipsis),
                                       ),
-                                    ))
-                                .toList(),
-                            onChanged: (s) => setState(() => _selectedSchedule = s),
-                          );
-                        },
-                      ),
+                                  ],
+                                  onChanged: (t) => setState(() => _selected = t),
+                                ),
                     ),
-
-                    // Scanner Viewport
                     Expanded(
                       child: Stack(
                         alignment: Alignment.center,
@@ -361,8 +209,6 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
                               ),
                             ),
                           ),
-
-                          // Scanner Viewfinder Overlay
                           Container(
                             width: 250,
                             height: 250,
@@ -371,10 +217,10 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
                               borderRadius: BorderRadius.circular(24),
                             ),
                           ),
-
-                          // Instruction Banner
                           Positioned(
                             bottom: 36,
+                            left: 24,
+                            right: 24,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                               decoration: BoxDecoration(
@@ -382,30 +228,17 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(color: Colors.white24),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 16),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Arahkan kamera ke Kartu QR Jemaat',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                              child: const Text(
+                                'Arahkan kamera ke QR kartu jemaat',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
                               ),
                             ),
                           ),
-
                           if (_isProcessing)
                             Container(
                               color: Colors.black54,
-                              child: const Center(
-                                child: CircularProgressIndicator(color: AppTheme.gold),
-                              ),
+                              child: const Center(child: CircularProgressIndicator(color: AppTheme.gold)),
                             ),
                         ],
                       ),
@@ -425,21 +258,16 @@ class _PermissionDenied extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppTheme.warmIvory,
+      color: Theme.of(context).scaffoldBackgroundColor,
       alignment: Alignment.center,
       padding: const EdgeInsets.all(24),
       child: AppEmptyState(
         icon: Icons.camera_alt_outlined,
         title: 'Izin Kamera Dibutuhkan',
-        description:
-            'Aplikasi membutuhkan izin akses kamera untuk dapat memindai kode QR kartu jemaat digital.',
+        description: 'Aplikasi membutuhkan izin akses kamera untuk memindai QR kartu jemaat.',
         actionLabel: openSettings != null ? 'Buka Pengaturan' : 'Berikan Izin Kamera',
         onAction: openSettings != null ? () => openSettings!() : onRetry,
       ),
     );
   }
-}
-
-extension _FirstOrNull<T> on List<T> {
-  T? get firstOrNull => isEmpty ? null : first;
 }

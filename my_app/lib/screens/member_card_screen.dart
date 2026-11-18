@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../utils/app_theme.dart';
-import '../utils/qr_payload.dart';
 import '../widgets/common/app_card.dart';
+import '../widgets/member_qr_image.dart';
 import '../widgets/common/app_status_badge.dart';
 
 class MemberCardScreen extends StatelessWidget {
@@ -191,9 +190,28 @@ class MemberCardScreen extends StatelessWidget {
                             user.memberCardNumber ?? user.identityNumber ?? '-',
                           ),
                           const SizedBox(height: 10),
-                          _buildCardField(
-                            'WILAYAH / KOMSEL',
-                            user.familyGroup ?? '-',
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'GROUP',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.65),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              GroupNameText(
+                                groupId: user.groupId,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 10),
                           _buildCardField(
@@ -223,15 +241,7 @@ class MemberCardScreen extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          QrImageView(
-                            data: encodeMemberPayload(
-                              userId: user.id,
-                              name: user.name,
-                            ),
-                            version: QrVersions.auto,
-                            size: 108,
-                            backgroundColor: Colors.white,
-                          ),
+                          MemberQrImage(user: user, size: 108),
                           const SizedBox(height: 4),
                           const Text(
                             'SCAN SAYA',
@@ -364,8 +374,11 @@ class MemberCardScreen extends StatelessWidget {
               const Divider(height: 20),
               _buildDetailRow(
                 icon: Icons.group_outlined,
-                label: 'Wilayah / Komsel',
-                value: user.familyGroup ?? '-',
+                label: 'Group',
+                customValue: GroupNameText(
+                  groupId: user.groupId,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
               const Divider(height: 20),
               _buildDetailRow(

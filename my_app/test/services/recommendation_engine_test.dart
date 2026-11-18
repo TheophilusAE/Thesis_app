@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_app/models/attendance_confirmation.dart';
 import 'package:my_app/models/event.dart';
 import 'package:my_app/models/feedback.dart';
+import 'package:my_app/models/ibadah.dart';
 import 'package:my_app/models/service_schedule.dart';
 import 'package:my_app/services/recommendation_engine.dart';
 
@@ -273,5 +274,63 @@ void main() {
     for (final rec in r.recommendations) {
       expect('${rec.title} ${rec.reason} ${rec.dataBasis}', isNot(contains('User ')));
     }
+  });
+
+  group('worship dates (scheduling v2)', () {
+    IbadahOccurrence occ(String id, DateTime d, {String status = 'scheduled'}) => IbadahOccurrence(
+          id: id,
+          seriesId: 's1',
+          tanggal: d,
+          startTime: '08:00',
+          endTime: '10:00',
+          nama: 'Ibadah Raya',
+          jenis: 'Ibadah Minggu',
+          status: status,
+        );
+    List<AttendanceConfirmation> checkins(String occId, int n, DateTime d) => [
+          for (var i = 0; i < n; i++)
+            AttendanceConfirmation(
+              id: '$occId-$i',
+              userId: 'u$i',
+              userName: 'User $i',
+              serviceScheduleId: '',
+              scheduleDate: d,
+              confirmed: true,
+              confirmedAt: d,
+              checkInMethod: 'qr',
+              createdAt: d,
+              occurrenceId: occId,
+            ),
+        ];
+
+    test('QR check-ins on a worship date count once per person, merged with legacy rows of the same day',
+        () {
+      final day = DateTime(2026, 6, 28);
+      final result = RecommendationEngine.serviceOccurrences(RecommendationInput(
+        schedules: [_schedule('legacy', day)],
+        attendance: [..._attendees('legacy', 2, day), ...checkins('occ-1', 3, day)], // u0..u2
+        feedback: const [],
+        events: const [],
+        now: _now,
+        buildingCapacity: null,
+        ibadah: [occ('occ-1', day)],
+      ));
+      expect(result['Ibadah Minggu']!.single.attendees, 3);
+    });
+
+    test('cancelled and future worship dates are ignored', () {
+      final past = DateTime(2026, 6, 21);
+      final future = DateTime(2026, 7, 5);
+      final result = RecommendationEngine.serviceOccurrences(RecommendationInput(
+        schedules: const [],
+        attendance: [...checkins('c', 4, past), ...checkins('f', 4, future)],
+        feedback: const [],
+        events: const [],
+        now: _now,
+        buildingCapacity: null,
+        ibadah: [occ('c', past, status: 'cancelled'), occ('f', future)],
+      ));
+      expect(result, isEmpty);
+    });
   });
 }

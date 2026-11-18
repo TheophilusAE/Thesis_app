@@ -1,30 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../models/komsel.dart';
-import '../providers/komsel_provider.dart';
+import '../models/church_group.dart';
+import '../providers/group_provider.dart';
 import '../utils/app_theme.dart';
 import '../widgets/common/app_button.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import '../widgets/common/app_skeleton.dart';
 
-class KomselDirectoryScreen extends StatefulWidget {
-  const KomselDirectoryScreen({super.key});
+class GroupDirectoryScreen extends StatefulWidget {
+  const GroupDirectoryScreen({super.key});
 
   @override
-  State<KomselDirectoryScreen> createState() => _KomselDirectoryScreenState();
+  State<GroupDirectoryScreen> createState() => _GroupDirectoryScreenState();
 }
 
-class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
+class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String? _categoryFilter; // null = all categories
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<KomselProvider>().loadActiveKomsel();
+      final provider = context.read<GroupProvider>();
+      provider.loadActiveGroups();
+      provider.loadCategories();
     });
   }
 
@@ -34,7 +37,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
     super.dispose();
   }
 
-  void _showDetail(Komsel komsel) {
+  void _showDetail(ChurchGroup churchGroup) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -80,7 +83,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        komsel.nama,
+                        churchGroup.nama,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -88,7 +91,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                         ),
                       ),
                       Text(
-                        'Wilayah: ${komsel.wilayah}',
+                        'Wilayah: ${churchGroup.wilayah}',
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppTheme.primary,
@@ -101,7 +104,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            if (komsel.description.isNotEmpty) ...[
+            if (churchGroup.description.isNotEmpty) ...[
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
@@ -111,7 +114,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                   border: Border.all(color: AppTheme.neutralBorder),
                 ),
                 child: Text(
-                  komsel.description,
+                  churchGroup.description,
                   style: const TextStyle(
                     fontSize: 13,
                     height: 1.5,
@@ -123,27 +126,27 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
             ],
             _buildDetailRow(
               icon: Icons.person_rounded,
-              label: 'Pemimpin Komsel',
-              value: komsel.leaderName,
+              label: 'Pemimpin Group',
+              value: churchGroup.leaderName,
             ),
             _buildDetailRow(
               icon: Icons.schedule_rounded,
               label: 'Jadwal Pertemuan',
-              value: komsel.meetingSchedule,
+              value: churchGroup.meetingSchedule,
             ),
             _buildDetailRow(
               icon: Icons.location_on_rounded,
               label: 'Lokasi Persekutuan',
-              value: komsel.location,
+              value: churchGroup.location,
             ),
             const SizedBox(height: 20),
-            if (komsel.leaderPhone.isNotEmpty)
+            if (churchGroup.leaderPhone.isNotEmpty)
               AppButton(
                 label: 'Hubungi via WhatsApp',
                 icon: Icons.chat_bubble_rounded,
                 color: const Color(0xFF25D366),
                 textColor: Colors.white,
-                onPressed: () => _contactViaWhatsApp(komsel.leaderPhone),
+                onPressed: () => _contactViaWhatsApp(churchGroup.leaderPhone),
               ),
           ],
         ),
@@ -215,15 +218,18 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text('Komsel / Kelompok Sel'),
+        title: const Text('Group'),
       ),
-      body: Consumer<KomselProvider>(
+      body: Consumer<GroupProvider>(
         builder: (context, provider, _) {
           if (provider.isLoading) {
             return _buildLoadingSkeleton();
           }
 
-          var items = provider.activeKomsel;
+          var items = provider.activeGroups;
+          if (_categoryFilter != null) {
+            items = items.where((g) => g.categoryId == _categoryFilter).toList();
+          }
           if (_searchQuery.isNotEmpty) {
             final query = _searchQuery.toLowerCase();
             items = items.where((k) {
@@ -236,7 +242,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
 
           return RefreshIndicator(
             color: AppTheme.primary,
-            onRefresh: provider.loadActiveKomsel,
+            onRefresh: provider.loadActiveGroups,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
               children: [
@@ -248,20 +254,41 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                 // Search Bar
                 _buildSearchBar(),
 
+                if (provider.categories.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Semua'),
+                        selected: _categoryFilter == null,
+                        onSelected: (_) => setState(() => _categoryFilter = null),
+                      ),
+                      for (final c in provider.categories)
+                        ChoiceChip(
+                          label: Text(groupCategoryLabel(c)),
+                          selected: _categoryFilter == c.id,
+                          onSelected: (_) => setState(() => _categoryFilter = c.id),
+                        ),
+                    ],
+                  ),
+                ],
+
                 const SizedBox(height: 16),
 
                 if (items.isEmpty)
                   AppEmptyState(
                     icon: Icons.groups_outlined,
                     title: _searchQuery.isNotEmpty
-                        ? 'Komsel Tidak Ditemukan'
-                        : 'Belum ada komsel yang terdaftar',
+                        ? 'Group Tidak Ditemukan'
+                        : 'Belum ada group yang terdaftar',
                     description: _searchQuery.isNotEmpty
-                        ? 'Tidak ada komsel yang cocok dengan kata kunci "$_searchQuery".'
-                        : 'Belum ada kelompok sel yang terdaftar aktif saat ini.',
+                        ? 'Tidak ada group yang cocok dengan kata kunci "$_searchQuery".'
+                        : 'Belum ada group yang terdaftar aktif saat ini.',
                   )
                 else
-                  ...items.map((komsel) => _buildKomselCard(komsel)),
+                  ...items.map((churchGroup) => _buildGroupCard(churchGroup)),
               ],
             ),
           );
@@ -294,7 +321,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Bertumbuh Bersama Komsel',
+                  'Bertumbuh Bersama Group',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -334,7 +361,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
           });
         },
         decoration: InputDecoration(
-          hintText: 'Cari nama komsel, wilayah, atau pemimpin...',
+          hintText: 'Cari nama group, wilayah, atau pemimpin...',
           hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
           prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.neutralMedium, size: 20),
           suffixIcon: _searchQuery.isNotEmpty
@@ -355,25 +382,35 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
     );
   }
 
-  Widget _buildKomselCard(Komsel komsel) {
+  Widget _buildGroupCard(ChurchGroup churchGroup) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
         padding: const EdgeInsets.all(16),
-        onTap: () => _showDetail(komsel),
+        onTap: () => _showDetail(churchGroup),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    komsel.nama,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.darkCharcoal,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        churchGroup.nama,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.darkCharcoal,
+                        ),
+                      ),
+                      if (churchGroup.categoryId != null)
+                        Text(
+                          context.read<GroupProvider>().categoryLabel(churchGroup.categoryId),
+                          style: const TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w600),
+                        ),
+                    ],
                   ),
                 ),
                 Container(
@@ -384,7 +421,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                     border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
                   ),
                   child: Text(
-                    komsel.wilayah,
+                    churchGroup.wilayah,
                     style: const TextStyle(
                       color: AppTheme.goldDark,
                       fontSize: 11,
@@ -401,7 +438,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Pemimpin: ${komsel.leaderName}',
+                    'Pemimpin: ${churchGroup.leaderName}',
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppTheme.darkCharcoal,
@@ -418,7 +455,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    komsel.meetingSchedule,
+                    churchGroup.meetingSchedule,
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppTheme.darkCharcoal,
@@ -427,7 +464,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                 ),
               ],
             ),
-            if (komsel.location.isNotEmpty) ...[
+            if (churchGroup.location.isNotEmpty) ...[
               const SizedBox(height: 6),
               Row(
                 children: [
@@ -435,7 +472,7 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      komsel.location,
+                      churchGroup.location,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -461,9 +498,9 @@ class _KomselDirectoryScreenState extends State<KomselDirectoryScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (komsel.leaderPhone.isNotEmpty)
+                if (churchGroup.leaderPhone.isNotEmpty)
                   GestureDetector(
-                    onTap: () => _contactViaWhatsApp(komsel.leaderPhone),
+                    onTap: () => _contactViaWhatsApp(churchGroup.leaderPhone),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(

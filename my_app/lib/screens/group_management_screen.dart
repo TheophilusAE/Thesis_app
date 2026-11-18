@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/komsel.dart';
+import '../models/church_group.dart';
 import '../providers/auth_provider.dart';
-import '../providers/komsel_provider.dart';
+import '../providers/group_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/permissions.dart';
 import '../widgets/permission_guard.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import '../widgets/common/app_status_badge.dart';
-import 'add_edit_komsel_screen.dart';
+import 'add_edit_group_screen.dart';
 
-class KomselManagementScreen extends StatefulWidget {
-  const KomselManagementScreen({super.key});
+class GroupManagementScreen extends StatefulWidget {
+  const GroupManagementScreen({super.key});
 
   @override
-  State<KomselManagementScreen> createState() => _KomselManagementScreenState();
+  State<GroupManagementScreen> createState() => _GroupManagementScreenState();
 }
 
-class _KomselManagementScreenState extends State<KomselManagementScreen> {
+class _GroupManagementScreenState extends State<GroupManagementScreen> {
   String _searchQuery = '';
   String _filterStatus = 'all'; // all, active, inactive
 
@@ -26,33 +26,33 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<KomselProvider>().loadAllKomsel();
+      context.read<GroupProvider>().loadAllGroups();
     });
   }
 
   void _addNew() {
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const AddEditKomselScreen()))
+        .push(MaterialPageRoute(builder: (_) => const AddEditGroupScreen()))
         .then((_) {
-      if (mounted) context.read<KomselProvider>().loadAllKomsel();
+      if (mounted) context.read<GroupProvider>().loadAllGroups();
     });
   }
 
-  void _edit(Komsel komsel) {
+  void _edit(ChurchGroup churchGroup) {
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => AddEditKomselScreen(komsel: komsel)))
+        .push(MaterialPageRoute(builder: (_) => AddEditGroupScreen(churchGroup: churchGroup)))
         .then((_) {
-      if (mounted) context.read<KomselProvider>().loadAllKomsel();
+      if (mounted) context.read<GroupProvider>().loadAllGroups();
     });
   }
 
-  void _delete(Komsel komsel) {
+  void _delete(ChurchGroup churchGroup) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Komsel?', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menghapus "${komsel.nama}"?'),
+        title: const Text('Hapus Group?', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Apakah Anda yakin ingin menghapus "${churchGroup.nama}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
@@ -61,11 +61,11 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogCtx);
-              final success = await context.read<KomselProvider>().deleteKomsel(komsel.id);
+              final success = await context.read<GroupProvider>().deleteGroup(churchGroup.id);
               if (!mounted) return;
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Komsel berhasil dihapus')),
+                  const SnackBar(content: Text('Group berhasil dihapus')),
                 );
               }
             },
@@ -81,7 +81,7 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
     );
   }
 
-  List<Komsel> _filterKomsel(List<Komsel> all) {
+  List<ChurchGroup> _filterGroups(List<ChurchGroup> all) {
     return all.where((k) {
       if (_filterStatus == 'active' && !k.isActive) return false;
       if (_filterStatus == 'inactive' && k.isActive) return false;
@@ -104,12 +104,12 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
     final canModify = auth.canModifyExisting;
     return PermissionGuard(
       module: AppModule.group,
-      title: 'Kelola Komsel',
+      title: 'Kelola Group',
       child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
         title: const Text(
-          'Kelola Komsel',
+          'Kelola Group',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
             fontWeight: FontWeight.bold,
@@ -121,9 +121,9 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
-      body: Consumer<KomselProvider>(
+      body: Consumer<GroupProvider>(
         builder: (context, provider, _) {
-          final filteredList = _filterKomsel(provider.allKomsel);
+          final filteredList = _filterGroups(provider.allGroups);
 
           return Column(
             children: [
@@ -135,7 +135,7 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                   children: [
                     TextField(
                       decoration: InputDecoration(
-                        hintText: 'Cari komsel, wilayah, pemimpin...',
+                        hintText: 'Cari group, wilayah, pemimpin...',
                         hintStyle: const TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
                         prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -161,16 +161,16 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildFilterChip('all', 'Semua (${provider.allKomsel.length})'),
+                          _buildFilterChip('all', 'Semua (${provider.allGroups.length})'),
                           const SizedBox(width: 8),
                           _buildFilterChip(
                             'active',
-                            'Aktif (${provider.allKomsel.where((k) => k.isActive).length})',
+                            'Aktif (${provider.allGroups.where((k) => k.isActive).length})',
                           ),
                           const SizedBox(width: 8),
                           _buildFilterChip(
                             'inactive',
-                            'Nonaktif (${provider.allKomsel.where((k) => !k.isActive).length})',
+                            'Nonaktif (${provider.allGroups.where((k) => !k.isActive).length})',
                           ),
                         ],
                       ),
@@ -180,26 +180,26 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
               ),
               const Divider(height: 1, color: AppTheme.neutralBorder),
 
-              // Komsel List
+              // ChurchGroup List
               Expanded(
                 child: provider.isLoading
                     ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
                     : filteredList.isEmpty
                         ? AppEmptyState(
                             icon: Icons.groups_outlined,
-                            title: 'Tidak Ada Data Komsel',
+                            title: 'Tidak Ada Data Group',
                             message: _searchQuery.isNotEmpty
-                                ? 'Tidak ditemukan komsel dengan kata kunci "$_searchQuery".'
-                                : 'Belum ada data kelompok sel yang terdaftar.',
+                                ? 'Tidak ditemukan group dengan kata kunci "$_searchQuery".'
+                                : 'Belum ada data group yang terdaftar.',
                           )
                         : RefreshIndicator(
-                            onRefresh: provider.loadAllKomsel,
+                            onRefresh: provider.loadAllGroups,
                             color: AppTheme.primary,
                             child: ListView.builder(
                               padding: const EdgeInsets.all(16),
                               itemCount: filteredList.length,
                               itemBuilder: (context, index) {
-                                final komsel = filteredList[index];
+                                final churchGroup = filteredList[index];
                                 return AppCard(
                                   margin: const EdgeInsets.only(bottom: 12),
                                   padding: const EdgeInsets.all(16),
@@ -215,7 +215,7 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  komsel.nama,
+                                                  churchGroup.nama,
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 16,
@@ -232,7 +232,7 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                                                     ),
                                                     const SizedBox(width: 4),
                                                     Text(
-                                                      komsel.wilayah,
+                                                      churchGroup.wilayah,
                                                       style: TextStyle(
                                                         fontSize: 12.5,
                                                         color: AppTheme.primary.withValues(alpha: 0.9),
@@ -245,9 +245,9 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                                             ),
                                           ),
                                           AppStatusBadge(
-                                            status: komsel.isActive ? 'aktif' : 'nonaktif',
-                                            label: komsel.isActive ? 'Aktif' : 'Nonaktif',
-                                            type: komsel.isActive ? BadgeType.success : BadgeType.neutral,
+                                            status: churchGroup.isActive ? 'aktif' : 'nonaktif',
+                                            label: churchGroup.isActive ? 'Aktif' : 'Nonaktif',
+                                            type: churchGroup.isActive ? BadgeType.success : BadgeType.neutral,
                                             isSmall: true,
                                           ),
                                           if (canModify) ...[
@@ -255,12 +255,12 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                                             IconButton(
                                               icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
                                               visualDensity: VisualDensity.compact,
-                                              onPressed: () => _edit(komsel),
+                                              onPressed: () => _edit(churchGroup),
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.errorColor),
                                               visualDensity: VisualDensity.compact,
-                                              onPressed: () => _delete(komsel),
+                                              onPressed: () => _delete(churchGroup),
                                             ),
                                           ],
                                         ],
@@ -276,7 +276,7 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                                           const SizedBox(width: 6),
                                           Expanded(
                                             child: Text(
-                                              '${komsel.leaderName}${komsel.leaderPhone.isNotEmpty ? " • ${komsel.leaderPhone}" : ""}',
+                                              '${churchGroup.leaderName}${churchGroup.leaderPhone.isNotEmpty ? " • ${churchGroup.leaderPhone}" : ""}',
                                               style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
                                             ),
                                           ),
@@ -289,13 +289,13 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                                           const SizedBox(width: 6),
                                           Expanded(
                                             child: Text(
-                                              komsel.meetingSchedule,
+                                              churchGroup.meetingSchedule,
                                               style: const TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
                                             ),
                                           ),
                                         ],
                                       ),
-                                      if (komsel.location.isNotEmpty) ...[
+                                      if (churchGroup.location.isNotEmpty) ...[
                                         const SizedBox(height: 6),
                                         Row(
                                           children: [
@@ -303,7 +303,7 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
                                             const SizedBox(width: 6),
                                             Expanded(
                                               child: Text(
-                                                komsel.location,
+                                                churchGroup.location,
                                                 style: const TextStyle(fontSize: 12.5, color: AppTheme.mutedCharcoal),
                                               ),
                                             ),
@@ -326,7 +326,7 @@ class _KomselManagementScreenState extends State<KomselManagementScreen> {
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah Komsel', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('Tambah Group', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       ),
     );

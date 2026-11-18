@@ -14,6 +14,10 @@ class User {
   final DateTime? birthDate;
   final String? baptismDate;
   final String? memberSince;
+  /// Group the member belongs to (`users.group_id` → komsels). Replaces the
+  /// free-text `family_group`, which is kept in the database but no longer
+  /// shown or edited by the app.
+  final String? groupId;
 
   User({
     required this.id,
@@ -31,6 +35,7 @@ class User {
     this.birthDate,
     this.baptismDate,
     this.memberSince,
+    this.groupId,
   });
 
   /// Check if user has a specific role
@@ -117,6 +122,8 @@ class User {
     DateTime? birthDate,
     String? baptismDate,
     String? memberSince,
+    String? groupId,
+    bool clearGroup = false,
   }) {
     return User(
       id: id ?? this.id,
@@ -134,6 +141,7 @@ class User {
       birthDate: birthDate ?? this.birthDate,
       baptismDate: baptismDate ?? this.baptismDate,
       memberSince: memberSince ?? this.memberSince,
+      groupId: clearGroup ? null : (groupId ?? this.groupId),
     );
   }
 }

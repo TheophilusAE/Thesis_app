@@ -1,23 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_app/models/komsel.dart';
+import 'package:my_app/models/church_group.dart';
 
 void main() {
-  group('Komsel', () {
+  group('Group', () {
     test('fromJson applies defaults for optional fields', () {
-      final komsel = Komsel.fromJson({
+      final churchGroup = ChurchGroup.fromJson({
         'id': 'k1',
-        'nama': 'Komsel Kasih',
+        'nama': 'Group Kasih',
         'created_at': '2026-01-01T00:00:00.000Z',
       });
 
-      expect(komsel.wilayah, '');
-      expect(komsel.isActive, isTrue);
+      expect(churchGroup.wilayah, '');
+      expect(churchGroup.isActive, isTrue);
     });
 
     test('toSupabaseJson omits id/timestamps', () {
-      final komsel = Komsel(
+      final churchGroup = ChurchGroup(
         id: '',
-        nama: 'Komsel Sukacita',
+        nama: 'Group Sukacita',
         wilayah: 'Utara',
         leaderName: 'Budi',
         leaderPhone: '081234567890',
@@ -25,23 +25,23 @@ void main() {
         createdAt: DateTime.utc(2026, 1, 1),
       );
 
-      final data = komsel.toSupabaseJson();
+      final data = churchGroup.toSupabaseJson();
       expect(data.containsKey('id'), isFalse);
       expect(data['is_active'], isFalse);
       expect(data['leader_phone'], '081234567890');
     });
 
     test('copyWith preserves untouched fields', () {
-      final komsel = Komsel(
+      final churchGroup = ChurchGroup(
         id: 'k2',
-        nama: 'Komsel Damai',
+        nama: 'Group Damai',
         isActive: true,
         createdAt: DateTime.utc(2026, 1, 1),
       );
 
-      final updated = komsel.copyWith(isActive: false);
+      final updated = churchGroup.copyWith(isActive: false);
       expect(updated.isActive, isFalse);
-      expect(updated.nama, 'Komsel Damai');
+      expect(updated.nama, 'Group Damai');
     });
   });
 }

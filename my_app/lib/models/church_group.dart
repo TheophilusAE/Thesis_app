@@ -1,4 +1,8 @@
-class Komsel {
+import 'admin_category.dart';
+
+/// A church small group ("Group", formerly "Komsel"). Stored in the existing
+/// `komsels` table — only the app's wording changed.
+class ChurchGroup {
   final String id;
   final String nama;
   final String wilayah;
@@ -8,10 +12,13 @@ class Komsel {
   final String location;
   final String description;
   final bool isActive;
+  /// Group category = administrative category (Umum / Pemuda / Sekolah
+  /// Minggu shown as "Anak"), so category admins only manage their groups.
+  final String? categoryId;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
-  Komsel({
+  ChurchGroup({
     required this.id,
     required this.nama,
     this.wilayah = '',
@@ -21,12 +28,13 @@ class Komsel {
     this.location = '',
     this.description = '',
     this.isActive = true,
+    this.categoryId,
     required this.createdAt,
     this.updatedAt,
   });
 
-  factory Komsel.fromJson(Map<String, dynamic> json) {
-    return Komsel(
+  factory ChurchGroup.fromJson(Map<String, dynamic> json) {
+    return ChurchGroup(
       id: json['id'] as String,
       nama: (json['nama'] ?? '') as String,
       wilayah: (json['wilayah'] ?? '') as String,
@@ -36,6 +44,7 @@ class Komsel {
       location: (json['location'] ?? '') as String,
       description: (json['description'] ?? '') as String,
       isActive: (json['is_active'] ?? true) as bool,
+      categoryId: json['category_id'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
@@ -53,6 +62,7 @@ class Komsel {
       'location': location,
       'description': description,
       'is_active': isActive,
+      if (categoryId != null) 'category_id': categoryId,
     };
   }
 
@@ -65,7 +75,7 @@ class Komsel {
     };
   }
 
-  Komsel copyWith({
+  ChurchGroup copyWith({
     String? id,
     String? nama,
     String? wilayah,
@@ -75,10 +85,11 @@ class Komsel {
     String? location,
     String? description,
     bool? isActive,
+    String? categoryId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
-    return Komsel(
+    return ChurchGroup(
       id: id ?? this.id,
       nama: nama ?? this.nama,
       wilayah: wilayah ?? this.wilayah,
@@ -88,8 +99,14 @@ class Komsel {
       location: location ?? this.location,
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
+      categoryId: categoryId ?? this.categoryId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
+
+/// Label of a group category as the client named them (Umum, Anak, Pemuda).
+/// The administrative category "Sekolah Minggu" is the children's group.
+String groupCategoryLabel(AdminCategory c) =>
+    c.kode == 'sekolah_minggu' ? 'Anak (Sekolah Minggu)' : c.nama;

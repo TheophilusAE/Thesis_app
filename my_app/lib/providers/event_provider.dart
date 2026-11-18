@@ -36,6 +36,8 @@ class EventProvider extends ChangeNotifier {
     required DateTime date,
     required String location,
     int? maxCapacity,
+    String? youtubeUrl,
+    String? categoryId,
   }) async {
     final ok = await _service.createEvent(
       title: title,
@@ -43,6 +45,8 @@ class EventProvider extends ChangeNotifier {
       date: date,
       location: location,
       maxCapacity: maxCapacity,
+      youtubeUrl: youtubeUrl,
+      categoryId: categoryId,
     );
     if (ok) await loadAllEvents();
     return ok;

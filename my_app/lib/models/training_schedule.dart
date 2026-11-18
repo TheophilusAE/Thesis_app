@@ -10,6 +10,8 @@ class TrainingSchedule {
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
+  /// Worship date this rehearsal prepares for (scheduling v2), if any.
+  final String? occurrenceId;
 
   TrainingSchedule({
     required this.id,
@@ -23,6 +25,7 @@ class TrainingSchedule {
     this.notes,
     required this.createdAt,
     required this.updatedAt,
+    this.occurrenceId,
   });
 
   factory TrainingSchedule.fromJson(Map<String, dynamic> json) {
@@ -46,11 +49,13 @@ class TrainingSchedule {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : DateTime.now()),
+      occurrenceId: json['occurrence_id'] as String?,
     );
   }
 
   Map<String, dynamic> toSupabaseJson() {
     return {
+      if (occurrenceId != null) 'occurrence_id': occurrenceId,
       'nama': nama,
       'training_date': trainingDate.toIso8601String(),
       'start_time': startTime,
@@ -103,6 +108,7 @@ class TrainingSchedule {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      occurrenceId: occurrenceId,
     );
   }
 }

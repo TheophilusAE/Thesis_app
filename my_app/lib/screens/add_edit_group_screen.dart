@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/komsel.dart';
-import '../providers/komsel_provider.dart';
+import '../models/church_group.dart';
+import '../providers/auth_provider.dart';
+import '../providers/group_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/permissions.dart';
 import '../widgets/common/app_card.dart';
 
-class AddEditKomselScreen extends StatefulWidget {
-  final Komsel? komsel;
+class AddEditGroupScreen extends StatefulWidget {
+  final ChurchGroup? churchGroup;
 
-  const AddEditKomselScreen({super.key, this.komsel});
+  const AddEditGroupScreen({super.key, this.churchGroup});
 
   @override
-  State<AddEditKomselScreen> createState() => _AddEditKomselScreenState();
+  State<AddEditGroupScreen> createState() => _AddEditGroupScreenState();
 }
 
-class _AddEditKomselScreenState extends State<AddEditKomselScreen> {
+class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _namaController;
   late final TextEditingController _wilayahController;
@@ -24,20 +26,25 @@ class _AddEditKomselScreenState extends State<AddEditKomselScreen> {
   late final TextEditingController _locationController;
   late final TextEditingController _descriptionController;
   late bool _isActive;
+  String? _categoryId;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    final komsel = widget.komsel;
-    _namaController = TextEditingController(text: komsel?.nama ?? '');
-    _wilayahController = TextEditingController(text: komsel?.wilayah ?? '');
-    _leaderNameController = TextEditingController(text: komsel?.leaderName ?? '');
-    _leaderPhoneController = TextEditingController(text: komsel?.leaderPhone ?? '');
-    _meetingScheduleController = TextEditingController(text: komsel?.meetingSchedule ?? '');
-    _locationController = TextEditingController(text: komsel?.location ?? '');
-    _descriptionController = TextEditingController(text: komsel?.description ?? '');
-    _isActive = komsel?.isActive ?? true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<GroupProvider>().loadCategories();
+    });
+    _categoryId = widget.churchGroup?.categoryId;
+    final churchGroup = widget.churchGroup;
+    _namaController = TextEditingController(text: churchGroup?.nama ?? '');
+    _wilayahController = TextEditingController(text: churchGroup?.wilayah ?? '');
+    _leaderNameController = TextEditingController(text: churchGroup?.leaderName ?? '');
+    _leaderPhoneController = TextEditingController(text: churchGroup?.leaderPhone ?? '');
+    _meetingScheduleController = TextEditingController(text: churchGroup?.meetingSchedule ?? '');
+    _locationController = TextEditingController(text: churchGroup?.location ?? '');
+    _descriptionController = TextEditingController(text: churchGroup?.description ?? '');
+    _isActive = churchGroup?.isActive ?? true;
   }
 
   @override
@@ -54,10 +61,16 @@ class _AddEditKomselScreenState extends State<AddEditKomselScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_categoryId == null && context.read<GroupProvider>().categories.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih kategori group (Umum, Anak, atau Pemuda).')),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
 
-    final komsel = Komsel(
-      id: widget.komsel?.id ?? '',
+    final churchGroup = ChurchGroup(
+      id: widget.churchGroup?.id ?? '',
       nama: _namaController.text.trim(),
       wilayah: _wilayahController.text.trim(),
       leaderName: _leaderNameController.text.trim(),
@@ -66,25 +79,26 @@ class _AddEditKomselScreenState extends State<AddEditKomselScreen> {
       location: _locationController.text.trim(),
       description: _descriptionController.text.trim(),
       isActive: _isActive,
-      createdAt: widget.komsel?.createdAt ?? DateTime.now(),
+      categoryId: _categoryId,
+      createdAt: widget.churchGroup?.createdAt ?? DateTime.now(),
     );
 
-    final provider = context.read<KomselProvider>();
-    final success = widget.komsel != null
-        ? await provider.updateKomsel(widget.komsel!.id, komsel)
-        : await provider.addKomsel(komsel);
+    final provider = context.read<GroupProvider>();
+    final success = widget.churchGroup != null
+        ? await provider.updateGroup(widget.churchGroup!.id, churchGroup)
+        : await provider.addGroup(churchGroup);
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.komsel != null ? 'Komsel diperbarui' : 'Komsel ditambahkan')),
+        SnackBar(content: Text(widget.churchGroup != null ? 'Group diperbarui' : 'Group ditambahkan')),
       );
       Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal menyimpan komsel')),
+        const SnackBar(content: Text('Gagal menyimpan group')),
       );
     }
   }
@@ -114,12 +128,12 @@ class _AddEditKomselScreenState extends State<AddEditKomselScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.komsel != null;
+    final isEditing = widget.churchGroup != null;
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
         title: Text(
-          isEditing ? 'Edit Komsel' : 'Tambah Komsel',
+          isEditing ? 'Edit Group' : 'Tambah Group',
           style: const TextStyle(
             color: AppTheme.darkCharcoal,
             fontWeight: FontWeight.bold,
@@ -141,11 +155,34 @@ class _AddEditKomselScreenState extends State<AddEditKomselScreen> {
               TextFormField(
                 controller: _namaController,
                 decoration: _inputDecoration(
-                  label: 'Nama Komsel',
+                  label: 'Nama Group',
                   prefixIcon: const Icon(Icons.groups_rounded, color: AppTheme.primary),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Nama tidak boleh kosong' : null,
               ),
+              const SizedBox(height: 16),
+              Builder(builder: (context) {
+                final auth = context.watch<AuthProvider>();
+                // Only categories this admin may create in (Super Admin: all).
+                final cats = context
+                    .watch<GroupProvider>()
+                    .categories
+                    .where((c) => auth.can(AppModule.group, PermissionAction.create, categoryId: c.id))
+                    .toList();
+                if (cats.isEmpty) return const SizedBox.shrink();
+                return DropdownButtonFormField<String>(
+                  initialValue: cats.any((c) => c.id == _categoryId) ? _categoryId : null,
+                  decoration: _inputDecoration(
+                    label: 'Kategori Group',
+                    prefixIcon: const Icon(Icons.category_outlined, color: AppTheme.primary),
+                  ),
+                  items: [
+                    for (final c in cats)
+                      DropdownMenuItem(value: c.id, child: Text(groupCategoryLabel(c))),
+                  ],
+                  onChanged: (v) => setState(() => _categoryId = v),
+                );
+              }),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _wilayahController,
@@ -208,7 +245,7 @@ class _AddEditKomselScreenState extends State<AddEditKomselScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Status Komsel',
+                          'Status Group',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         SizedBox(height: 2),
@@ -245,7 +282,7 @@ class _AddEditKomselScreenState extends State<AddEditKomselScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : Text(
-                          isEditing ? 'Simpan Perubahan' : 'Tambah Komsel',
+                          isEditing ? 'Simpan Perubahan' : 'Tambah Group',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                 ),

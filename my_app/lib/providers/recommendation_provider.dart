@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/attendance_confirmation.dart';
 import '../models/feedback.dart';
+import '../models/ibadah.dart';
 import '../models/service_schedule.dart';
 import '../services/event_service.dart';
 import '../services/recommendation_engine.dart';
@@ -50,6 +51,16 @@ class RecommendationProvider extends ChangeNotifier {
         _service.getAllFeedback(),
       ]);
       final events = await _eventLoader(at);
+      // Worship dates of the last 180 days (scheduling v2); empty before the
+      // migration, in which case only legacy schedule attendance is used.
+      List<IbadahOccurrence> ibadah = const [];
+      try {
+        ibadah = (await _service.getIbadahOccurrences(at.subtract(const Duration(days: 180)), at))
+            .map(IbadahOccurrence.fromJson)
+            .toList();
+      } catch (e) {
+        debugPrint('Recommendation: worship dates unavailable ($e)');
+      }
 
       _result = RecommendationEngine.generate(RecommendationInput(
         schedules: responses[0].map(ServiceSchedule.fromJson).toList(),
@@ -58,6 +69,7 @@ class RecommendationProvider extends ChangeNotifier {
         events: events,
         now: at,
         buildingCapacity: _capacity,
+        ibadah: ibadah,
       ));
       _generatedAt = at;
     } catch (e) {

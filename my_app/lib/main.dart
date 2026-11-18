@@ -20,11 +20,14 @@ import 'providers/notification_provider.dart';
 import 'providers/substitution_request_provider.dart';
 import 'providers/attendance_confirmation_provider.dart';
 import 'providers/event_provider.dart';
-import 'providers/komsel_provider.dart';
+import 'providers/group_provider.dart';
 import 'providers/prayer_request_provider.dart';
 import 'providers/sermon_provider.dart';
 import 'providers/recommendation_provider.dart';
 import 'providers/admin_access_provider.dart';
+import 'providers/checkin_provider.dart';
+import 'providers/ibadah_provider.dart';
+import 'providers/kas_provider.dart';
 import 'services/local_notification_service.dart';
 import 'utils/app_theme.dart';
 import 'screens/guest_home_screen.dart';
@@ -123,10 +126,13 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AttendanceConfirmationProvider()),
         ChangeNotifierProvider(create: (_) => EventProvider()),
         ChangeNotifierProvider(create: (_) => PrayerRequestProvider()),
-        ChangeNotifierProvider(create: (_) => KomselProvider()),
+        ChangeNotifierProvider(create: (_) => GroupProvider()),
         ChangeNotifierProvider(create: (_) => SermonProvider()),
         ChangeNotifierProvider(create: (_) => RecommendationProvider()),
         ChangeNotifierProvider(create: (_) => AdminAccessProvider()),
+        ChangeNotifierProvider(create: (_) => IbadahProvider()),
+        ChangeNotifierProvider(create: (_) => CheckinProvider()),
+        ChangeNotifierProvider(create: (_) => KasProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

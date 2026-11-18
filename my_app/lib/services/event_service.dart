@@ -46,6 +46,8 @@ class EventService {
     required DateTime date,
     required String location,
     int? maxCapacity,
+    String? youtubeUrl,
+    String? categoryId,
   }) async {
     try {
       await _db.from('church_events').insert({
@@ -55,6 +57,8 @@ class EventService {
         'location': location,
         'max_capacity': maxCapacity,
         'is_active': true,
+        'youtube_url': (youtubeUrl?.trim().isEmpty ?? true) ? null : youtubeUrl!.trim(),
+        'category_id': categoryId,
       });
       return true;
     } catch (e) {
@@ -124,11 +128,14 @@ class EventService {
     }
   }
 
-  /// Registers (or updates the existing registration of) [userId].
-  /// Returns null on success, or a user-facing error message.
+  /// Books seats (or updates the caller's existing booking) through the
+  /// `book_event` RPC, which locks the event row so simultaneous bookings
+  /// can never overbook. A booking is status `registered`; attendance only
+  /// counts after a QR check-in. Returns null on success, or a user-facing
+  /// error message (quota messages come from the database).
   ///
-  /// Capacity is re-checked against a fresh headcount right before writing.
-  /// See `utils/event_capacity.dart` for why this is best-effort only.
+  /// [userId] / [maxCapacity] are kept for the screen's pre-check display;
+  /// the server uses the session user and the stored capacity.
   Future<String?> registerForEvent({
     required String eventId,
     required String userId,
@@ -136,66 +143,61 @@ class EventService {
     int? maxCapacity,
     String? notes,
   }) async {
-    final total = 1 + familyMembers.length;
     final cleanNotes = notes?.trim().isEmpty == true ? null : notes?.trim();
-    try {
+    // Cheap client-side pre-check for a fast message; the RPC re-checks
+    // under a row lock and is the real guarantee.
+    if (maxCapacity != null) {
       final existing = await getUserRegistration(eventId, userId);
-
-      if (maxCapacity != null) {
-        final current = await getRegisteredCountOrNull(eventId);
-        if (current == null) {
-          return 'Tidak dapat memeriksa kuota acara. Periksa koneksi lalu coba lagi.';
-        }
-        if (!fitsCapacity(
-          maxCapacity: maxCapacity,
-          currentCount: current,
-          requestedTotal: total,
-          existingTotal: existing?.totalCount ?? 0,
-        )) {
-          final left = remainingCapacity(
+      final current = await getRegisteredCountOrNull(eventId);
+      final existingTotal =
+          (existing != null && existing.isActive) ? existing.totalCount : 0;
+      if (current != null &&
+          !fitsCapacity(
             maxCapacity: maxCapacity,
             currentCount: current,
-            existingTotal: existing?.totalCount ?? 0,
-          );
-          return 'Kuota tidak mencukupi. Sisa kuota: ${left ?? 0} orang.';
-        }
+            requestedTotal: 1 + familyMembers.length,
+            existingTotal: existingTotal,
+          )) {
+        final left = remainingCapacity(
+          maxCapacity: maxCapacity,
+          currentCount: current,
+          existingTotal: existingTotal,
+        );
+        return 'Kuota tidak mencukupi. Sisa kuota: ${left ?? 0} orang.';
       }
-
-      final fields = {
-        'family_members': familyMembers.map((m) => m.toJson()).toList(),
-        'total_count': total,
-        'notes': cleanNotes,
-      };
-      if (existing != null) {
-        // Update by primary key and never rewrite event_id/user_id, so an
-        // edit can't move or reassign the registration row.
-        await _db.from('event_registrations').update(fields).eq('id', existing.id);
-      } else {
-        await _db.from('event_registrations').insert({
-          'event_id': eventId,
-          'user_id': userId,
-          ...fields,
-        });
-      }
+    }
+    try {
+      await _db.rpc('book_event', params: {
+        'p_event_id': eventId,
+        'p_family_members': familyMembers.map((m) => m.toJson()).toList(),
+        'p_notes': cleanNotes,
+      });
       return null;
+    } on PostgrestException catch (e) {
+      debugPrint('registerForEvent error: ${e.message}');
+      return _bookingMessage(e);
     } catch (e) {
       debugPrint('registerForEvent error: $e');
       return 'Pendaftaran gagal disimpan. Periksa koneksi lalu coba lagi.';
     }
   }
 
+  /// Cancels the caller's active booking (status → cancelled; history kept).
   Future<bool> cancelRegistration(String eventId, String userId) async {
     try {
-      await _db
-          .from('event_registrations')
-          .delete()
-          .eq('event_id', eventId)
-          .eq('user_id', userId);
+      await _db.rpc('cancel_event_booking', params: {'p_event_id': eventId});
       return true;
     } catch (e) {
       debugPrint('cancelRegistration error: $e');
       return false;
     }
+  }
+
+  /// Database messages from the booking RPCs are written for users (quota
+  /// left, event closed, already checked in); pass them through.
+  static String _bookingMessage(PostgrestException e) {
+    if (e.code == '22023' || e.code == 'P0002' || e.code == '42501') return e.message;
+    return 'Pendaftaran gagal disimpan. Periksa koneksi lalu coba lagi.';
   }
 
   /// Returns total attendees (sum of total_count) already registered for

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/event.dart';
 import '../models/event_registration.dart';
 import '../providers/auth_provider.dart';
@@ -119,10 +120,22 @@ class _EventCardState extends State<_EventCard> {
     ]);
     if (!mounted) return;
     setState(() {
-      _myReg = results[0] as EventRegistration?;
+      final reg = results[0] as EventRegistration?;
+      // A cancelled booking counts as "not registered" (can book again).
+      _myReg = (reg != null && reg.isActive) ? reg : null;
       _registeredCount = results[1] as int;
       _loadingReg = false;
     });
+  }
+
+  Future<void> _openLive() async {
+    final uri = Uri.tryParse(widget.event.youtubeUrl ?? '');
+    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tautan siaran tidak dapat dibuka.')),
+      );
+    }
   }
 
   bool get _isFull =>
@@ -302,6 +315,14 @@ class _EventCardState extends State<_EventCard> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
+                if (widget.event.hasLive) ...[
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: _openLive,
+                    icon: const Icon(Icons.live_tv_rounded, color: Colors.red),
+                    label: const Text('Tonton di YouTube'),
+                  ),
+                ],
                 if (widget.event.maxCapacity != null && !_loadingReg) ...[
                   const SizedBox(height: 14),
                   Row(
@@ -424,6 +445,7 @@ class _RegisteredActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final attended = registration.isAttended;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -439,17 +461,19 @@ class _RegisteredActions extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded, color: AppTheme.emerald, size: 18),
+                  Icon(attended ? Icons.verified_rounded : Icons.event_seat_rounded,
+                      color: AppTheme.emerald, size: 18),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Anda Telah Terdaftar',
-                    style: TextStyle(
-                      color: AppTheme.emerald,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                  Expanded(
+                    child: Text(
+                      RegistrationStatus.label(registration.status),
+                      style: const TextStyle(
+                        color: AppTheme.emerald,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   Text(
                     '${registration.totalCount} Orang',
                     style: const TextStyle(
@@ -469,9 +493,18 @@ class _RegisteredActions extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
+              if (!attended) ...[
+                const SizedBox(height: 6),
+                const Text(
+                  'Kehadiran baru tercatat setelah Anda memindai QR presensi di lokasi event.',
+                  style: TextStyle(color: AppTheme.neutralMedium, fontSize: 11.5),
+                ),
+              ],
             ],
           ),
         ),
+        // After check-in the booking is final (the server refuses changes).
+        if (!attended) ...[
         const SizedBox(height: 12),
         Row(
           children: [
@@ -496,6 +529,7 @@ class _RegisteredActions extends StatelessWidget {
             ),
           ],
         ),
+        ],
       ],
     );
   }

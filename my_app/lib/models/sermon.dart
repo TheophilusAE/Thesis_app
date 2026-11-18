@@ -1,3 +1,5 @@
+import '../utils/youtube_url.dart' as yt;
+
 class Sermon {
   final String id;
   final String title;
@@ -27,35 +29,15 @@ class Sermon {
     this.updatedAt,
   });
 
-  /// Extracts the YouTube video id from watch/short/live URL shapes.
-  /// Returns null for non-YouTube URLs or ones that can't be parsed.
-  String? get youtubeVideoId {
-    final uri = Uri.tryParse(mediaUrl);
-    if (uri == null) return null;
-    final host = uri.host.toLowerCase();
-
-    if (host.contains('youtu.be')) {
-      return uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
-    }
-    if (host.contains('youtube.com')) {
-      if (uri.queryParameters.containsKey('v')) {
-        return uri.queryParameters['v'];
-      }
-      // e.g. /live/<id> or /embed/<id>
-      final segments = uri.pathSegments;
-      if (segments.length >= 2 && (segments[0] == 'live' || segments[0] == 'embed')) {
-        return segments[1];
-      }
-    }
-    return null;
-  }
+  /// Extracts the YouTube video id (see `utils/youtube_url.dart`).
+  String? get youtubeVideoId => yt.youtubeVideoId(mediaUrl);
 
   /// Client-derived thumbnail: prefer an explicit thumbnail_url, else fall
   /// back to YouTube's own thumbnail CDN when the video id is known.
   String? get resolvedThumbnailUrl {
     if (thumbnailUrl != null && thumbnailUrl!.isNotEmpty) return thumbnailUrl;
     final videoId = youtubeVideoId;
-    if (videoId != null) return 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
+    if (videoId != null) return yt.youtubeThumbnail(videoId);
     return null;
   }
 

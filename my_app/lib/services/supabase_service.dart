@@ -187,6 +187,180 @@ class SupabaseService {
     }).eq('id', id);
   }
 
+  // ============== JADWAL IBADAH v2 (series + occurrence) ==============
+
+  static String _isoDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Worship dates in [from, to] with effective values (view).
+  Future<List<Map<String, dynamic>>> getIbadahOccurrences(DateTime from, DateTime to) async {
+    final data = await _client
+        .from('ibadah_schedule_view')
+        .select()
+        .gte('tanggal', _isoDate(from))
+        .lte('tanggal', _isoDate(to))
+        .order('tanggal')
+        .order('start_time');
+    return _asMapList(data);
+  }
+
+  Future<List<Map<String, dynamic>>> getIbadahSeries() async {
+    final data = await _client.from('ibadah_series').select().order('nama');
+    return _asMapList(data);
+  }
+
+  /// Creates a series and its dates atomically; returns the series id.
+  Future<String> createIbadahSeries(Map<String, dynamic> series, List<DateTime> dates) async {
+    final id = await _client.rpc('create_ibadah_series', params: {
+      'p_series': series,
+      'p_dates': dates.map(_isoDate).toList(),
+    });
+    return id as String;
+  }
+
+  /// Adds missing future dates of a recurring series (rolling horizon).
+  Future<int> ensureIbadahOccurrences(String seriesId, List<DateTime> dates) async {
+    final n = await _client.rpc('ensure_ibadah_occurrences', params: {
+      'p_series_id': seriesId,
+      'p_dates': dates.map(_isoDate).toList(),
+    });
+    return (n as num?)?.toInt() ?? 0;
+  }
+
+  /// Super Admin: edit a series (past dates keep their old values).
+  Future<void> updateIbadahSeries(String seriesId, Map<String, dynamic> changes) async {
+    await _client.rpc('update_ibadah_series', params: {
+      'p_series_id': seriesId,
+      'p_changes': changes,
+    });
+  }
+
+  /// Super Admin: change one date (cancel, or override place/time/live link).
+  Future<void> updateIbadahOccurrence(String occurrenceId, Map<String, dynamic> data) async {
+    final rows = await _client
+        .from('ibadah_occurrences')
+        .update({...data, 'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', occurrenceId)
+        .select('id');
+    if ((rows as List).isEmpty) {
+      throw Exception('Perubahan ditolak: hanya Super Admin yang dapat mengubah tanggal ibadah.');
+    }
+  }
+
+  // ============== CHECK-IN QR & MEMBER QR ==============
+
+  /// Token for the check-in QR a pelayan/admin displays.
+  Future<Map<String, dynamic>> issueCheckinToken(String targetType, String targetId) async {
+    final r = await _client.rpc('issue_checkin_token', params: {
+      'p_target_type': targetType,
+      'p_target_id': targetId,
+    });
+    return Map<String, dynamic>.from(r as Map);
+  }
+
+  Future<String> getMyMemberQrSecret() async {
+    final r = await _client.rpc('get_my_member_qr_secret');
+    return r as String;
+  }
+
+  Future<Map<String, dynamic>> selfCheckIn(String targetType, String targetId, String token) async {
+    final r = await _client.rpc('self_check_in', params: {
+      'p_target_type': targetType,
+      'p_target_id': targetId,
+      'p_token': token,
+    });
+    return Map<String, dynamic>.from(r as Map);
+  }
+
+  Future<Map<String, dynamic>> staffCheckIn({
+    required String targetType,
+    required String targetId,
+    required String userId,
+    required String secret,
+  }) async {
+    final r = await _client.rpc('staff_check_in', params: {
+      'p_target_type': targetType,
+      'p_target_id': targetId,
+      'p_user_id': userId,
+      'p_secret': secret,
+    });
+    return Map<String, dynamic>.from(r as Map);
+  }
+
+  // ============== KAS KEUANGAN & REKENING ==============
+
+  /// Accounts with balance; RLS limits admins to accounts they may read.
+  Future<List<Map<String, dynamic>>> getKasSaldo() async {
+    final data = await _client.from('kas_saldo_view').select().order('nama_akun');
+    return _asMapList(data);
+  }
+
+  Future<List<Map<String, dynamic>>> getKasTransaksi({
+    int? akunId,
+    String? jenis,
+    String? kategori,
+    DateTime? from,
+    DateTime? to,
+    int limit = 500,
+  }) async {
+    var q = _client.from('kas_transaksis').select();
+    if (akunId != null) q = q.eq('kas_akun_id', akunId);
+    if (jenis != null) q = q.eq('jenis', jenis);
+    if (kategori != null && kategori.isNotEmpty) q = q.ilike('kategori', '%$kategori%');
+    if (from != null) q = q.gte('tanggal', _isoDate(from));
+    if (to != null) q = q.lte('tanggal', _isoDate(to));
+    final data = await q.order('tanggal', ascending: false).order('id', ascending: false).limit(limit);
+    return _asMapList(data);
+  }
+
+  Future<int> createKasAkun(Map<String, dynamic> data) async {
+    final id = await _client.rpc('create_kas_akun', params: {'p_data': data});
+    return (id as num).toInt();
+  }
+
+  Future<Map<String, dynamic>> createKasTransaksi(Map<String, dynamic> data) async {
+    final r = await _client.rpc('create_kas_transaksi', params: {'p_data': data});
+    return Map<String, dynamic>.from(r as Map);
+  }
+
+  /// Super Admin only (RLS). Throws when the change was refused.
+  Future<void> updateKasAkun(int id, Map<String, dynamic> data) async {
+    final rows = await _client.from('kas_akuns').update(data).eq('id', id).select('id');
+    if ((rows as List).isEmpty) throw Exception('Perubahan rekening ditolak (khusus Super Admin).');
+  }
+
+  Future<void> updateKasTransaksi(int id, Map<String, dynamic> data) async {
+    final rows = await _client.from('kas_transaksis').update(data).eq('id', id).select('id');
+    if ((rows as List).isEmpty) throw Exception('Perubahan transaksi ditolak (khusus Super Admin).');
+  }
+
+  Future<void> deleteKasTransaksi(int id) async {
+    final rows = await _client.from('kas_transaksis').delete().eq('id', id).select('id');
+    if ((rows as List).isEmpty) throw Exception('Penghapusan transaksi ditolak (khusus Super Admin).');
+  }
+
+  Future<List<Map<String, dynamic>>> getKasAkunAccess(int akunId) async {
+    final data = await _client
+        .from('kas_akun_users')
+        .select('*, users(nama, email)')
+        .eq('kas_akun_id', akunId);
+    return _asMapList(data);
+  }
+
+  Future<void> setKasAkunAccess({
+    required int akunId,
+    required String userId,
+    required bool canRead,
+    required bool canCreate,
+  }) async {
+    await _client.rpc('set_kas_akun_access', params: {
+      'p_akun_id': akunId,
+      'p_user_id': userId,
+      'p_can_read': canRead,
+      'p_can_create': canCreate,
+    });
+  }
+
   // ============== PUBLIC (GUEST) DATA ==============
 
   /// Service schedule without pelayan names, readable by guests (anon).
@@ -571,27 +745,27 @@ class SupabaseService {
     await _client.from('prayer_requests').delete().eq('id', id);
   }
 
-  // ============== KOMSEL (SMALL GROUPS) ==============
-  Future<List<Map<String, dynamic>>> getKomsels() async {
+  // ============== GROUP (tabel komsels) ==============
+  Future<List<Map<String, dynamic>>> getGroups() async {
     final data = await _client.from('komsels').select().order('nama');
     return _asMapList(data);
   }
 
-  Future<List<Map<String, dynamic>>> getActiveKomsels() async {
+  Future<List<Map<String, dynamic>>> getActiveGroups() async {
     final data = await _client.from('komsels').select().eq('is_active', true).order('nama');
     return _asMapList(data);
   }
 
-  Future<Map<String, dynamic>> addKomsel(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> addGroup(Map<String, dynamic> data) async {
     final response = await _client.from('komsels').insert(data).select();
     return Map<String, dynamic>.from(_asMapList(response).first);
   }
 
-  Future<void> updateKomsel(String id, Map<String, dynamic> data) async {
+  Future<void> updateGroup(String id, Map<String, dynamic> data) async {
     await _client.from('komsels').update(data).eq('id', id);
   }
 
-  Future<void> deleteKomsel(String id) async {
+  Future<void> deleteGroup(String id) async {
     await _client.from('komsels').delete().eq('id', id);
   }
 
