@@ -50,7 +50,17 @@ class AuthProvider with ChangeNotifier {
   bool get isAdminMode => isAdmin && _currentDisplayRole == 'admin';
   bool get isPelayan => _currentUser?.hasRole('pelayan') ?? false;
   bool get isJemaat => _currentUser?.hasRole('jemaat') ?? false;
-  List<String> get userRoles => _currentUser?.roles ?? [];
+  /// The app views this user can switch between: jemaat / pelayan / admin.
+  /// `super_admin` is not a view of its own — it is the Admin view with full
+  /// rights — so it maps to 'admin' (listing it separately sent the user to
+  /// an unknown view that fell back to the Jemaat screens).
+  List<String> get userRoles {
+    final raw = _currentUser?.roles ?? const <String>[];
+    return [
+      for (final r in const ['jemaat', 'pelayan', 'admin'])
+        if (raw.contains(r) || (r == 'admin' && raw.contains('super_admin'))) r,
+    ];
+  }
   User? get user => _currentUser;
   String get currentDisplayRole => _currentDisplayRole;
 

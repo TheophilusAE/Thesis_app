@@ -169,4 +169,22 @@ void main() {
     verify(() => service.updateUserRoles('u2', ['admin', 'jemaat'])).called(1);
     verifyNever(() => service.updateUserProfile(any(), any()));
   });
+
+  test('Super Admin is offered as the Admin view, never as a separate role', () async {
+    await signInAs(_profile(roles: ['super_admin', 'admin', 'jemaat']));
+    expect(auth.userRoles, ['jemaat', 'admin']);
+
+    auth.switchRole('jemaat');
+    expect(auth.currentDisplayRole, 'jemaat');
+    auth.switchRole('super_admin'); // not a view: ignored
+    expect(auth.currentDisplayRole, 'jemaat');
+    auth.switchRole('admin');
+    expect(auth.isAdminMode, isTrue);
+    expect(auth.canModifyExisting, isTrue);
+  });
+
+  test('a Super Admin row without a plain admin role still gets the Admin view', () async {
+    await signInAs(_profile(roles: ['super_admin', 'jemaat']));
+    expect(auth.userRoles, ['jemaat', 'admin']);
+  });
 }
