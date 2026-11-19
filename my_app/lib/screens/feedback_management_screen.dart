@@ -294,7 +294,7 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
         fontWeight: selected ? FontWeight.bold : FontWeight.w500,
         color: selected ? Colors.white : AppTheme.darkCharcoal,
       ),
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: AppTheme.neutralLight,
       selectedColor: AppTheme.primary,
       checkmarkColor: Colors.white,
       shape: RoundedRectangleBorder(
@@ -348,7 +348,7 @@ class FeedbackCard extends StatelessWidget {
   Color _getBadgeTextColor(String type) {
     switch (type) {
       case 'event':
-        return const Color(0xFF1E3A8A);
+        return AppTheme.navy;
       case 'facility':
         return const Color(0xFFB45309);
       case 'hospitality':

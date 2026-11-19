@@ -524,7 +524,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                       width: double.infinity,
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
+                        color: AppTheme.warningLight,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: const Color(0xFFFDE68A)),
                       ),

@@ -8,6 +8,7 @@ import '../providers/notification_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/user.dart';
 import '../utils/app_theme.dart';
+import '../widgets/delete_account_dialog.dart';
 import 'admin_management_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -206,6 +207,15 @@ class _ProfileBody extends StatelessWidget {
                   color: AppTheme.errorColor,
                   outlined: true,
                   onTap: () => _confirmLogout(context),
+                ),
+                const SizedBox(height: 4),
+                Center(
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+                    icon: const Icon(Icons.delete_forever_rounded, size: 20),
+                    label: const Text('Hapus Akun'),
+                    onPressed: () => showDeleteAccountDialog(context),
+                  ),
                 ),
               ],
             ),
@@ -743,8 +753,11 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         ),
       );
     } else {
+      final msg = auth.lastMessage;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal memperbarui profil. Coba lagi.')),
+        SnackBar(
+          content: Text(msg != null && msg.startsWith('Koneksi') ? msg : 'Gagal memperbarui profil. Coba lagi.'),
+        ),
       );
     }
   }
@@ -825,6 +838,10 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                 firstDate: DateTime(1900),
                 lastDate: now,
                 helpText: 'Tanggal Lahir',
+                // A birthday is usually decades back: start on the year
+                // grid (or let the user type it) instead of month-by-month.
+                initialDatePickerMode: _birthDate == null ? DatePickerMode.year : DatePickerMode.day,
+                fieldHintText: 'hh/bb/tttt',
               );
               if (picked != null) setState(() => _birthDate = picked);
             },

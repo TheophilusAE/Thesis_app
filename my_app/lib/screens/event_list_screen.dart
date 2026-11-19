@@ -452,7 +452,7 @@ class _RegisteredActions extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0FDF4),
+            color: AppTheme.successLight,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppTheme.emerald.withValues(alpha: 0.3)),
           ),

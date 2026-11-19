@@ -335,6 +335,33 @@ class SupabaseService {
     await _client.from('device_tokens').delete().eq('token', token);
   }
 
+  // ── Hapus akun (migration_account_deletion.sql + Edge Function delete-account) ──
+
+  /// Permanently deletes the signed-in user's own account. The Edge Function
+  /// identifies the caller from their JWT and holds the service key; throws
+  /// [AccountDeletionException] with a user-facing message on failure.
+  Future<void> deleteMyAccount() async {
+    final token = _client.auth.currentSession?.accessToken;
+    if (token == null) throw const AccountDeletionException('Sesi tidak valid. Silakan login ulang.');
+    final FunctionResponse res;
+    try {
+      res = await _client.functions
+          .invoke('delete-account', headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 30));
+    } on FormatException {
+      throw const AccountDeletionException('Layanan hapus akun belum aktif. Hubungi admin gereja.');
+    }
+    final status = res.status ?? 0;
+    if (status >= 200 && status < 300) return;
+    final data = res.data;
+    final msg = data is Map && data['error'] is String
+        ? data['error'] as String
+        : status == 404
+            ? 'Layanan hapus akun belum aktif. Hubungi admin gereja.'
+            : 'Gagal menghapus akun (kode $status). Coba lagi nanti.';
+    throw AccountDeletionException(msg);
+  }
+
   // ── Pengumuman & ucapan (migration_notifications_v2.sql) ──
 
   /// Announcements, newest first. RLS: active ones for approved members,
@@ -914,4 +941,12 @@ class SupabaseService {
   void unsubscribeChannel(RealtimeChannel channel) {
     _client.removeChannel(channel);
   }
+}
+
+/// A user-facing reason why the account could not be deleted.
+class AccountDeletionException implements Exception {
+  final String message;
+  const AccountDeletionException(this.message);
+  @override
+  String toString() => message;
 }

@@ -296,7 +296,7 @@ class _AdminAttendanceMonitoringScreenState
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: confirmation.confirmed
-                    ? const Color(0xFFD1FAE5)
+                    ? AppTheme.successLight
                     : AppTheme.goldLight,
                 borderRadius: BorderRadius.circular(12),
               ),

@@ -89,6 +89,8 @@ class AppTheme {
   static Color get errorLight     => _pick(const Color(0xFFFEE4E2), const Color(0xFF3A1A18));
   static Color get infoColor      => _pick(const Color(0xFF356A9A), const Color(0xFF4F8CC6)); // Muted Serene Blue
   static Color get infoLight      => _pick(const Color(0xFFEBF3FA), const Color(0xFF172636));
+  /// Navy accent used for text/icons (lifted in dark mode for contrast).
+  static Color get navy           => _pick(const Color(0xFF1E3A8A), const Color(0xFF8AB4F8));
   static Color get softCard       => _pick(const Color(0xFFFAF6F0), _dSurfaceSubtle);
 
   // ── Shapes & Radii ─────────────────────────────────────────

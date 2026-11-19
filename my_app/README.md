@@ -13,14 +13,14 @@ Versions are the constraints declared in `pubspec.yaml`.
 | Layer | Technology |
 |-------|-----------|
 | Framework | Flutter (Dart SDK `^3.10.4`; developed with Flutter 3.41 / Dart 3.11) |
-| Backend | Supabase (`supabase_flutter ^1.10.0`) — PostgreSQL, Auth, Row Level Security, Realtime |
+| Backend | Supabase (`supabase_flutter ^1.10.0`) — PostgreSQL, Auth, Row Level Security, Realtime, Edge Functions (`supabase/functions/`) |
 | State management | Provider (`^6.1.1`) |
 | Offline Bible | `sqflite` / `sqflite_common_ffi` (desktop) + `xml` parsing of a bundled Indonesian Bible |
 | Local storage | `shared_preferences` (caches, per-account reading progress and bookmarks) |
-| QR | `qr_flutter` (generate) + `mobile_scanner` (scan) |
-| Reminders | `flutter_local_notifications` + `timezone` (on-device only, no Firebase/FCM) |
+| QR | `qr_flutter` (generate) + `mobile_scanner ^7.5` (scan; 16 KB page-size compatible) |
+| Notifications | Push via Firebase Cloud Messaging (`firebase_messaging`; sent server-side by the `send-push` Edge Function) + on-device reminders (`flutter_local_notifications`, `timezone`, WITA) |
 | Links / sharing | `url_launcher` (sermon media, playlist links, WhatsApp) |
-| Design | Poppins (`google_fonts`), Material 3, light theme with GPdI burgundy `#A62639` and gold `#C89B3C` |
+| Design | Poppins (`google_fonts`), Material 3, light (default) and dark theme with GPdI burgundy `#A62639` and gold `#C89B3C` |
 | Testing | `flutter_test` + `mocktail` (mocks `SupabaseService`) |
 
 ---
@@ -35,8 +35,8 @@ Versions are the constraints declared in `pubspec.yaml`.
 ### Jemaat (Congregation Member)
 - **Registration and login** — email/password via Supabase Auth. New accounts wait for admin approval before they can sign in.
 - **Profile and digital member card** — the QR code on the card is used for attendance.
-- **Alkitab** — offline Indonesian Bible with chapter navigation and search.
-- **Quest Baca** — annual Bible reading plan with progress and a calendar-day streak. Progress is stored **per account on the device** (see Known Limitations).
+- **Alkitab** — offline Indonesian Bible: pick book → chapter → verse, adjustable text size (A−/A+), search.
+- **Quest Baca** — annual Bible reading plan. Each day's passage is read in the app; "Selesai Membaca" unlocks only after enough active reading time, scrolling to the end and every section being on screen. Progress is stored **per account on the device** (see Known Limitations).
 - **Renungan Harian** — admin-managed daily devotional. Can be saved on the device or shared (copy text or WhatsApp).
 - **Playlist Pujian** — admin-managed worship playlist. Songs with a link open in an external app; there is no built-in audio player.
 - **Event Gereja** — book a place (including family members) with a server-side quota guarantee, edit or cancel the booking, watch the livestream link, and give event feedback. A booking becomes *Hadir* only after a QR check-in at the event.
@@ -44,7 +44,9 @@ Versions are the constraints declared in `pubspec.yaml`.
 - **Jadwal Ibadah** — upcoming worship services with time, place and livestream link.
 - **Prayer requests**, **Group directory** (Umum, Pemuda, Anak/Sekolah Minggu; contact leaders via WhatsApp; choose your Group in the profile), **sermon/media library** (opens links externally).
 - **Feedback** — rate events, facilities and hospitality. The "anonymous" option hides your name from church leaders; the account is still recorded (see Known Limitations).
-- **Notifications** — in-app inbox (realtime) for schedule changes, substitution decisions and new events.
+- **Notifications** — inbox with categories (Ibadah, Pelayanan, Khusus, Umum); tapping one opens the related page; users delete their own. Push notifications arrive even when the app is closed (Android). Church announcements and birthday greetings.
+- **Dark mode** — Profil → Pengaturan Tampilan (light is the default).
+- **Hapus Akun** — Profil → Keamanan Akun → Hapus Akun permanently deletes the account and personal data (required by Google Play).
 
 ### Pelayan (Service Minister)
 - Service and training schedules, with attendance confirmation for assigned services.
@@ -66,6 +68,7 @@ Versions are the constraints declared in `pubspec.yaml`.
 - **Substitution review** — choose the replacement pelayan. Approval moves the duty to that pelayan and notifies the people involved.
 - **Attendance monitoring** — all check-ins with role (Jemaat/Pelayan), check-in method (manual / self QR / QR by an usher) and filters.
 - **Feedback** and **prayer request** review.
+- **Pengumuman & Ucapan** — send announcements to all members or one role (opening a chosen page when tapped), send today's birthday greetings; the Super Admin can edit/archive announcements and purge notifications older than 30+ days.
 - **Rekomendasi Kegiatan** (decision support) — explainable, rule-based recommendations computed from attendance history, building capacity, event registrations and feedback. Each recommendation shows the numbers it is based on.
 
 ---
@@ -117,9 +120,10 @@ The seating capacity used by *Rekomendasi Kegiatan* is set in `lib/utils/church_
 ## Database Notes
 
 - The app is written against the **existing** Supabase schema. **Future work must not change the database schema, RLS policies, functions, triggers or grants without explicit approval from the project owner** — adapt the app code to the schema instead.
-- SQL scripts are kept out of version control (`*.sql` in `.gitignore`). Ask the project owner for them; do not run schema-changing scripts on the live project without approval.
-- RBAC v2 and guest access (`migration_rbac_v2.sql`, `migration_guest_access.sql`) are applied to production.
-- **Pending owner action (scheduling, booking/QR, Group, Kas):** run, in this order and **before** installing this app version: `migration_scheduling_v2.sql`, `migration_booking_qr_v2.sql`, `migration_groups.sql`, `migration_kas_v1.sql`. The Kas migration only adds security rules, a balance view and functions; the `kas_*` tables are shared with another system and their structure is not changed. After `migration_booking_qr_v2.sql`, older app builds can no longer check in or book directly, so update the app together with the migration.
+- SQL scripts are kept out of version control (`*.sql` in `.gitignore`). Ask the project owner for them; do not run schema-changing scripts on the live project without approval. The run order is listed at the top of `database_setup.sql`.
+- Applied to production: RBAC v2 + guest access; scheduling v2, booking/QR v2, groups, kas v1 (the `kas_*` tables are shared with another system — their structure is never changed); notifications v2 and push (FCM).
+- **Pending owner action:** `migration_account_deletion.sql` + deploy the `delete-account` Edge Function (Verify JWT on) — needed before the Play Store release. Optional and inactive: `migration_whatsapp_v1.sql` + `send-whatsapp` (no Meta Business account yet).
+- Server pieces outside SQL: Edge Functions `send-push` (Verify JWT off, protected by the `x-webhook-secret` header), `delete-account`, `send-whatsapp`; Database Webhook `push_on_notification`; secrets `FIREBASE_SERVICE_ACCOUNT`, `PUSH_WEBHOOK_SECRET`. Details: `docs/notifikasi_push_whatsapp.md`.
 - Credentials of any seeded admin account are not documented here. If a default admin password was ever used, change it.
 
 ---
@@ -132,22 +136,25 @@ flutter analyze        # expected: "No issues found!"
 flutter test           # unit + widget tests
 ```
 
-As of 2026-11-17: `flutter analyze` reports no issues and `flutter test` passes 230/230. All tests use mocks and local storage; **no test talks to a live Supabase project**. Camera, notification delivery, offline behaviour and end-to-end flows require manual testing on a device.
+As of 2026-11-19: `flutter analyze` reports no issues and `flutter test` passes 271/271. All tests use mocks and local storage; **no test talks to a live Supabase project**. Camera, notification delivery, offline behaviour and end-to-end flows require manual testing on a device.
 
-## Android Build
+## Android Build and Release
 
 ```bash
 cd my_app
-flutter build apk --release      # APK in build/app/outputs/flutter-apk/
+flutter build appbundle --release   # Play Store bundle in build/app/outputs/bundle/release/
+flutter build apk --release         # APK for direct install
 ```
 
-Before publishing:
-- The release build is currently **signed with the debug key**. Add your own keystore and `signingConfigs` (keep `key.properties` and keystores out of git — they are already ignored).
-- The `applicationId` is still the placeholder `com.mycompany.my_app`. Choose the final ID before the first store upload; it cannot be changed afterwards.
-- iOS sources are prepared but **have never been built or tested** (no Mac available).
-- Google Play requires apps with account creation to offer account deletion; the app has no self-service deletion yet. A privacy policy and the Play data-safety form are also needed.
+- Package name: `com.gpdipersadamas.app`; targetSdk/compileSdk 36; all 64-bit native libraries are 16 KB-aligned (checked on the release APK, 2026-11-19).
+- Release signing reads `android/key.properties` + the upload keystore (both gitignored, kept by the owner). Without them the release build falls back to the debug key, which Google Play rejects.
+- `android/app/google-services.json` (Firebase) is required for the build and is gitignored.
+- The full Play Store procedure (keystore, privacy policy, Data safety answers, closed testing) is in **`docs/play_store.md`**; store graphics are in `store_assets/`; the privacy policy text is `docs/kebijakan_privasi.md`.
+- iOS sources are prepared but **have never been built or tested** (no Mac, no APNs key), so push is Android-only.
 
-A debug-signed `flutter build apk --release` was verified to compile on 2026-10-23. Device testing is still required.
+## Docker
+
+`Dockerfile` / `docker-compose.yml` pin the Flutter + Android toolchain for reproducible tests and release builds; the Supabase CLI local stack is used for testing migrations. See `docs/docker.md` — **written but not yet run** (Docker is not installed on the development PC).
 
 ---
 
@@ -157,7 +164,10 @@ A debug-signed `flutter build apk --release` was verified to compile on 2026-10-
 - **Saved devotionals** are stored on the device.
 - **Recurring worship services** keep dates 90 days ahead; the window is extended when the schedule screen is opened. Changing a series affects future dates only. Older per-pelayan recurring schedules created before this version are not converted.
 - **Anonymous feedback** hides the name from church leaders, but the submitting account is still stored, as the database security rules require.
-- **Notifications** are in-app (and local reminders). Nothing is pushed while the app is fully closed. Only admin actions create notifications for other users.
+- **Push notifications** are Android-only. A phone receives the pushes of the last account that signed in on it. Nothing is deleted automatically; the Super Admin can purge old notifications manually.
+- **Birthday greetings** are sent manually by an admin (automation planned later).
+- **WhatsApp** messaging is prepared but inactive until the church has a verified Meta Business account and approved templates.
+- **Account deletion** removes the person's attendance and registrations too; schedules/events/announcements they created as staff and kas records stay (without the link to the account).
 - **Attendance roles** in monitoring reflect each person's current role, not the role at check-in time.
 - **Persembahan (giving) is not implemented.**
 - **Recommendations** are rule-based guidance for church leaders, not automatic decisions. They need enough recorded data (at least 3 data points per rule) and a configured building capacity.

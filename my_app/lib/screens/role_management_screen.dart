@@ -108,7 +108,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                       title: 'Pelayan',
                       subtitle: 'Akses jadwal pelayanan, absensi, dan substitusi',
                       value: selectedRoles.contains('pelayan'),
-                      color: const Color(0xFF1E3A8A),
+                      color: AppTheme.navy,
                       icon: Icons.church_rounded,
                       onChanged: (val) {
                         setDialogState(() {
@@ -439,7 +439,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         label = 'Admin';
         break;
       case 'pelayan':
-        color = const Color(0xFF1E3A8A);
+        color = AppTheme.navy;
         icon = Icons.church_rounded;
         label = 'Pelayan';
         break;
@@ -485,7 +485,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
         color: isSelected ? Colors.white : AppTheme.darkCharcoal,
       ),
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: AppTheme.neutralLight,
       selectedColor: AppTheme.primary,
       checkmarkColor: Colors.white,
       shape: RoundedRectangleBorder(

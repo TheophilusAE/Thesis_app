@@ -28,6 +28,7 @@ import '../services/push_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/permissions.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/delete_account_dialog.dart';
 import '../widgets/common/compact_feature_tile.dart';
 import '../widgets/role_switcher.dart';
 import '../widgets/notification_inbox.dart';
@@ -653,7 +654,7 @@ class _SectionTitle extends StatelessWidget {
                 text,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF0F172A),
+                      color: AppTheme.darkCharcoal,
                     ),
               ),
             ],
@@ -2160,7 +2161,7 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
               width: 54,
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primary : Colors.white,
+                color: isSelected ? AppTheme.primary : AppTheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected
@@ -2915,13 +2916,21 @@ class _TodayServiceHeroCardState extends State<_TodayServiceHeroCard> {
   }
 }
 
-class _TodayDevotionalPreviewCard extends StatelessWidget {
+class _TodayDevotionalPreviewCard extends StatefulWidget {
   const _TodayDevotionalPreviewCard();
+
+  @override
+  State<_TodayDevotionalPreviewCard> createState() => _TodayDevotionalPreviewCardState();
+}
+
+class _TodayDevotionalPreviewCardState extends State<_TodayDevotionalPreviewCard> {
+  // Fetched once per card, not on every rebuild (profile saves, theme switch).
+  late final Future<Devotional> _today = DevotionalService().getTodaysDevotional();
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Devotional>(
-      future: DevotionalService().getTodaysDevotional(),
+      future: _today,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
@@ -3137,7 +3146,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                 width: active ? 20 : 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFF1E3A8A) : const Color(0xFFCBD5E1),
+                  color: active ? AppTheme.navy : const Color(0xFFCBD5E1),
                   borderRadius: BorderRadius.circular(3),
                 ),
               );
@@ -3441,7 +3450,7 @@ class _ServiceScheduleStripState extends State<_ServiceScheduleStrip> {
             decoration: BoxDecoration(
               color: AppTheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE8F0F8)),
+              border: Border.all(color: AppTheme.neutralBorder),
             ),
             child: Text(
               'Belum ada jadwal ibadah mendatang',
@@ -3468,7 +3477,7 @@ class _ServiceScheduleStripState extends State<_ServiceScheduleStrip> {
                 decoration: BoxDecoration(
                   color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE8F0F8)),
+                  border: Border.all(color: AppTheme.neutralBorder),
                   boxShadow: [BoxShadow(color: const Color(0xFF1E3A8A).withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
                 ),
                 padding: const EdgeInsets.all(14),
@@ -3483,7 +3492,7 @@ class _ServiceScheduleStripState extends State<_ServiceScheduleStrip> {
                             color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(7),
                           ),
-                          child: Text(dayLabel, style: const TextStyle(color: Color(0xFF1E3A8A), fontSize: 10.5, fontWeight: FontWeight.w700)),
+                          child: Text(dayLabel, style: TextStyle(color: AppTheme.navy, fontSize: 10.5, fontWeight: FontWeight.w700)),
                         ),
                         const Spacer(),
                         Container(
@@ -3879,7 +3888,7 @@ class _ProfileTab extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primary : Colors.white,
+            color: isSelected ? AppTheme.primary : AppTheme.surface,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected ? AppTheme.primary : AppTheme.neutralBorder,
@@ -4016,6 +4025,14 @@ class _ProfileTab extends StatelessWidget {
           ],
         ),
         actions: [
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+            onPressed: () {
+              Navigator.pop(ctx);
+              showDeleteAccountDialog(context);
+            },
+            child: const Text('Hapus Akun'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Mengerti'),

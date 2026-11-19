@@ -54,7 +54,7 @@ dependencies:
   
   # QR Code Generation
   qr_flutter: ^4.1.0
-  mobile_scanner: ^5.2.3
+  mobile_scanner: ^7.5.0
   
   # UI Components
   google_fonts: ^6.1.0

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../models/admin_permission.dart';
@@ -452,37 +453,79 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Permanently deletes the signed-in user's own account (Google Play
+  /// requirement). Super Admin must hand the role over first (also enforced
+  /// server-side). On success the session is cleared.
+  Future<bool> deleteAccount() async {
+    if (_currentUser == null) {
+      _lastMessage = 'Anda belum login.';
+      return false;
+    }
+    if (isSuperAdmin) {
+      _lastMessage =
+          'Akun Super Admin tidak dapat dihapus sendiri. Serahkan peran Super Admin ke akun lain terlebih dahulu.';
+      return false;
+    }
+    try {
+      await _supabaseService.deleteMyAccount();
+    } on AccountDeletionException catch (e) {
+      _lastMessage = e.message;
+      return false;
+    } catch (_) {
+      _lastMessage = 'Gagal menghapus akun. Periksa koneksi internet lalu coba lagi.';
+      return false;
+    }
+    // The account is gone server-side (its push token rows went with it);
+    // drop this phone's FCM token and the local session.
+    await PushService.instance.unregister(service: _supabaseService);
+    try {
+      await _supabaseService.signOut();
+    } catch (_) {}
+    _clearSession();
+    _lastMessage = 'Akun Anda telah dihapus.';
+    notifyListeners();
+    return true;
+  }
+
   static bool _sameDay(DateTime? a, DateTime? b) =>
       (a == null && b == null) ||
       (a != null && b != null && a.year == b.year && a.month == b.month && a.day == b.day);
 
+  static String? _isoDate(DateTime? d) => d == null
+      ? null
+      : '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Saves only the profile fields that actually changed (one small UPDATE,
+  /// or none at all), then updates the in-memory profile.
   Future<bool> updateProfile(User updatedUser) async {
+    // No loaded profile to compare with (or another account): write every field.
+    final before = _currentUser?.id == updatedUser.id ? _currentUser : null;
+    final full = before == null;
+    final changes = <String, dynamic>{
+      if (full || updatedUser.name != before.name) 'nama': updatedUser.name,
+      if (full || updatedUser.phone != before.phone) 'phone': updatedUser.phone,
+      // Extended Jemaat data is optional: blank -> NULL, never a placeholder.
+      if (full || updatedUser.address != before.address) 'address': updatedUser.address,
+      if (full || updatedUser.identityNumber != before.identityNumber) 'identity_number': updatedUser.identityNumber,
+      if (full || updatedUser.baptismDate != before.baptismDate) 'baptism_date': updatedUser.baptismDate,
+      // The Group picker replaces the old free-text family_group, which is
+      // left untouched in the database.
+      if (full || updatedUser.groupId != before.groupId) 'group_id': updatedUser.groupId,
+      // users.tanggal_lahir (migration_notifications_v2.sql).
+      if (full ? updatedUser.birthDate != null : !_sameDay(updatedUser.birthDate, before.birthDate)) 'tanggal_lahir': _isoDate(updatedUser.birthDate),
+    };
     try {
-      await _supabaseService.updateUserProfile(
-        updatedUser.id,
-        {
-          'nama': updatedUser.name,
-          'phone': updatedUser.phone,
-          // Extended Jemaat data is optional: blank -> NULL, never a placeholder.
-          'address': updatedUser.address,
-          'identity_number': updatedUser.identityNumber,
-          'baptism_date': updatedUser.baptismDate,
-          // The Group picker replaces the old free-text family_group, which
-          // is left untouched in the database. Only sent when it changed.
-          if (updatedUser.groupId != _currentUser?.groupId) 'group_id': updatedUser.groupId,
-          // users.tanggal_lahir (migration_notifications_v2.sql); only sent
-          // when it changed, so profiles still save before that migration.
-          if (!_sameDay(updatedUser.birthDate, _currentUser?.birthDate))
-            'tanggal_lahir': updatedUser.birthDate == null
-                ? null
-                : '${updatedUser.birthDate!.year.toString().padLeft(4, '0')}-'
-                    '${updatedUser.birthDate!.month.toString().padLeft(2, '0')}-'
-                    '${updatedUser.birthDate!.day.toString().padLeft(2, '0')}',
-        },
-      );
+      if (changes.isNotEmpty) {
+        await _supabaseService
+            .updateUserProfile(updatedUser.id, changes)
+            .timeout(const Duration(seconds: 20));
+      }
       _currentUser = updatedUser;
       notifyListeners();
       return true;
+    } on TimeoutException {
+      _lastMessage = 'Koneksi lambat. Periksa internet lalu coba lagi.';
+      return false;
     } catch (e) {
       _lastMessage = 'Error updating profile: $e';
       return false;

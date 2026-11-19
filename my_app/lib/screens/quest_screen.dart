@@ -125,7 +125,7 @@ class _QuestScreenState extends State<QuestScreen> {
           padding: const EdgeInsets.only(bottom: 16),
           child: AppCard(
             borderColor: AppTheme.gold.withValues(alpha: 0.5),
-            color: const Color(0xFFFFFBEB),
+            color: AppTheme.warningLight,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -387,7 +387,7 @@ class _QuestScreenState extends State<QuestScreen> {
           padding: const EdgeInsets.symmetric(vertical: 8),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primary : Colors.white,
+            color: isSelected ? AppTheme.primary : AppTheme.surface,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected ? AppTheme.primary : AppTheme.neutralBorder,
@@ -417,7 +417,7 @@ class _QuestScreenState extends State<QuestScreen> {
         onTap: () => _openReading(context, quest),
         padding: const EdgeInsets.all(16),
         borderColor: quest.isCompleted ? AppTheme.emerald.withValues(alpha: 0.3) : AppTheme.neutralBorder,
-        color: quest.isCompleted ? const Color(0xFFF0FDF4) : Colors.white,
+        color: quest.isCompleted ? AppTheme.successLight : AppTheme.surface,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

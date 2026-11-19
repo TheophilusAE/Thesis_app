@@ -550,7 +550,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: AppCard(
                     padding: EdgeInsets.zero,
-                    color: isSelected ? AppTheme.primaryLight : Colors.white,
+                    color: isSelected ? AppTheme.primaryLight : AppTheme.surface,
                     borderColor: isSelected ? AppTheme.primary : AppTheme.neutralBorder,
                     onTap: () {
                       setState(() {

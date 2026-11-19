@@ -1,0 +1,20 @@
+# Build output and local tooling
+build/
+.dart_tool/
+.idea/
+.vscode/
+android/.gradle/
+android/app/build/
+ios/Pods/
+windows/flutter/ephemeral/
+
+# Secrets — mounted at run time, never baked into the image
+android/key.properties
+**/*.jks
+**/*.keystore
+android/app/google-services.json
+.env
+.env.*
+
+# Database scripts and private notes
+*.sql

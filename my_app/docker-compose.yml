@@ -1,0 +1,17 @@
+# docker compose run --rm test     → flutter analyze + flutter test
+# docker compose run --rm release  → signed Play Store bundle in build/app/outputs/bundle/release/
+# See docs/docker.md. Secrets are mounted read-only and never copied into the image.
+services:
+  test:
+    build: .
+    image: gpdi-app
+
+  release:
+    image: gpdi-app
+    build: .
+    command: flutter build appbundle --release
+    volumes:
+      - ./build:/app/build
+      - ./android/key.properties:/app/android/key.properties:ro
+      - ./android/app/google-services.json:/app/android/app/google-services.json:ro
+      - ${KEYSTORE_DIR:?set KEYSTORE_DIR to the folder holding upload-keystore.jks}:/keys:ro

@@ -458,7 +458,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
-                      color: selected ? AppTheme.primaryLight : Colors.white,
+                      color: selected ? AppTheme.primaryLight : AppTheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                           color: selected ? AppTheme.primary : AppTheme.neutralBorder),

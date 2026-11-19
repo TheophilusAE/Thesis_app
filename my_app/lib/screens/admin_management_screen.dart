@@ -2209,8 +2209,8 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                     ),
                     child: Text(
                       '${regs.where((r) => r.isActive).fold<int>(0, (s, r) => s + r.totalCount)} peserta',
-                      style: const TextStyle(
-                          color: Color(0xFF1E3A8A),
+                      style: TextStyle(
+                          color: AppTheme.navy,
                           fontWeight: FontWeight.w700,
                           fontSize: 13),
                     ),
@@ -2251,8 +2251,8 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                                         .withValues(alpha: 0.12),
                                     child: Text(
                                       (r.userName ?? '?')[0].toUpperCase(),
-                                      style: const TextStyle(
-                                          color: Color(0xFF1E3A8A),
+                                      style: TextStyle(
+                                          color: AppTheme.navy,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12),
                                     ),
@@ -2322,9 +2322,9 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                                             ),
                                             child: Text(
                                               '${m.name} (${m.relationship})',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                   fontSize: 11.5,
-                                                  color: Color(0xFF374151)),
+                                                  color: AppTheme.secondaryText),
                                             ),
                                           ))
                                       .toList(),
@@ -2552,8 +2552,8 @@ class _AdminEventCard extends StatelessWidget {
                   ),
                   child: Text(
                     'Maks. ${event.maxCapacity} peserta',
-                    style: const TextStyle(
-                        color: Color(0xFF1E3A8A),
+                    style: TextStyle(
+                        color: AppTheme.navy,
                         fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
@@ -2564,7 +2564,7 @@ class _AdminEventCard extends StatelessWidget {
                 icon: const Icon(Icons.people_rounded, size: 15),
                 label: const Text('Peserta', style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF1E3A8A),
+                    foregroundColor: AppTheme.navy,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     minimumSize: Size.zero,

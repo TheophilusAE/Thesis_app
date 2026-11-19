@@ -367,7 +367,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
         color: isSelected ? Colors.white : AppTheme.darkCharcoal,
       ),
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: AppTheme.neutralLight,
       selectedColor: AppTheme.primary,
       checkmarkColor: Colors.white,
       shape: RoundedRectangleBorder(
