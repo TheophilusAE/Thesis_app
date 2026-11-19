@@ -62,12 +62,12 @@ class AppErrorState extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.error_outline_rounded, color: AppTheme.errorColor, size: 24),
+            Icon(Icons.error_outline_rounded, color: AppTheme.errorColor, size: 24),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 effectiveMessage,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.errorColor,
@@ -78,7 +78,7 @@ class AppErrorState extends StatelessWidget {
             if (onRetry != null) ...[
               const SizedBox(width: 8),
               IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: AppTheme.errorColor),
+                icon: Icon(Icons.refresh_rounded, color: AppTheme.errorColor),
                 onPressed: onRetry,
                 tooltip: 'Coba lagi',
               ),
@@ -102,7 +102,7 @@ class AppErrorState extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: AppTheme.errorLight,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.error_outline_rounded,
                 size: 40,
                 color: AppTheme.errorColor,

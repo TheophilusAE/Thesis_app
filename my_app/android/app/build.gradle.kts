@@ -1,12 +1,14 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    // Firebase Cloud Messaging config from google-services.json (not in git)
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace = "com.mycompany.my_app"
+    namespace = "com.gpdipersadamas.app"
     compileSdk = 34  // Set explicitly to support sign_in_with_apple and other plugins
     ndkVersion = flutter.ndkVersion
 
@@ -24,8 +26,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.mycompany.my_app"
+        // Registered in Firebase (project gpdi-persadamas) — keep in sync with google-services.json.
+        applicationId = "com.gpdipersadamas.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

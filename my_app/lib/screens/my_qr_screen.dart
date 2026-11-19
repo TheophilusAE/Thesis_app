@@ -80,7 +80,7 @@ class _MyQrScreenState extends State<MyQrScreen> {
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Colors.white, // QR must stay dark-on-white to scan
                             borderRadius: BorderRadius.circular(28),
                             border: Border.all(color: AppTheme.neutralBorder),
                           ),

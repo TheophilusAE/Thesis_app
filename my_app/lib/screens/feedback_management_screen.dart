@@ -61,7 +61,7 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
       child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Manajemen Feedback',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -70,7 +70,7 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -80,13 +80,13 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
             children: [
               // Filter and Sort Section
               Container(
-                color: Colors.white,
+                color: AppTheme.surface,
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Type Filter
-                    const Text(
+                    Text(
                       'Filter Kategori',
                       style: TextStyle(
                         fontSize: 13,
@@ -142,7 +142,7 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
                     // Sort Options
                     Row(
                       children: [
-                        const Text(
+                        Text(
                           'Urutkan:',
                           style: TextStyle(
                             fontSize: 13,
@@ -164,8 +164,8 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
                               child: DropdownButton<String>(
                                 value: _sortBy,
                                 isDense: true,
-                                icon: const Icon(Icons.arrow_drop_down, color: AppTheme.primary),
-                                style: const TextStyle(
+                                icon: Icon(Icons.arrow_drop_down, color: AppTheme.primary),
+                                style: TextStyle(
                                   fontSize: 13,
                                   color: AppTheme.darkCharcoal,
                                   fontWeight: FontWeight.w600,
@@ -194,12 +194,12 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
                   ],
                 ),
               ),
-              const Divider(height: 1, color: AppTheme.neutralBorder),
+              Divider(height: 1, color: AppTheme.neutralBorder),
 
               // Feedback List
               Expanded(
                 child: provider.isLoading
-                    ? const Center(
+                    ? Center(
                         child: CircularProgressIndicator(color: AppTheme.primary),
                       )
                     : provider.filteredFeedback.isEmpty
@@ -238,7 +238,7 @@ class _FeedbackManagementScreenState extends State<FeedbackManagementScreen> {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.pop(context, false),
-                                            child: const Text(
+                                            child: Text(
                                               'Batal',
                                               style: TextStyle(color: AppTheme.mutedCharcoal),
                                             ),
@@ -391,7 +391,7 @@ class FeedbackCard extends StatelessWidget {
               const Spacer(),
               if (onDelete != null)
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorColor, size: 20),
+                icon: Icon(Icons.delete_outline_rounded, color: AppTheme.errorColor, size: 20),
                 visualDensity: VisualDensity.compact,
                 onPressed: onDelete,
               ),
@@ -401,11 +401,11 @@ class FeedbackCard extends StatelessWidget {
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.event_rounded, size: 14, color: AppTheme.mutedCharcoal),
+                Icon(Icons.event_rounded, size: 14, color: AppTheme.mutedCharcoal),
                 const SizedBox(width: 4),
                 Text(
                   'Event: ${feedback.eventName}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.mutedCharcoal,
@@ -428,7 +428,7 @@ class FeedbackCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 '${feedback.rating}/5',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.darkCharcoal,
@@ -449,7 +449,7 @@ class FeedbackCard extends StatelessWidget {
             ),
             child: Text(
               feedback.message,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13.5,
                 color: AppTheme.darkCharcoal,
                 height: 1.45,
@@ -478,7 +478,7 @@ class FeedbackCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     feedback.isAnonymous ? 'Anonim' : feedback.userName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.darkCharcoal,
@@ -488,11 +488,11 @@ class FeedbackCard extends StatelessWidget {
               ),
               Row(
                 children: [
-                  const Icon(Icons.access_time_rounded, size: 13, color: AppTheme.mutedCharcoal),
+                  Icon(Icons.access_time_rounded, size: 13, color: AppTheme.mutedCharcoal),
                   const SizedBox(width: 4),
                   Text(
                     DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(feedback.createdAt),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       color: AppTheme.mutedCharcoal,
                     ),

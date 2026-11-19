@@ -73,14 +73,14 @@ class _AddEditTrainingScheduleScreenState
       appBar: AppBar(
         title: Text(
           isEditing ? 'Edit Jadwal Latihan' : 'Tambah Jadwal Latihan',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.darkCharcoal,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
       ),
       body: SingleChildScrollView(
@@ -340,7 +340,7 @@ class _AddEditTrainingScheduleScreenState
         if (!mounted) return;
         if (!success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Gagal memperbarui jadwal latihan. Periksa koneksi lalu coba lagi.'),
               backgroundColor: AppTheme.errorColor,
             ),
@@ -376,7 +376,7 @@ class _AddEditTrainingScheduleScreenState
         if (!mounted) return;
         if (!success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Gagal menyimpan jadwal latihan. Periksa koneksi lalu coba lagi.'),
               backgroundColor: AppTheme.errorColor,
             ),

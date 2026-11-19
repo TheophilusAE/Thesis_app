@@ -42,7 +42,7 @@ class PendingApprovalScreen extends StatelessWidget {
                           ? 'Pendaftaran Ditolak'
                           : 'Registrasi Berhasil',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.darkCharcoal,
@@ -56,7 +56,7 @@ class PendingApprovalScreen extends StatelessWidget {
                           ? 'Pendaftaran akun Anda ditolak. Silakan hubungi admin gereja.'
                           : 'Akun Anda sedang menunggu verifikasi admin gereja.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     height: 1.4,
                     color: AppTheme.mutedCharcoal,

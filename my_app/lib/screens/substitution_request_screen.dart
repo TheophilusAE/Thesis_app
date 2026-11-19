@@ -92,7 +92,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -119,7 +119,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
+            Text(
               'Ajukan Penggantian Tugas',
               style: TextStyle(
                 fontSize: 18,
@@ -128,7 +128,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Permohonan akan diteruskan ke Tim Koordinator Pelayanan untuk ditinjau dan disetujui.',
               style: TextStyle(
                 fontSize: 13,
@@ -150,7 +150,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                 children: [
                   Text(
                     schedule.serviceType,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14.5,
                       color: AppTheme.darkCharcoal,
@@ -159,18 +159,18 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded, size: 13.5, color: AppTheme.neutralMedium),
+                      Icon(Icons.calendar_today_rounded, size: 13.5, color: AppTheme.neutralMedium),
                       const SizedBox(width: 6),
                       Text(
                         DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(schedule.serviceDate),
-                        style: const TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
+                        style: TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
                       ),
                       const SizedBox(width: 12),
-                      const Icon(Icons.schedule_rounded, size: 13.5, color: AppTheme.neutralMedium),
+                      Icon(Icons.schedule_rounded, size: 13.5, color: AppTheme.neutralMedium),
                       const SizedBox(width: 6),
                       Text(
                         '${schedule.startTime} - ${schedule.endTime}',
-                        style: const TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
+                        style: TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
                       ),
                     ],
                   ),
@@ -321,7 +321,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                       Expanded(
                         child: Text(
                           schedule.serviceType,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             color: AppTheme.darkCharcoal,
@@ -349,22 +349,22 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.neutralMedium),
+                      Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.neutralMedium),
                       const SizedBox(width: 8),
                       Text(
                         DateFormat('EEEE, dd MMM yyyy', 'id_ID').format(schedule.serviceDate),
-                        style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
+                        style: TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.schedule_rounded, size: 14, color: AppTheme.neutralMedium),
+                      Icon(Icons.schedule_rounded, size: 14, color: AppTheme.neutralMedium),
                       const SizedBox(width: 8),
                       Text(
-                        '${schedule.startTime} - ${schedule.endTime} WIB',
-                        style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
+                        '${schedule.startTime} - ${schedule.endTime} WITA',
+                        style: TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
                       ),
                     ],
                   ),
@@ -435,7 +435,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                       Expanded(
                         child: Text(
                           serviceTitle,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             color: AppTheme.darkCharcoal,
@@ -449,11 +449,11 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded, size: 13.5, color: AppTheme.neutralMedium),
+                      Icon(Icons.calendar_today_rounded, size: 13.5, color: AppTheme.neutralMedium),
                       const SizedBox(width: 6),
                       Text(
                         scheduleDate,
-                        style: const TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
+                        style: TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
                       ),
                     ],
                   ),
@@ -469,14 +469,14 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Alasan Berhalangan:',
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.neutralMedium),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           request.reason,
-                          style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
+                          style: TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
                         ),
                       ],
                     ),
@@ -486,12 +486,12 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.person_outline_rounded, size: 14, color: AppTheme.neutralMedium),
+                        Icon(Icons.person_outline_rounded, size: 14, color: AppTheme.neutralMedium),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             'Pengganti disarankan: ${request.requestedReplacementName}',
-                            style: const TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
+                            style: TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
                           ),
                         ),
                       ],
@@ -508,7 +508,7 @@ class _SubstitutionRequestScreenState extends State<SubstitutionRequestScreen>
                         Expanded(
                           child: Text(
                             'Digantikan oleh: ${request.replacementName}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
                               color: AppTheme.darkCharcoal,
                               fontWeight: FontWeight.w600,

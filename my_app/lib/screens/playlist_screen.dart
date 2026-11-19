@@ -125,7 +125,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(formError!,
-                          style: const TextStyle(color: AppTheme.errorColor, fontSize: 12.5)),
+                          style: TextStyle(color: AppTheme.errorColor, fontSize: 12.5)),
                     ),
                 ],
               ),
@@ -234,7 +234,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Playlist Ibadah',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -243,7 +243,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -260,7 +260,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         future: _todayFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+            return Center(child: CircularProgressIndicator(color: AppTheme.primary));
           }
 
           if (snapshot.hasError) {
@@ -366,7 +366,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   Widget _buildSongList(Playlist playlist) {
     if (playlist.songs.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.all(24),
         child: Center(
           child: Text('Belum ada lagu dalam playlist ini',
@@ -386,7 +386,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppTheme.neutralBorder),
             boxShadow: [
@@ -403,12 +403,12 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
               child: Text(
                 '${index + 1}',
-                style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
               ),
             ),
             title: Text(
               song.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.darkCharcoal,
                 fontSize: 14.5,
@@ -416,16 +416,16 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             ),
             subtitle: Text(
               song.artist.isEmpty ? (hasLink ? 'Ketuk untuk membuka tautan' : '-') : song.artist,
-              style: const TextStyle(fontSize: 12.5, color: AppTheme.mutedCharcoal),
+              style: TextStyle(fontSize: 12.5, color: AppTheme.mutedCharcoal),
             ),
             trailing: hasLyrics
                 ? IconButton(
                     tooltip: 'Lihat lirik',
-                    icon: const Icon(Icons.lyrics_outlined, color: AppTheme.primary),
+                    icon: Icon(Icons.lyrics_outlined, color: AppTheme.primary),
                     onPressed: () => _showLyrics(context, song),
                   )
                 : hasLink
-                    ? const Icon(Icons.open_in_new_rounded, color: AppTheme.primary, size: 20)
+                    ? Icon(Icons.open_in_new_rounded, color: AppTheme.primary, size: 20)
                     : null,
             onTap: () => _onSongTap(song),
           ),
@@ -440,7 +440,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Playlist Sebelumnya',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.darkCharcoal),
           ),
@@ -449,7 +449,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             future: _historyFuture,
             builder: (context, snapshot) {
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Text('Belum ada playlist sebelumnya',
+                return Text('Belum ada playlist sebelumnya',
                     style: TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal));
               }
               return Column(
@@ -470,7 +470,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                           color: AppTheme.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.playlist_play_rounded, color: AppTheme.primary),
+                        child: Icon(Icons.playlist_play_rounded, color: AppTheme.primary),
                       ),
                       title: Text(
                         pl.title,
@@ -478,9 +478,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                       ),
                       subtitle: Text(
                         '${pl.songs.length} lagu',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
+                        style: TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
                       ),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                      trailing: Icon(Icons.arrow_forward_ios_rounded,
                           size: 14, color: AppTheme.mutedCharcoal),
                       onTap: () => setState(() => _selectedPlaylist = pl),
                     ),

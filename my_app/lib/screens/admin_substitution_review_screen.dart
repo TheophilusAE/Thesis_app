@@ -166,7 +166,7 @@ class _AdminSubstitutionReviewScreenState
                 const SizedBox(height: 4),
                 Text(
                   'Alasan: ${request.reason}',
-                  style: const TextStyle(fontSize: 13, color: AppTheme.neutralMedium),
+                  style: TextStyle(fontSize: 13, color: AppTheme.neutralMedium),
                 ),
                 if (request.requestedReplacementName != null &&
                     request.requestedReplacementName!.isNotEmpty) ...[
@@ -182,7 +182,7 @@ class _AdminSubstitutionReviewScreenState
                 ],
                 const SizedBox(height: 16),
                 if (candidates.isEmpty)
-                  const Text(
+                  Text(
                     'Tidak ada pelayan aktif lain yang dapat ditugaskan.',
                     style: TextStyle(fontSize: 13, color: AppTheme.errorColor),
                   )
@@ -349,7 +349,7 @@ class _AdminSubstitutionReviewScreenState
                 const SizedBox(height: 4),
                 Text(
                   'Alasan: ${request.reason}',
-                  style: const TextStyle(fontSize: 13, color: AppTheme.neutralMedium),
+                  style: TextStyle(fontSize: 13, color: AppTheme.neutralMedium),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -457,7 +457,7 @@ class _AdminSubstitutionReviewScreenState
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Review Penggantian Tugas',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -465,7 +465,7 @@ class _AdminSubstitutionReviewScreenState
             fontSize: 18,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -473,7 +473,7 @@ class _AdminSubstitutionReviewScreenState
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.white,
+            color: AppTheme.surface,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -539,7 +539,7 @@ class _AdminSubstitutionReviewScreenState
                                     children: [
                                       Text(
                                         request.requestedByName,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.w700,
                                           fontSize: 16,
                                           color: AppTheme.darkCharcoal,
@@ -548,7 +548,7 @@ class _AdminSubstitutionReviewScreenState
                                       const SizedBox(height: 2),
                                       Text(
                                         schedule?.serviceType ?? 'Jadwal tidak ditemukan',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500,
                                           color: AppTheme.neutralMuted,
@@ -565,12 +565,12 @@ class _AdminSubstitutionReviewScreenState
                             ),
 
                             const SizedBox(height: 12),
-                            const Divider(height: 1, color: AppTheme.neutralBorder),
+                            Divider(height: 1, color: AppTheme.neutralBorder),
                             const SizedBox(height: 12),
 
                             Row(
                               children: [
-                                const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.neutralMuted),
+                                Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.neutralMuted),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
@@ -578,7 +578,7 @@ class _AdminSubstitutionReviewScreenState
                                         ? 'Tanggal tidak diketahui'
                                         : '${DateFormat('EEEE, dd MMM yyyy', 'id_ID').format(schedule.serviceDate)}'
                                             ' • ${schedule.startTime}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12.5,
                                       color: AppTheme.darkCharcoal,
                                       fontWeight: FontWeight.w500,
@@ -591,12 +591,12 @@ class _AdminSubstitutionReviewScreenState
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.notes_rounded, size: 14, color: AppTheme.neutralMuted),
+                                Icon(Icons.notes_rounded, size: 14, color: AppTheme.neutralMuted),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     'Alasan: ${request.reason}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12.5,
                                       color: AppTheme.neutralMedium,
                                     ),
@@ -610,12 +610,12 @@ class _AdminSubstitutionReviewScreenState
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  const Icon(Icons.person_search_rounded, size: 14, color: AppTheme.neutralMuted),
+                                  Icon(Icons.person_search_rounded, size: 14, color: AppTheme.neutralMuted),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
                                       'Saran pemohon: ${request.requestedReplacementName}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12.5,
                                         color: AppTheme.neutralMedium,
                                       ),
@@ -659,7 +659,7 @@ class _AdminSubstitutionReviewScreenState
                                 ),
                                 child: Text(
                                   'Catatan Admin: ${request.adminNotes}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
                                     color: AppTheme.neutralMedium,
                                     fontStyle: FontStyle.italic,
@@ -677,7 +677,7 @@ class _AdminSubstitutionReviewScreenState
                                     child: OutlinedButton(
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: AppTheme.error,
-                                        side: const BorderSide(color: AppTheme.error),
+                                        side: BorderSide(color: AppTheme.error),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),
                                         ),
@@ -731,7 +731,7 @@ class _AdminSubstitutionReviewScreenState
         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
         color: isSelected ? AppTheme.primary : AppTheme.darkCharcoal,
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       selectedColor: AppTheme.primaryLight,
       side: BorderSide(
         color: isSelected ? AppTheme.primary : AppTheme.neutralBorder,

@@ -56,7 +56,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Batal', style: TextStyle(color: AppTheme.mutedCharcoal)),
+            child: Text('Batal', style: TextStyle(color: AppTheme.mutedCharcoal)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -108,7 +108,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
       child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Kelola Group',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -117,7 +117,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -129,29 +129,29 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
             children: [
               // Search & Filter Header
               Container(
-                color: Colors.white,
+                color: AppTheme.surface,
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     TextField(
                       decoration: InputDecoration(
                         hintText: 'Cari group, wilayah, pemimpin...',
-                        hintStyle: const TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
-                        prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
+                        hintStyle: TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
+                        prefixIcon: Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         filled: true,
                         fillColor: AppTheme.warmIvory,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                          borderSide: BorderSide(color: AppTheme.neutralBorder),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                          borderSide: BorderSide(color: AppTheme.neutralBorder),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                          borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
                         ),
                       ),
                       onChanged: (v) => setState(() => _searchQuery = v.trim()),
@@ -178,12 +178,12 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                   ],
                 ),
               ),
-              const Divider(height: 1, color: AppTheme.neutralBorder),
+              Divider(height: 1, color: AppTheme.neutralBorder),
 
               // ChurchGroup List
               Expanded(
                 child: provider.isLoading
-                    ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                    ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
                     : filteredList.isEmpty
                         ? AppEmptyState(
                             icon: Icons.groups_outlined,
@@ -216,7 +216,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                                               children: [
                                                 Text(
                                                   churchGroup.nama,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 16,
                                                     color: AppTheme.darkCharcoal,
@@ -225,7 +225,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                                                 const SizedBox(height: 4),
                                                 Row(
                                                   children: [
-                                                    const Icon(
+                                                    Icon(
                                                       Icons.location_on_outlined,
                                                       size: 14,
                                                       color: AppTheme.primary,
@@ -253,12 +253,12 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                                           if (canModify) ...[
                                             const SizedBox(width: 4),
                                             IconButton(
-                                              icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
+                                              icon: Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
                                               visualDensity: VisualDensity.compact,
                                               onPressed: () => _edit(churchGroup),
                                             ),
                                             IconButton(
-                                              icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.errorColor),
+                                              icon: Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.errorColor),
                                               visualDensity: VisualDensity.compact,
                                               onPressed: () => _delete(churchGroup),
                                             ),
@@ -266,18 +266,18 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                                         ],
                                       ),
                                       const SizedBox(height: 12),
-                                      const Divider(height: 1, color: AppTheme.neutralBorder),
+                                      Divider(height: 1, color: AppTheme.neutralBorder),
                                       const SizedBox(height: 10),
 
                                       // Leader & Schedule Details
                                       Row(
                                         children: [
-                                          const Icon(Icons.person_outline_rounded, size: 15, color: AppTheme.mutedCharcoal),
+                                          Icon(Icons.person_outline_rounded, size: 15, color: AppTheme.mutedCharcoal),
                                           const SizedBox(width: 6),
                                           Expanded(
                                             child: Text(
                                               '${churchGroup.leaderName}${churchGroup.leaderPhone.isNotEmpty ? " • ${churchGroup.leaderPhone}" : ""}',
-                                              style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
+                                              style: TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
                                             ),
                                           ),
                                         ],
@@ -285,12 +285,12 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                                       const SizedBox(height: 6),
                                       Row(
                                         children: [
-                                          const Icon(Icons.schedule_rounded, size: 15, color: AppTheme.mutedCharcoal),
+                                          Icon(Icons.schedule_rounded, size: 15, color: AppTheme.mutedCharcoal),
                                           const SizedBox(width: 6),
                                           Expanded(
                                             child: Text(
                                               churchGroup.meetingSchedule,
-                                              style: const TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
+                                              style: TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
                                             ),
                                           ),
                                         ],
@@ -299,12 +299,12 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                                         const SizedBox(height: 6),
                                         Row(
                                           children: [
-                                            const Icon(Icons.home_outlined, size: 15, color: AppTheme.mutedCharcoal),
+                                            Icon(Icons.home_outlined, size: 15, color: AppTheme.mutedCharcoal),
                                             const SizedBox(width: 6),
                                             Expanded(
                                               child: Text(
                                                 churchGroup.location,
-                                                style: const TextStyle(fontSize: 12.5, color: AppTheme.mutedCharcoal),
+                                                style: TextStyle(fontSize: 12.5, color: AppTheme.mutedCharcoal),
                                               ),
                                             ),
                                           ],

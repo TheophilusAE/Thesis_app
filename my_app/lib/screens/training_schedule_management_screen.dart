@@ -53,7 +53,7 @@ class _TrainingScheduleManagementScreenState
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Jadwal Latihan',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -61,7 +61,7 @@ class _TrainingScheduleManagementScreenState
             fontSize: 18,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -70,7 +70,7 @@ class _TrainingScheduleManagementScreenState
           // Search & Filter Header
           Container(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            color: Colors.white,
+            color: AppTheme.surface,
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -79,7 +79,7 @@ class _TrainingScheduleManagementScreenState
                   color: AppTheme.neutralMuted.withValues(alpha: 0.8),
                   fontSize: 13.5,
                 ),
-                prefixIcon: const Icon(
+                prefixIcon: Icon(
                   Icons.search_rounded,
                   color: AppTheme.primary,
                   size: 22,
@@ -95,15 +95,15 @@ class _TrainingScheduleManagementScreenState
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                  borderSide: BorderSide(color: AppTheme.neutralBorder),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                  borderSide: BorderSide(color: AppTheme.neutralBorder),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                  borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
                 ),
               ),
             ),
@@ -114,7 +114,7 @@ class _TrainingScheduleManagementScreenState
             child: Consumer<TrainingScheduleProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
-                  return const Center(
+                  return Center(
                     child: CircularProgressIndicator(color: AppTheme.primary),
                   );
                 }
@@ -237,7 +237,7 @@ class _TrainingScheduleManagementScreenState
                 );
               }
             },
-            child: const Text('Hapus', style: TextStyle(color: AppTheme.error)),
+            child: Text('Hapus', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),
@@ -287,7 +287,7 @@ class _TrainingScheduleCard extends StatelessWidget {
                   children: [
                     Text(
                       schedule.nama,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.darkCharcoal,
@@ -297,7 +297,7 @@ class _TrainingScheduleCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         schedule.deskripsi,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           color: AppTheme.neutralMuted,
                           height: 1.3,
@@ -314,14 +314,14 @@ class _TrainingScheduleCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
+                    icon: Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
                     onPressed: onEdit,
                     tooltip: 'Edit',
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     padding: EdgeInsets.zero,
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
+                    icon: Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
                     onPressed: onDelete,
                     tooltip: 'Hapus',
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -333,17 +333,17 @@ class _TrainingScheduleCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 12),
-          const Divider(height: 1, color: AppTheme.neutralBorder),
+          Divider(height: 1, color: AppTheme.neutralBorder),
           const SizedBox(height: 12),
 
           Row(
             children: [
-              const Icon(Icons.calendar_today_rounded, size: 15, color: AppTheme.neutralMuted),
+              Icon(Icons.calendar_today_rounded, size: 15, color: AppTheme.neutralMuted),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   dateStr,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppTheme.darkCharcoal,
                     fontWeight: FontWeight.w500,
@@ -355,11 +355,11 @@ class _TrainingScheduleCard extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.access_time_rounded, size: 15, color: AppTheme.neutralMuted),
+              Icon(Icons.access_time_rounded, size: 15, color: AppTheme.neutralMuted),
               const SizedBox(width: 8),
               Text(
                 '${schedule.startTime} - ${schedule.endTime}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   color: AppTheme.darkCharcoal,
                   fontWeight: FontWeight.w500,
@@ -371,12 +371,12 @@ class _TrainingScheduleCard extends StatelessWidget {
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, size: 15, color: AppTheme.neutralMuted),
+                Icon(Icons.location_on_outlined, size: 15, color: AppTheme.neutralMuted),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     schedule.lokasi,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: AppTheme.darkCharcoal,
                       fontWeight: FontWeight.w500,
@@ -397,11 +397,11 @@ class _TrainingScheduleCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.people_outline_rounded, size: 14, color: AppTheme.neutralMuted),
+                Icon(Icons.people_outline_rounded, size: 14, color: AppTheme.neutralMuted),
                 const SizedBox(width: 6),
                 Text(
                   '${schedule.pelayaniIds.length} Peserta Terdaftar',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.darkCharcoal,

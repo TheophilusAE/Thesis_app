@@ -989,7 +989,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
       child: Scaffold(
         backgroundColor: AppTheme.warmIvory,
         appBar: AppBar(
-          title: const Text(
+          title: Text(
             'Kelola Data',
             style: TextStyle(
               color: AppTheme.darkCharcoal,
@@ -997,7 +997,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
               fontSize: 18,
             ),
           ),
-          backgroundColor: Colors.white,
+          backgroundColor: AppTheme.surface,
           foregroundColor: AppTheme.darkCharcoal,
           elevation: 0,
           bottom: TabBar(
@@ -1013,7 +1013,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
-            indicator: const UnderlineTabIndicator(
+            indicator: UnderlineTabIndicator(
               borderSide: BorderSide(color: AppTheme.primary, width: 3),
               insets: EdgeInsets.symmetric(horizontal: 8),
             ),
@@ -1026,7 +1026,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
             IconButton(
               tooltip: 'Muat ulang',
               onPressed: _reloadAll,
-              icon: const Icon(Icons.refresh_rounded, color: AppTheme.darkCharcoal),
+              icon: Icon(Icons.refresh_rounded, color: AppTheme.darkCharcoal),
             ),
           ],
         ),
@@ -1626,7 +1626,7 @@ class _AdminManagementScreenState extends State<AdminManagementScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.15)),
         boxShadow: [
@@ -1924,7 +1924,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
@@ -1938,10 +1938,10 @@ class _AdminEventTabState extends State<_AdminEventTab> {
               children: [
                 Text(
                   existing == null ? 'Buat Event Baru' : 'Edit Event',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937)),
+                      color: AppTheme.darkCharcoal),
                 ),
                 const SizedBox(height: 16),
                 _field(titleCtrl, 'Judul Event'),
@@ -2000,7 +2000,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
+                      color: AppTheme.neutralLight,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -2011,8 +2011,8 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                         Text(
                           DateFormat('EEE, d MMM yyyy • HH:mm')
                               .format(selectedDate),
-                          style: const TextStyle(
-                              fontSize: 14, color: Color(0xFF1F2937)),
+                          style: TextStyle(
+                              fontSize: 14, color: AppTheme.darkCharcoal),
                         ),
                         const Spacer(),
                         const Icon(Icons.edit_rounded,
@@ -2169,7 +2169,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => DraggableScrollableSheet(
@@ -2187,10 +2187,10 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(event.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937))),
+                                color: AppTheme.darkCharcoal)),
                         Text(
                             '${regs.where((r) => r.isActive).length} pendaftaran aktif • '
                             '${regs.where((r) => r.isAttended).length} sudah check-in • '
@@ -2235,10 +2235,10 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                         return Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: AppTheme.surface,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                                color: const Color(0xFFE2E8F0)),
+                                color: AppTheme.neutralBorder),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2264,10 +2264,10 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(r.userName ?? '-',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 fontWeight: FontWeight.w700,
                                                 fontSize: 13.5,
-                                                color: Color(0xFF1F2937))),
+                                                color: AppTheme.darkCharcoal)),
                                         if (r.userEmail != null)
                                           Text(r.userEmail!,
                                               style: const TextStyle(
@@ -2316,7 +2316,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
                                                     horizontal: 8,
                                                     vertical: 3),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFF1F5F9),
+                                              color: AppTheme.neutralLight,
                                               borderRadius:
                                                   BorderRadius.circular(6),
                                             ),
@@ -2360,7 +2360,7 @@ class _AdminEventTabState extends State<_AdminEventTab> {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const Color(0xFFF1F5F9),
+        fillColor: AppTheme.neutralLight,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         border: OutlineInputBorder(
@@ -2401,12 +2401,12 @@ class _AdminEventCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
             color: event.isActive
                 ? const Color(0xFF1E3A8A).withValues(alpha: 0.2)
-                : const Color(0xFFE2E8F0)),
+                : AppTheme.neutralBorder),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -2425,10 +2425,10 @@ class _AdminEventCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(event.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 14.5,
-                            color: Color(0xFF1F2937))),
+                            color: AppTheme.darkCharcoal)),
                     const SizedBox(height: 4),
                     Row(
                       children: [

@@ -57,7 +57,7 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Batal', style: TextStyle(color: AppTheme.mutedCharcoal)),
+            child: Text('Batal', style: TextStyle(color: AppTheme.mutedCharcoal)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -108,7 +108,7 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
       child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Kelola Khotbah',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -117,7 +117,7 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -129,29 +129,29 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
             children: [
               // Search & Filter Header
               Container(
-                color: Colors.white,
+                color: AppTheme.surface,
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     TextField(
                       decoration: InputDecoration(
                         hintText: 'Cari judul khotbah, pembicara...',
-                        hintStyle: const TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
-                        prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
+                        hintStyle: TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
+                        prefixIcon: Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         filled: true,
                         fillColor: AppTheme.warmIvory,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                          borderSide: BorderSide(color: AppTheme.neutralBorder),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                          borderSide: BorderSide(color: AppTheme.neutralBorder),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                          borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
                         ),
                       ),
                       onChanged: (v) => setState(() => _searchQuery = v.trim()),
@@ -178,12 +178,12 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
                   ],
                 ),
               ),
-              const Divider(height: 1, color: AppTheme.neutralBorder),
+              Divider(height: 1, color: AppTheme.neutralBorder),
 
               // Sermons List
               Expanded(
                 child: provider.isLoading
-                    ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                    ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
                     : filteredList.isEmpty
                         ? AppEmptyState(
                             icon: Icons.video_library_outlined,
@@ -213,7 +213,7 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
                                           const SizedBox(width: 8),
                                           Text(
                                             DateFormat('dd MMM yyyy', 'id_ID').format(sermon.sermonDate),
-                                            style: const TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
+                                            style: TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
                                           ),
                                           const Spacer(),
                                           AppStatusBadge(
@@ -225,12 +225,12 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
                                           if (canModify) ...[
                                             const SizedBox(width: 4),
                                             IconButton(
-                                              icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
+                                              icon: Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
                                               visualDensity: VisualDensity.compact,
                                               onPressed: () => _edit(sermon),
                                             ),
                                             IconButton(
-                                              icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.errorColor),
+                                              icon: Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.errorColor),
                                               visualDensity: VisualDensity.compact,
                                               onPressed: () => _delete(sermon),
                                             ),
@@ -242,7 +242,7 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
                                       // Title
                                       Text(
                                         sermon.title,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15.5,
                                           color: AppTheme.darkCharcoal,
@@ -253,7 +253,7 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
                                       // Speaker
                                       Row(
                                         children: [
-                                          const Icon(Icons.person_outline_rounded, size: 15, color: AppTheme.primary),
+                                          Icon(Icons.person_outline_rounded, size: 15, color: AppTheme.primary),
                                           const SizedBox(width: 6),
                                           Text(
                                             sermon.speaker,
@@ -272,7 +272,7 @@ class _SermonManagementScreenState extends State<SermonManagementScreen> {
                                           sermon.description,
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 12.5, color: AppTheme.mutedCharcoal),
+                                          style: TextStyle(fontSize: 12.5, color: AppTheme.mutedCharcoal),
                                         ),
                                       ],
                                     ],

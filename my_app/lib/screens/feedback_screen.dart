@@ -79,7 +79,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           Navigator.of(context).pop(true);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Gagal mengirim feedback. Silakan coba lagi.'),
               backgroundColor: AppTheme.primary,
             ),
@@ -169,7 +169,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                       color: AppTheme.primary.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.rate_review_outlined, color: AppTheme.primary, size: 24),
+                    child: Icon(Icons.rate_review_outlined, color: AppTheme.primary, size: 24),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -195,7 +195,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Bagaimana Penilaian Anda?',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -250,7 +250,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   const SizedBox(height: 24),
 
                   // Message Input
-                  const Text(
+                  Text(
                     'Saran & Masukan',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
@@ -262,23 +262,23 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   TextField(
                     controller: _messageController,
                     maxLines: 5,
-                    style: const TextStyle(fontSize: 14, color: AppTheme.darkCharcoal),
+                    style: TextStyle(fontSize: 14, color: AppTheme.darkCharcoal),
                     decoration: InputDecoration(
                       hintText: 'Tuliskan tanggapan, kritik membangun, atau apresiasi Anda...',
-                      hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
+                      hintStyle: TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
                       filled: true,
                       fillColor: AppTheme.warmIvory,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                        borderSide: BorderSide(color: AppTheme.neutralBorder),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                        borderSide: BorderSide(color: AppTheme.neutralBorder),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                        borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
                       ),
                       contentPadding: const EdgeInsets.all(14),
                     ),
@@ -296,9 +296,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.visibility_off_outlined, color: AppTheme.neutralMedium, size: 20),
+                        Icon(Icons.visibility_off_outlined, color: AppTheme.neutralMedium, size: 20),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -419,7 +419,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(22),
@@ -435,10 +435,10 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
                       color: AppTheme.primaryLight,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.rate_review_outlined, color: AppTheme.primary, size: 20),
+                    child: Icon(Icons.rate_review_outlined, color: AppTheme.primary, size: 20),
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Berikan Masukan',
                       style: TextStyle(
@@ -476,20 +476,20 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
                 style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Tulis saran atau evaluasi Anda...',
-                  hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
+                  hintStyle: TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
                   filled: true,
                   fillColor: AppTheme.warmIvory,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                    borderSide: BorderSide(color: AppTheme.neutralBorder),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                    borderSide: BorderSide(color: AppTheme.neutralBorder),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                    borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
                   ),
                 ),
               ),
@@ -511,7 +511,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
                 children: [
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    child: const Text('Batal', style: TextStyle(color: AppTheme.neutralMedium)),
+                    child: Text('Batal', style: TextStyle(color: AppTheme.neutralMedium)),
                   ),
                   const SizedBox(width: 8),
                   AppButton(

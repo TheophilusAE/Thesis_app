@@ -96,7 +96,7 @@ class RoleSwitcher extends StatelessWidget {
                       color: isDark ? const Color(0xFF4A131A) : AppTheme.primaryLight,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.switch_account_rounded,
                       color: AppTheme.primary,
                       size: 22,
@@ -300,14 +300,14 @@ class RoleSwitcher extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.primary,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(
+                  Icon(
                     Icons.arrow_drop_down_rounded,
                     size: 18,
                     color: AppTheme.primary,

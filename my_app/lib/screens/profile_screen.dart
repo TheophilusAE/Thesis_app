@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/checkin_provider.dart';
@@ -134,6 +135,11 @@ class _ProfileBody extends StatelessWidget {
                       value: user.memberCardNumber ?? '-',
                     ),
                     _InfoRow(
+                      icon: Icons.cake_outlined,
+                      label: 'Tanggal Lahir',
+                      value: user.birthDate == null ? '-' : DateFormat('d MMMM yyyy', 'id_ID').format(user.birthDate!),
+                    ),
+                    _InfoRow(
                       icon: Icons.water_drop_outlined,
                       label: 'Tanggal Baptis',
                       value: user.baptismDate ?? '-',
@@ -224,7 +230,7 @@ class _ProfileBody extends StatelessWidget {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.darkCharcoal,
-                    side: const BorderSide(color: AppTheme.neutralBorder),
+                    side: BorderSide(color: AppTheme.neutralBorder),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -379,7 +385,7 @@ class _ProfileHeader extends StatelessWidget {
                   backgroundColor: theme.colorScheme.surface,
                   child: Text(
                     initials,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 32,
                       color: AppTheme.primary,
                       fontWeight: FontWeight.w800,
@@ -645,6 +651,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   late final TextEditingController _nikCtrl;
   String? _groupId;
   String? _baptism;
+  DateTime? _birthDate;
   bool _saving = false;
 
   static String? _blankToNull(String v) => v.trim().isEmpty ? null : v.trim();
@@ -657,6 +664,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _addressCtrl = TextEditingController(text: widget.user.address ?? '');
     _nikCtrl = TextEditingController(text: widget.user.identityNumber ?? '');
     _groupId = widget.user.groupId;
+    _birthDate = widget.user.birthDate;
     final b = widget.user.baptismDate;
     _baptism = (b == 'Sudah' || b == 'Belum') ? b : null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -713,7 +721,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       memberCardNumber: u.memberCardNumber,
       profileImage: u.profileImage,
       address: _blankToNull(_addressCtrl.text),
-      birthDate: u.birthDate,
+      birthDate: _birthDate,
       baptismDate: _baptism,
       memberSince: u.memberSince,
     );
@@ -805,6 +813,36 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               onChanged: (v) => setState(() => _groupId = v),
             );
           }),
+          const SizedBox(height: 14),
+          // Tanggal lahir: used for the church's birthday greetings.
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () async {
+              final now = DateTime.now();
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _birthDate ?? DateTime(now.year - 20),
+                firstDate: DateTime(1900),
+                lastDate: now,
+                helpText: 'Tanggal Lahir',
+              );
+              if (picked != null) setState(() => _birthDate = picked);
+            },
+            child: InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Tanggal Lahir (opsional)',
+                prefixIcon: const Icon(Icons.cake_outlined),
+                suffixIcon: _birthDate == null
+                    ? null
+                    : IconButton(
+                        tooltip: 'Hapus tanggal lahir',
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () => setState(() => _birthDate = null),
+                      ),
+              ),
+              child: Text(_birthDate == null ? '-' : DateFormat('d MMMM yyyy', 'id_ID').format(_birthDate!)),
+            ),
+          ),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
             initialValue: _baptism,

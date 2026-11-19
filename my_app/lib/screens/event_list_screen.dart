@@ -198,7 +198,7 @@ class _EventCardState extends State<_EventCard> {
                           ),
                           Text(
                             DateFormat('MMM', 'id_ID').format(widget.event.date).toUpperCase(),
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.goldLight,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -227,11 +227,11 @@ class _EventCardState extends State<_EventCard> {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              const Icon(Icons.access_time_rounded, size: 14, color: AppTheme.goldLight),
+                              Icon(Icons.access_time_rounded, size: 14, color: AppTheme.goldLight),
                               const SizedBox(width: 4),
                               Text(
-                                '$timeStr WIB',
-                                style: const TextStyle(
+                                '$timeStr WITA',
+                                style: TextStyle(
                                   color: AppTheme.goldLight,
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -279,12 +279,12 @@ class _EventCardState extends State<_EventCard> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.calendar_month_outlined, size: 16, color: AppTheme.neutralMedium),
+                    Icon(Icons.calendar_month_outlined, size: 16, color: AppTheme.neutralMedium),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         dateStr,
-                        style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal, fontWeight: FontWeight.w500),
+                        style: TextStyle(fontSize: 13, color: AppTheme.darkCharcoal, fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -293,12 +293,12 @@ class _EventCardState extends State<_EventCard> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 16, color: AppTheme.neutralMedium),
+                      Icon(Icons.location_on_outlined, size: 16, color: AppTheme.neutralMedium),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           widget.event.location,
-                          style: const TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
+                          style: TextStyle(fontSize: 13, color: AppTheme.darkCharcoal),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -310,7 +310,7 @@ class _EventCardState extends State<_EventCard> {
                   const SizedBox(height: 10),
                   Text(
                     widget.event.description,
-                    style: const TextStyle(fontSize: 13, color: AppTheme.neutralMedium, height: 1.45),
+                    style: TextStyle(fontSize: 13, color: AppTheme.neutralMedium, height: 1.45),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -327,11 +327,11 @@ class _EventCardState extends State<_EventCard> {
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      const Icon(Icons.people_outline_rounded, size: 16, color: AppTheme.neutralMedium),
+                      Icon(Icons.people_outline_rounded, size: 16, color: AppTheme.neutralMedium),
                       const SizedBox(width: 6),
                       Text(
                         '$_registeredCount / ${widget.event.maxCapacity} Peserta',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.neutralMedium, fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: 12, color: AppTheme.neutralMedium, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -413,7 +413,7 @@ class _EventCardState extends State<_EventCard> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -476,7 +476,7 @@ class _RegisteredActions extends StatelessWidget {
                   ),
                   Text(
                     '${registration.totalCount} Orang',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.darkCharcoal,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -488,14 +488,14 @@ class _RegisteredActions extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   'Anggota: ${registration.familyMembers.map((m) => m.name).join(', ')}',
-                  style: const TextStyle(color: AppTheme.neutralMedium, fontSize: 12),
+                  style: TextStyle(color: AppTheme.neutralMedium, fontSize: 12),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
               if (!attended) ...[
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Kehadiran baru tercatat setelah Anda memindai QR presensi di lokasi event.',
                   style: TextStyle(color: AppTheme.neutralMedium, fontSize: 11.5),
                 ),
@@ -539,7 +539,7 @@ class _RegisteredActions extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -567,7 +567,7 @@ class _RegisteredActions extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tidak, Tetap Ikut', style: TextStyle(color: AppTheme.neutralMedium)),
+            child: Text('Tidak, Tetap Ikut', style: TextStyle(color: AppTheme.neutralMedium)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -747,7 +747,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                 children: [
                   Text(
                     isEdit ? 'Ubah Data Pendaftaran' : 'Formulir Pendaftaran Event',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.darkCharcoal,
@@ -756,7 +756,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                   const SizedBox(height: 2),
                   Text(
                     widget.event.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       color: AppTheme.primary,
                       fontWeight: FontWeight.w600,
@@ -765,7 +765,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                   const SizedBox(height: 2),
                   Text(
                     dateStr,
-                    style: const TextStyle(fontSize: 12, color: AppTheme.neutralMedium),
+                    style: TextStyle(fontSize: 12, color: AppTheme.neutralMedium),
                   ),
                 ],
               ),
@@ -793,7 +793,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                           backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
                           child: Text(
                             myName.isNotEmpty ? myName[0].toUpperCase() : 'A',
-                            style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -805,11 +805,11 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                                 myName,
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                               ),
-                              const Text('Pendaftar Utama (Terdaftar)', style: TextStyle(fontSize: 12, color: AppTheme.neutralMedium)),
+                              Text('Pendaftar Utama (Terdaftar)', style: TextStyle(fontSize: 12, color: AppTheme.neutralMedium)),
                             ],
                           ),
                         ),
-                        const Icon(Icons.lock_outline_rounded, size: 16, color: AppTheme.neutralMedium),
+                        Icon(Icons.lock_outline_rounded, size: 16, color: AppTheme.neutralMedium),
                       ],
                     ),
                   ),
@@ -823,7 +823,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                       _buildSectionTitle('Anggota Keluarga / Tambahan'),
                       Text(
                         '${_familyRows.length} ditambahkan',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.neutralMedium, fontWeight: FontWeight.w500),
+                        style: TextStyle(fontSize: 12, color: AppTheme.neutralMedium, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -887,7 +887,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                     label: const Text('Tambah Anggota Keluarga'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.primary,
-                      side: const BorderSide(color: AppTheme.primary),
+                      side: BorderSide(color: AppTheme.primary),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -910,7 +910,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Contoh: butuh tempat duduk khusus lansia / kursi roda...',
-                      hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 12),
+                      hintStyle: TextStyle(color: AppTheme.neutralMedium, fontSize: 12),
                       contentPadding: const EdgeInsets.all(12),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       filled: true,
@@ -949,7 +949,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
                   ),
                   if (_exceedsCapacity) ...[
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Jumlah peserta melebihi sisa kuota. Kurangi anggota keluarga untuk melanjutkan.',
                       style: TextStyle(color: AppTheme.errorColor, fontSize: 12.5),
                     ),
@@ -979,7 +979,7 @@ class _RegistrationSheetState extends State<_RegistrationSheet> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13.5,
         fontWeight: FontWeight.bold,
         color: AppTheme.darkCharcoal,

@@ -109,14 +109,14 @@ class _AddEditServiceScheduleScreenState
       appBar: AppBar(
         title: Text(
           isEditing ? 'Edit Jadwal' : 'Tambah Jadwal',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.darkCharcoal,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
       ),
       body: SingleChildScrollView(
@@ -155,7 +155,7 @@ class _AddEditServiceScheduleScreenState
                           Expanded(
                             child: Text(
                               provider.errorMessage!,
-                              style: const TextStyle(color: AppTheme.errorColor),
+                              style: TextStyle(color: AppTheme.errorColor),
                             ),
                           ),
                           TextButton(
@@ -171,7 +171,7 @@ class _AddEditServiceScheduleScreenState
                         .toList();
 
                     if (pelayaniList.isEmpty) {
-                      return const Text(
+                      return Text(
                         'Belum ada pelayan yang tersedia. Tambahkan data pelayan aktif '
                         'terlebih dahulu di menu Kelola Pelayan.',
                         style: TextStyle(color: AppTheme.mutedCharcoal),
@@ -367,7 +367,7 @@ class _AddEditServiceScheduleScreenState
                           : 'Akan dibuat ${_previewDates.length} jadwal '
                               '(${recurrencePatternLabel(_recurringPattern).toLowerCase()}) hingga '
                               '${DateFormat('dd MMM yyyy', 'id_ID').format(_previewDates.last)}.',
-                  style: const TextStyle(fontSize: 12.5, color: AppTheme.neutralMedium),
+                  style: TextStyle(fontSize: 12.5, color: AppTheme.neutralMedium),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -486,7 +486,7 @@ class _AddEditServiceScheduleScreenState
 
         if (!success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Gagal menyimpan jadwal. Pastikan Anda admin lalu coba lagi.'),
               backgroundColor: AppTheme.errorColor,
             ),

@@ -13,7 +13,16 @@ class BibleProvider with ChangeNotifier {
   String _lastBook = 'Kejadian';
   int _lastChapter = 1;
   bool _isSearchMode = false;
+  double _fontSize = defaultFontSize;
   late final Future<void> _initializationFuture;
+
+  static const double minFontSize = 14;
+  static const double maxFontSize = 32;
+  static const double defaultFontSize = 17;
+  static const double fontStep = 2;
+
+  /// Book names that were spelled wrongly in older app versions.
+  static const Map<String, String> renamedBooks = {'Trenyina': 'Ratapan'};
 
   final SupabaseService _supabaseService = SupabaseService();
   final BibleService _bibleService = BibleService();
@@ -24,6 +33,9 @@ class BibleProvider with ChangeNotifier {
   String? get error => _error;
   String get lastBook => _lastBook;
   int get lastChapter => _lastChapter;
+  double get fontSize => _fontSize;
+  bool get canDecreaseFont => _fontSize > minFontSize;
+  bool get canIncreaseFont => _fontSize < maxFontSize;
 
   BibleProvider() {
     _books.addAll(_bibleService.getBibleBooks());
@@ -35,8 +47,10 @@ class BibleProvider with ChangeNotifier {
   Future<void> _loadLastPosition() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _lastBook = prefs.getString('bible_last_book') ?? 'Kejadian';
+      final saved = prefs.getString('bible_last_book') ?? 'Kejadian';
+      _lastBook = renamedBooks[saved] ?? saved;
       _lastChapter = prefs.getInt('bible_last_chapter') ?? 1;
+      _fontSize = (prefs.getDouble('bible_font_size') ?? defaultFontSize).clamp(minFontSize, maxFontSize);
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading last position: $e');
@@ -53,6 +67,28 @@ class BibleProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('Error saving last position: $e');
     }
+  }
+
+  void increaseFont() => _setFontSize(_fontSize + fontStep);
+  void decreaseFont() => _setFontSize(_fontSize - fontStep);
+
+  Future<void> _setFontSize(double size) async {
+    final next = size.clamp(minFontSize, maxFontSize);
+    if (next == _fontSize) return;
+    _fontSize = next;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('bible_font_size', next);
+    } catch (e) {
+      debugPrint('Error saving font size: $e');
+    }
+  }
+
+  /// Number of verses in a chapter, from the offline Bible (for the verse picker).
+  Future<int> verseCount(String book, int chapter) async {
+    final verses = await _loadFromLocal(book, chapter);
+    return verses.length;
   }
 
   Future<void> loadChapter(String book, int chapter) async {

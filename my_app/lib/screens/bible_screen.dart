@@ -6,6 +6,7 @@ import '../utils/app_theme.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import '../widgets/common/app_error_state.dart';
+import '../widgets/bible_reference_picker.dart';
 
 class BibleScreen extends StatefulWidget {
   const BibleScreen({super.key});
@@ -20,7 +21,8 @@ class _BibleScreenState extends State<BibleScreen> {
   BibleBook? _selectedBook;
   int _selectedChapter = 1;
   bool _initialized = false;
-  double _fontSize = 17.0;
+  int? _highlightVerse;
+  final Map<int, GlobalKey> _verseKeys = {};
 
   @override
   void initState() {
@@ -95,7 +97,10 @@ class _BibleScreenState extends State<BibleScreen> {
 
   void _changeChapter(int chapter) {
     if (_selectedBook == null) return;
-    setState(() => _selectedChapter = chapter);
+    setState(() {
+      _selectedChapter = chapter;
+      _highlightVerse = null;
+    });
     context.read<BibleProvider>().loadChapter(_selectedBook!.name, chapter);
     _scrollToTop();
   }
@@ -110,177 +115,32 @@ class _BibleScreenState extends State<BibleScreen> {
     }
   }
 
-  void _showBookChapterModal(BuildContext context, BibleProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (modalContext) {
-        final theme = Theme.of(modalContext);
-        final isDark = theme.brightness == Brightness.dark;
-
-        return Container(
-          height: MediaQuery.of(modalContext).size.height * 0.78,
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1C1F) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: DefaultTabController(
-            length: 2,
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF3E3B40) : const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Pilih Kitab & Pasal',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? const Color(0xFFF5F3F6) : AppTheme.textColor,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(modalContext),
-                      ),
-                    ],
-                  ),
-                ),
-                const TabBar(
-                  indicatorColor: AppTheme.primary,
-                  labelColor: AppTheme.primary,
-                  unselectedLabelColor: AppTheme.mutedText,
-                  tabs: [
-                    Tab(text: 'Daftar Kitab'),
-                    Tab(text: 'Pilih Pasal'),
-                  ],
-                ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      // Tab 1: Books List
-                      ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        itemCount: provider.books.length,
-                        separatorBuilder: (context, index) => const Divider(height: 1),
-                        itemBuilder: (_, i) {
-                          final book = provider.books[i];
-                          final isCurrent = book.name == _selectedBook?.name;
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            leading: Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: isCurrent ? AppTheme.primary : AppTheme.primaryLight,
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                '${i + 1}',
-                                style: TextStyle(
-                                  color: isCurrent ? Colors.white : AppTheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              book.name,
-                              style: TextStyle(
-                                fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                                color: isCurrent ? AppTheme.primary : (isDark ? Colors.white : AppTheme.textColor),
-                                fontSize: 16,
-                              ),
-                            ),
-                            subtitle: Text('${book.chapters} Pasal'),
-                            trailing: isCurrent ? const Icon(Icons.check_circle_rounded, color: AppTheme.primary) : null,
-                            onTap: () {
-                              setState(() {
-                                _selectedBook = book;
-                                _selectedChapter = 1;
-                              });
-                              provider.loadChapter(book.name, 1);
-                              Navigator.pop(modalContext);
-                            },
-                          );
-                        },
-                      ),
-                      // Tab 2: Chapters Grid for selected book
-                      if (_selectedBook != null)
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${_selectedBook!.name} — ${_selectedBook!.chapters} Pasal',
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                              ),
-                              const SizedBox(height: 14),
-                              Expanded(
-                                child: GridView.builder(
-                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 5,
-                                    crossAxisSpacing: 10,
-                                    mainAxisSpacing: 10,
-                                  ),
-                                  itemCount: _selectedBook!.chapters,
-                                  itemBuilder: (_, idx) {
-                                    final ch = idx + 1;
-                                    final isCur = ch == _selectedChapter;
-                                    return Material(
-                                      color: isCur ? AppTheme.primary : (isDark ? const Color(0xFF2E2B30) : const Color(0xFFF5F5F5)),
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: InkWell(
-                                        onTap: () {
-                                          _changeChapter(ch);
-                                          Navigator.pop(modalContext);
-                                        },
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Center(
-                                          child: Text(
-                                            '$ch',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 16,
-                                              color: isCur ? Colors.white : (isDark ? Colors.white : AppTheme.textColor),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        const Center(child: Text('Pilih kitab terlebih dahulu')),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  /// Kitab -> Pasal -> Ayat picker; jumps to the chosen verse.
+  Future<void> _openPicker(BibleProvider provider) async {
+    final ref = await showBibleReferencePicker(
+      context,
+      books: provider.books,
+      verseCount: provider.verseCount,
+      currentBook: _selectedBook,
+      currentChapter: _selectedChapter,
     );
+    if (ref == null || !mounted) return;
+    setState(() {
+      _selectedBook = ref.book;
+      _selectedChapter = ref.chapter;
+      _highlightVerse = ref.verse;
+    });
+    await provider.loadChapter(ref.book.name, ref.chapter);
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = ref.verse == null ? null : _verseKeys[ref.verse]?.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 350), alignment: 0.1);
+      } else if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+    });
   }
 
   @override
@@ -300,17 +160,23 @@ class _BibleScreenState extends State<BibleScreen> {
       appBar: AppBar(
         title: const Text('Alkitab'),
         actions: [
-          // Text size adjuster
-          PopupMenuButton<double>(
-            icon: const Icon(Icons.format_size_rounded),
-            tooltip: 'Ukuran Huruf',
-            onSelected: (size) => setState(() => _fontSize = size),
-            itemBuilder: (_) => [
-              const PopupMenuItem(value: 15.0, child: Text('Ukuran Normal (15sp)')),
-              const PopupMenuItem(value: 17.0, child: Text('Ukuran Nyaman (17sp)')),
-              const PopupMenuItem(value: 20.0, child: Text('Ukuran Besar (20sp)')),
-              const PopupMenuItem(value: 24.0, child: Text('Ukuran Sangat Besar (24sp)')),
-            ],
+          // Text size: A- / A+ (saved on the device)
+          Consumer<BibleProvider>(
+            builder: (context, bible, _) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Perkecil huruf',
+                  onPressed: bible.canDecreaseFont ? bible.decreaseFont : null,
+                  icon: const Text('A−', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+                IconButton(
+                  tooltip: 'Perbesar huruf',
+                  onPressed: bible.canIncreaseFont ? bible.increaseFont : null,
+                  icon: const Text('A+', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.search_rounded),
@@ -358,7 +224,7 @@ class _BibleScreenState extends State<BibleScreen> {
                     // Tap to open book & chapter modal
                     Expanded(
                       child: InkWell(
-                        onTap: () => _showBookChapterModal(context, bibleProvider),
+                        onTap: () => _openPicker(bibleProvider),
                         borderRadius: BorderRadius.circular(10),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -377,7 +243,7 @@ class _BibleScreenState extends State<BibleScreen> {
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.arrow_drop_down_rounded, color: AppTheme.primary, size: 22),
+                              Icon(Icons.arrow_drop_down_rounded, color: AppTheme.primary, size: 22),
                             ],
                           ),
                         ),
@@ -397,7 +263,7 @@ class _BibleScreenState extends State<BibleScreen> {
               // Verses Reader Content
               Expanded(
                 child: bibleProvider.isLoading
-                    ? const Center(
+                    ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -423,16 +289,22 @@ class _BibleScreenState extends State<BibleScreen> {
                                 title: 'Pilih Kitab untuk Membaca',
                                 message: 'Gunakan pemilih kitab di atas untuk mulai membaca firman Tuhan.',
                                 actionLabel: 'Buka Daftar Kitab',
-                                onAction: () => _showBookChapterModal(context, bibleProvider),
+                                onAction: () => _openPicker(bibleProvider),
                               )
-                            : ListView.builder(
+                            : SingleChildScrollView(
                                 controller: _scrollController,
                                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-                                itemCount: bibleProvider.verses.length + 1,
-                                itemBuilder: (context, index) {
-                                  // Chapter Footer Navigation Card
-                                  if (index == bibleProvider.verses.length) {
-                                    return Padding(
+                                child: Column(
+                                  children: [
+                                    for (final verse in bibleProvider.verses)
+                                      _VerseRow(
+                                        key: _verseKeys.putIfAbsent(verse.verse, () => GlobalKey()),
+                                        number: verse.verse,
+                                        text: verse.text,
+                                        fontSize: bibleProvider.fontSize,
+                                        highlighted: verse.verse == _highlightVerse,
+                                      ),
+                                    Padding(
                                       padding: const EdgeInsets.only(top: 28, bottom: 20),
                                       child: Row(
                                         children: [
@@ -443,7 +315,6 @@ class _BibleScreenState extends State<BibleScreen> {
                                               label: const Text('Sebelumnya'),
                                               style: OutlinedButton.styleFrom(
                                                 foregroundColor: AppTheme.primary,
-                                                side: const BorderSide(color: Color(0xFFE5E7EB)),
                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                               ),
                                             ),
@@ -463,56 +334,74 @@ class _BibleScreenState extends State<BibleScreen> {
                                           ),
                                         ],
                                       ),
-                                    );
-                                  }
-
-                                  final verse = bibleProvider.verses[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Verse Number badge
-                                        Container(
-                                          width: 32,
-                                          height: 32,
-                                          alignment: Alignment.center,
-                                          margin: const EdgeInsets.only(top: 2),
-                                          decoration: BoxDecoration(
-                                            color: isDark ? const Color(0xFF2A1519) : AppTheme.primaryLight,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            '${verse.verse}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              color: AppTheme.primary,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 14),
-                                        // Verse Text with readable line-height
-                                        Expanded(
-                                          child: Text(
-                                            verse.text,
-                                            style: TextStyle(
-                                              fontSize: _fontSize,
-                                              height: 1.65,
-                                              fontWeight: FontWeight.w400,
-                                              color: isDark ? const Color(0xFFE8E6EB) : const Color(0xFF222222),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
                                     ),
-                                  );
-                                },
+                                  ],
+                                ),
                               ),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// One verse: number badge + text; tinted when jumped to from the picker.
+class _VerseRow extends StatelessWidget {
+  final int number;
+  final String text;
+  final double fontSize;
+  final bool highlighted;
+
+  const _VerseRow({
+    super.key,
+    required this.number,
+    required this.text,
+    required this.fontSize,
+    required this.highlighted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: highlighted ? AppTheme.goldDark.withValues(alpha: isDark ? 0.25 : 0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            margin: const EdgeInsets.only(top: 2),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2A1519) : AppTheme.primaryLight,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$number',
+              style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.primary, fontSize: 13),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: fontSize,
+                height: 1.65,
+                color: isDark ? const Color(0xFFE8E6EB) : const Color(0xFF222222),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -569,7 +458,7 @@ class BibleSearchDelegate extends SearchDelegate<String> {
     return Consumer<BibleProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(color: AppTheme.primary),
           );
         }
@@ -604,7 +493,7 @@ class BibleSearchDelegate extends SearchDelegate<String> {
                           ),
                           child: Text(
                             '${verse.book} ${verse.chapter}:${verse.verse}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppTheme.primary,
                               fontSize: 13,

@@ -155,7 +155,7 @@ class _QrAttendanceScanScreenState extends State<QrAttendanceScanScreen> {
         ],
       ),
       body: _checkingPermission
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : !_permissionGranted
               ? _PermissionDenied(
                   onRetry: _init,

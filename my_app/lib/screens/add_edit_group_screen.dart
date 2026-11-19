@@ -109,19 +109,19 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
       hintText: hint,
       prefixIcon: prefixIcon,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppTheme.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+        borderSide: BorderSide(color: AppTheme.neutralBorder),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+        borderSide: BorderSide(color: AppTheme.neutralBorder),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+        borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
       ),
     );
   }
@@ -134,14 +134,14 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
       appBar: AppBar(
         title: Text(
           isEditing ? 'Edit Group' : 'Tambah Group',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.darkCharcoal,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -156,7 +156,7 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
                 controller: _namaController,
                 decoration: _inputDecoration(
                   label: 'Nama Group',
-                  prefixIcon: const Icon(Icons.groups_rounded, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.groups_rounded, color: AppTheme.primary),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Nama tidak boleh kosong' : null,
               ),
@@ -174,7 +174,7 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
                   initialValue: cats.any((c) => c.id == _categoryId) ? _categoryId : null,
                   decoration: _inputDecoration(
                     label: 'Kategori Group',
-                    prefixIcon: const Icon(Icons.category_outlined, color: AppTheme.primary),
+                    prefixIcon: Icon(Icons.category_outlined, color: AppTheme.primary),
                   ),
                   items: [
                     for (final c in cats)
@@ -188,7 +188,7 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
                 controller: _wilayahController,
                 decoration: _inputDecoration(
                   label: 'Wilayah',
-                  prefixIcon: const Icon(Icons.location_on_outlined, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.location_on_outlined, color: AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -196,7 +196,7 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
                 controller: _leaderNameController,
                 decoration: _inputDecoration(
                   label: 'Nama Pemimpin',
-                  prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -206,7 +206,7 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
                 decoration: _inputDecoration(
                   label: 'Nomor Telepon Pemimpin',
                   hint: 'Contoh: 081234567890',
-                  prefixIcon: const Icon(Icons.phone_outlined, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.phone_outlined, color: AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -215,7 +215,7 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
                 decoration: _inputDecoration(
                   label: 'Jadwal Pertemuan',
                   hint: 'Contoh: Setiap Jumat, 19:00',
-                  prefixIcon: const Icon(Icons.schedule_rounded, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.schedule_rounded, color: AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -223,7 +223,7 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
                 controller: _locationController,
                 decoration: _inputDecoration(
                   label: 'Lokasi',
-                  prefixIcon: const Icon(Icons.home_outlined, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.home_outlined, color: AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -232,7 +232,7 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
                 maxLines: 3,
                 decoration: _inputDecoration(
                   label: 'Deskripsi',
-                  prefixIcon: const Icon(Icons.description_outlined, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.description_outlined, color: AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -241,7 +241,7 @@ class _AddEditGroupScreenState extends State<AddEditGroupScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(

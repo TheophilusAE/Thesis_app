@@ -123,7 +123,7 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
 
               // Request History Header
               Row(
-                children: const [
+                children: [
                   Icon(Icons.history_rounded, size: 20, color: AppTheme.primary),
                   SizedBox(width: 8),
                   Text(
@@ -182,7 +182,7 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
               color: AppTheme.primary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.lock_outline_rounded, color: AppTheme.primary, size: 20),
+            child: Icon(Icons.lock_outline_rounded, color: AppTheme.primary, size: 20),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -220,7 +220,7 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Sampaikan Permohonan Doa',
             style: TextStyle(
               fontWeight: FontWeight.bold,
@@ -231,7 +231,7 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
           const SizedBox(height: 14),
 
           // Category Chips
-          const Text(
+          Text(
             'Kategori Doa',
             style: TextStyle(
               fontWeight: FontWeight.w600,
@@ -254,7 +254,7 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
                 label: Text(cat['label'] as String),
                 selected: isSelected,
                 selectedColor: AppTheme.primary,
-                backgroundColor: Colors.white,
+                backgroundColor: AppTheme.surface,
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : AppTheme.darkCharcoal,
                   fontSize: 12,
@@ -276,7 +276,7 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
           const SizedBox(height: 16),
 
           // Content Input
-          const Text(
+          Text(
             'Tuliskan Pokok Doa',
             style: TextStyle(
               fontWeight: FontWeight.w600,
@@ -288,23 +288,23 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
           TextField(
             controller: _contentController,
             maxLines: 4,
-            style: const TextStyle(fontSize: 14, color: AppTheme.darkCharcoal),
+            style: TextStyle(fontSize: 14, color: AppTheme.darkCharcoal),
             decoration: InputDecoration(
               hintText: 'Tuliskan pergumulan atau ucapan syukur yang ingin didoakan...',
-              hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
+              hintStyle: TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
               filled: true,
               fillColor: AppTheme.warmIvory,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                borderSide: BorderSide(color: AppTheme.neutralBorder),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                borderSide: BorderSide(color: AppTheme.neutralBorder),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
               ),
               contentPadding: const EdgeInsets.all(14),
             ),
@@ -322,9 +322,9 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.visibility_off_outlined, color: AppTheme.neutralMedium, size: 20),
+                Icon(Icons.visibility_off_outlined, color: AppTheme.neutralMedium, size: 20),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -400,7 +400,7 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
             const SizedBox(height: 12),
             Text(
               request.content,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 height: 1.5,
                 color: AppTheme.darkCharcoal,
@@ -409,15 +409,15 @@ class _PrayerRequestScreenState extends State<PrayerRequestScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.access_time_rounded, size: 14, color: AppTheme.neutralMedium),
+                Icon(Icons.access_time_rounded, size: 14, color: AppTheme.neutralMedium),
                 const SizedBox(width: 4),
                 Text(
                   formattedDate,
-                  style: const TextStyle(color: AppTheme.neutralMedium, fontSize: 12),
+                  style: TextStyle(color: AppTheme.neutralMedium, fontSize: 12),
                 ),
                 if (request.isAnonymous) ...[
                   const Spacer(),
-                  const Row(
+                  Row(
                     children: [
                       Icon(Icons.visibility_off_outlined, size: 14, color: AppTheme.neutralMedium),
                       SizedBox(width: 4),

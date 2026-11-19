@@ -323,6 +323,57 @@ class SupabaseService {
     return Map<String, dynamic>.from(r as Map);
   }
 
+  // ── Push (migration_push_fcm.sql) ──
+
+  /// Links this phone's FCM token to the signed-in user (RPC moves a token
+  /// that was registered by another account on the same phone).
+  Future<void> saveDeviceToken(String token, {required String platform}) async {
+    await _client.rpc('register_device_token', params: {'p_token': token, 'p_platform': platform});
+  }
+
+  Future<void> deleteDeviceToken(String token) async {
+    await _client.from('device_tokens').delete().eq('token', token);
+  }
+
+  // ── Pengumuman & ucapan (migration_notifications_v2.sql) ──
+
+  /// Announcements, newest first. RLS: active ones for approved members,
+  /// all for admins with notifikasi:read.
+  Future<List<Map<String, dynamic>>> getBroadcasts({bool activeOnly = true, int limit = 50}) async {
+    var q = _client.from('notification_broadcasts').select();
+    if (activeOnly) q = q.eq('is_active', true);
+    final rows = await q.order('created_at', ascending: false).limit(limit);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// Creates an announcement and delivers it to the audience's inboxes.
+  Future<Map<String, dynamic>> createBroadcast(Map<String, dynamic> data) async {
+    final r = await _client.rpc('create_broadcast', params: {'p': data});
+    return Map<String, dynamic>.from(r as Map);
+  }
+
+  /// Super Admin: edits an announcement (also in recipients' inboxes).
+  Future<void> updateBroadcast(String id, Map<String, dynamic> changes) async {
+    await _client.rpc('update_broadcast', params: {'p_id': id, 'p': changes});
+  }
+
+  /// Super Admin: deletes notifications older than [days] (≥ 30). Returns the count.
+  Future<int> purgeOldNotifications(int days) async {
+    final r = await _client.rpc('purge_old_notifications', params: {'p_older_than_days': days});
+    return (r as num).toInt();
+  }
+
+  Future<List<Map<String, dynamic>>> getBirthdaysToday() async {
+    final r = await _client.rpc('birthdays_today');
+    return List<Map<String, dynamic>>.from(r as List);
+  }
+
+  /// Sends the birthday greeting to everyone not yet greeted today.
+  Future<Map<String, dynamic>> sendBirthdayGreetings() async {
+    final r = await _client.rpc('send_birthday_greetings');
+    return Map<String, dynamic>.from(r as Map);
+  }
+
   /// Super Admin only (RLS). Throws when the change was refused.
   Future<void> updateKasAkun(int id, Map<String, dynamic> data) async {
     final rows = await _client.from('kas_akuns').update(data).eq('id', id).select('id');

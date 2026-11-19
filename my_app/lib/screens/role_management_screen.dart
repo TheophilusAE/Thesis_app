@@ -72,7 +72,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: Row(
                 children: [
-                  const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.primary),
+                  Icon(Icons.admin_panel_settings_rounded, color: AppTheme.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -159,7 +159,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                     ),
                     const SizedBox(height: 12),
                     if (selectedRoles.isEmpty)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.all(8.0),
                         child: Text(
                           'Minimal satu role harus dipilih',
@@ -172,7 +172,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Batal', style: TextStyle(color: AppTheme.mutedCharcoal)),
+                  child: Text('Batal', style: TextStyle(color: AppTheme.mutedCharcoal)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -234,7 +234,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
             Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           ],
         ),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: AppTheme.mutedCharcoal)),
+        subtitle: Text(subtitle, style: TextStyle(fontSize: 11, color: AppTheme.mutedCharcoal)),
         value: value,
         activeColor: color,
         checkColor: Colors.white,
@@ -256,7 +256,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
   Widget _buildContent(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppTheme.warmIvory,
         body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
       );
@@ -265,7 +265,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Kelola Role Pengguna',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -274,7 +274,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -285,29 +285,29 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           children: [
             // Search & Filter Container
             Container(
-              color: Colors.white,
+              color: AppTheme.surface,
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
                   TextField(
                     decoration: InputDecoration(
                       hintText: 'Cari berdasarkan nama atau email...',
-                      hintStyle: const TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
-                      prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
+                      hintStyle: TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
+                      prefixIcon: Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       filled: true,
                       fillColor: AppTheme.warmIvory,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                        borderSide: BorderSide(color: AppTheme.neutralBorder),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                        borderSide: BorderSide(color: AppTheme.neutralBorder),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                        borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
                       ),
                     ),
                     onChanged: (value) {
@@ -334,7 +334,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                 ],
               ),
             ),
-            const Divider(height: 1, color: AppTheme.neutralBorder),
+            Divider(height: 1, color: AppTheme.neutralBorder),
 
             // Users List
             Expanded(
@@ -369,7 +369,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                               backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
                               child: Text(
                                 initials,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppTheme.primary,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -383,7 +383,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                                 children: [
                                   Text(
                                     user.name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14.5,
                                       color: AppTheme.darkCharcoal,
@@ -392,7 +392,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     user.email,
-                                    style: const TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
+                                    style: TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
                                   ),
                                   const SizedBox(height: 8),
                                   Wrap(
@@ -404,7 +404,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.edit_outlined, color: AppTheme.primary),
+                              icon: Icon(Icons.edit_outlined, color: AppTheme.primary),
                               tooltip: 'Ubah Role',
                               onPressed: () => _showRoleUpdateDialog(user),
                             ),

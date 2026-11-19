@@ -9,7 +9,8 @@ import '../models/bible_verse.dart';
 /// Bible Service - Fully Offline (SQLite)
 class BibleService {
   static const _dbName = 'bible.db';
-  static const _dbVersion = 4;
+  // 5: book 25 renamed "Trenyina" → "Ratapan" (reseed rebuilds the names).
+  static const _dbVersion = 5;
   static const _seedAssetPath = 'assets/bible/IndonesianBible.xml';
 
   sqflite.Database? _database;
@@ -465,7 +466,7 @@ class BibleService {
       // Perjanjian Lama - Nabi Besar
       BibleBook(name: 'Yesaya', chapters: 66),
       BibleBook(name: 'Yeremia', chapters: 52),
-      BibleBook(name: 'Trenyina', chapters: 5),
+      BibleBook(name: 'Ratapan', chapters: 5),
       BibleBook(name: 'Yehezkiel', chapters: 48),
       BibleBook(name: 'Daniel', chapters: 12),
       

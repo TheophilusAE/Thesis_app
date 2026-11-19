@@ -91,19 +91,19 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
       hintText: hint,
       prefixIcon: prefixIcon,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppTheme.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+        borderSide: BorderSide(color: AppTheme.neutralBorder),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+        borderSide: BorderSide(color: AppTheme.neutralBorder),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+        borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
       ),
     );
   }
@@ -117,7 +117,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
       appBar: AppBar(
         title: Text(
           isEditing ? 'Edit Pelayan' : 'Tambah Pelayan',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.darkCharcoal,
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -125,7 +125,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
       ),
       body: SingleChildScrollView(
@@ -142,7 +142,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
                 isExpanded: true,
                 decoration: _inputDecoration(
                   label: _loadingUsers ? 'Memuat akun pengguna...' : 'Akun Pengguna',
-                  prefixIcon: const Icon(Icons.account_circle_outlined, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.account_circle_outlined, color: AppTheme.primary),
                 ),
                 items: [
                   const DropdownMenuItem(value: '', child: Text('Tanpa akun aplikasi')),
@@ -166,7 +166,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
                         }
                       },
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(4, 6, 4, 0),
                 child: Text(
                   'Hubungkan ke akun agar pelayan dapat melihat jadwalnya, mengajukan '
@@ -182,7 +182,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
                 decoration: _inputDecoration(
                   label: 'Nama Pelayan',
                   hint: 'Masukkan nama pelayan',
-                  prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.primary),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -202,7 +202,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
                 decoration: _inputDecoration(
                   label: 'Nomor Telepon',
                   hint: 'Contoh: 081234567890',
-                  prefixIcon: const Icon(Icons.phone_outlined, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.phone_outlined, color: AppTheme.primary),
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
@@ -222,7 +222,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
                 initialValue: _posisiController.text.isNotEmpty ? _posisiController.text : null,
                 decoration: _inputDecoration(
                   label: 'Posisi Pelayanan',
-                  prefixIcon: const Icon(Icons.work_outline_rounded, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.work_outline_rounded, color: AppTheme.primary),
                 ),
                 items: positions.map((position) {
                   return DropdownMenuItem(
@@ -247,7 +247,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
               // Status Aktif toggle
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppTheme.neutralBorder),
                 ),
@@ -255,7 +255,7 @@ class _AddEditPelayaniScreenState extends State<AddEditPelayaniScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(

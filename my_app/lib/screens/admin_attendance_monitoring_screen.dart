@@ -139,18 +139,18 @@ class _AdminAttendanceMonitoringScreenState
           ],
         ),
             const SizedBox(height: 10),
-            const Divider(height: 1, color: AppTheme.neutralBorder),
+            Divider(height: 1, color: AppTheme.neutralBorder),
             const SizedBox(height: 8),
             Text(
               'Hadir: $jemaatCount jemaat • $pelayanCount pelayan',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.darkCharcoal,
               ),
             ),
             const SizedBox(height: 2),
-            const Text(
+            Text(
               'Peran dihitung dari peran akun saat ini, bukan saat presensi.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 11, color: AppTheme.neutralMuted),
@@ -178,7 +178,7 @@ class _AdminAttendanceMonitoringScreenState
                 color: AppTheme.neutralMuted.withValues(alpha: 0.8),
                 fontSize: 13.5,
               ),
-              prefixIcon: const Icon(
+              prefixIcon: Icon(
                 Icons.search_rounded,
                 color: AppTheme.primary,
                 size: 22,
@@ -193,19 +193,19 @@ class _AdminAttendanceMonitoringScreenState
                     )
                   : null,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppTheme.surface,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                borderSide: BorderSide(color: AppTheme.neutralBorder),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                borderSide: BorderSide(color: AppTheme.neutralBorder),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
               ),
             ),
           ),
@@ -251,7 +251,7 @@ class _AdminAttendanceMonitoringScreenState
         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
         color: isSelected ? AppTheme.primary : AppTheme.darkCharcoal,
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       selectedColor: AppTheme.primaryLight,
       side: BorderSide(color: isSelected ? AppTheme.primary : AppTheme.neutralBorder),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -272,7 +272,7 @@ class _AdminAttendanceMonitoringScreenState
         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
         color: isSelected ? AppTheme.primary : AppTheme.darkCharcoal,
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       selectedColor: AppTheme.primaryLight,
       side: BorderSide(
         color: isSelected ? AppTheme.primary : AppTheme.neutralBorder,
@@ -321,7 +321,7 @@ class _AdminAttendanceMonitoringScreenState
                       Expanded(
                         child: Text(
                           confirmation.userName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
                             color: AppTheme.darkCharcoal,
@@ -339,7 +339,7 @@ class _AdminAttendanceMonitoringScreenState
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.calendar_today_rounded,
                         size: 13,
                         color: AppTheme.neutralMuted,
@@ -348,7 +348,7 @@ class _AdminAttendanceMonitoringScreenState
                       Expanded(
                         child: Text(
                           scheduleDate,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
                             color: AppTheme.neutralMuted,
                             fontWeight: FontWeight.w500,
@@ -376,7 +376,7 @@ class _AdminAttendanceMonitoringScreenState
                     const SizedBox(height: 4),
                     Text(
                       'Catatan: ${confirmation.notes}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.neutralMedium,
                         fontStyle: FontStyle.italic,
@@ -457,7 +457,7 @@ class _AdminAttendanceMonitoringScreenState
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             color: AppTheme.neutralMuted,
             fontWeight: FontWeight.w500,
@@ -489,7 +489,7 @@ class _AdminAttendanceMonitoringScreenState
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Monitoring Kehadiran',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -497,7 +497,7 @@ class _AdminAttendanceMonitoringScreenState
             fontSize: 18,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -508,7 +508,7 @@ class _AdminAttendanceMonitoringScreenState
               _getFilteredConfirmations(allConfirmations);
 
           if (provider.isLoading && allConfirmations.isEmpty) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+            return Center(child: CircularProgressIndicator(color: AppTheme.primary));
           }
           if (provider.error != null && allConfirmations.isEmpty) {
             return AppErrorState(
@@ -607,7 +607,7 @@ class _MetricItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
             color: AppTheme.neutralMuted,

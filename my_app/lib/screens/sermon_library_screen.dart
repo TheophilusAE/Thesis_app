@@ -114,7 +114,7 @@ class _SermonLibraryScreenState extends State<SermonLibraryScreen> {
     return Container(
       height: 46,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppTheme.neutralBorder),
       ),
@@ -127,8 +127,8 @@ class _SermonLibraryScreenState extends State<SermonLibraryScreen> {
         },
         decoration: InputDecoration(
           hintText: 'Cari judul khotbah atau pembicara...',
-          hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
-          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.neutralMedium, size: 20),
+          hintStyle: TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
+          prefixIcon: Icon(Icons.search_rounded, color: AppTheme.neutralMedium, size: 20),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.clear_rounded, size: 18),
@@ -166,7 +166,7 @@ class _SermonLibraryScreenState extends State<SermonLibraryScreen> {
               label: Text(f['label']!),
               selected: isSelected,
               selectedColor: AppTheme.primary,
-              backgroundColor: Colors.white,
+              backgroundColor: AppTheme.surface,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : AppTheme.darkCharcoal,
                 fontSize: 12,
@@ -295,7 +295,7 @@ class _SermonLibraryScreenState extends State<SermonLibraryScreen> {
                 children: [
                   Text(
                     sermon.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.darkCharcoal,
@@ -305,7 +305,7 @@ class _SermonLibraryScreenState extends State<SermonLibraryScreen> {
                   Row(
                     children: [
                       if (sermon.speaker.isNotEmpty) ...[
-                        const Icon(Icons.person_outline_rounded, size: 16, color: AppTheme.primary),
+                        Icon(Icons.person_outline_rounded, size: 16, color: AppTheme.primary),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
@@ -321,11 +321,11 @@ class _SermonLibraryScreenState extends State<SermonLibraryScreen> {
                         ),
                         const SizedBox(width: 8),
                       ],
-                      const Icon(Icons.calendar_today_outlined, size: 14, color: AppTheme.neutralMedium),
+                      Icon(Icons.calendar_today_outlined, size: 14, color: AppTheme.neutralMedium),
                       const SizedBox(width: 4),
                       Text(
                         formattedDate,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.neutralMedium,
                         ),
@@ -338,7 +338,7 @@ class _SermonLibraryScreenState extends State<SermonLibraryScreen> {
                       sermon.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         color: AppTheme.neutralMedium,
                         height: 1.4,

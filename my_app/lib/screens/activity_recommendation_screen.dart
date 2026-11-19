@@ -50,11 +50,11 @@ class _ActivityRecommendationScreenState extends State<ActivityRecommendationScr
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Rekomendasi Kegiatan',
           style: TextStyle(color: AppTheme.darkCharcoal, fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
         actions: [
@@ -113,7 +113,7 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Dasar Data Analisis',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.darkCharcoal),
           ),
@@ -129,7 +129,7 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Dihitung: ${DateFormat('dd MMM yyyy • HH:mm', 'id_ID').format(generatedAt!)}',
-              style: const TextStyle(fontSize: 11.5, color: AppTheme.neutralMedium),
+              style: TextStyle(fontSize: 11.5, color: AppTheme.neutralMedium),
             ),
           ],
         ],
@@ -208,7 +208,7 @@ class _RecommendationCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       rec.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.darkCharcoal,
@@ -232,7 +232,7 @@ class _RecommendationCard extends StatelessWidget {
             ),
             child: Text(
               'Dasar: ${rec.dataBasis}',
-              style: const TextStyle(fontSize: 12, color: AppTheme.neutralMedium),
+              style: TextStyle(fontSize: 12, color: AppTheme.neutralMedium),
             ),
           ),
         ],
@@ -246,7 +246,7 @@ class _MethodNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
+    return Text(
       'Metode: rekomendasi berbasis aturan (rule-based) yang dapat dijelaskan. Keterisian '
       'dihitung dari rata-rata ${RecommendationEngine.utilizationWindow} ibadah terakhir '
       'terhadap kapasitas gedung (≥90% penuh, ≤40% rendah). Tren membandingkan '

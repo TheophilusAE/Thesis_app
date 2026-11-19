@@ -128,7 +128,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: isDark ? const Color(0xFF1E1C1F) : AppTheme.primaryLight,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person_add_rounded,
                       size: 38,
                       color: AppTheme.primary,
@@ -167,7 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.info_outline_rounded, color: AppTheme.infoColor, size: 20),
+                      Icon(Icons.info_outline_rounded, color: AppTheme.infoColor, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -195,12 +195,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline_rounded, color: AppTheme.errorColor, size: 20),
+                        Icon(Icons.error_outline_rounded, color: AppTheme.errorColor, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: const TextStyle(color: AppTheme.errorColor, fontSize: 13.5),
+                            style: TextStyle(color: AppTheme.errorColor, fontSize: 13.5),
                           ),
                         ),
                       ],
@@ -299,7 +299,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     InkWell(
                       onTap: () => Navigator.of(context).pop(),
                       borderRadius: BorderRadius.circular(6),
-                      child: const Padding(
+                      child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                         child: Text(
                           'Masuk di sini',

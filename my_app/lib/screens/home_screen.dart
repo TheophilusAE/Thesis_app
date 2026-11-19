@@ -13,21 +13,29 @@ import '../services/devotional_service.dart';
 import '../models/pelayan.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import '../providers/broadcast_provider.dart';
+import '../models/notification.dart';
+import '../models/public_service.dart';
+import '../models/broadcast.dart';
 import '../providers/feedback_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/pelayan_provider.dart';
 import '../providers/service_schedule_provider.dart';
 import '../providers/training_schedule_provider.dart';
 import '../services/local_notification_service.dart';
+import '../services/notification_router.dart';
+import '../services/push_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/permissions.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/common/compact_feature_tile.dart';
 import '../widgets/role_switcher.dart';
+import '../widgets/notification_inbox.dart';
 import 'admin_access_management_screen.dart';
 import 'admin_management_screen.dart';
 import 'ibadah_management_screen.dart';
 import 'kas_screen.dart';
+import 'broadcast_management_screen.dart';
 import 'public_schedule_screen.dart';
 import '../providers/checkin_provider.dart';
 import 'activity_recommendation_screen.dart';
@@ -71,11 +79,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _index = 0;
   String _lastRole = '';
 
+  /// A notification tap that launched the app is opened only once per run.
+  static bool _launchPayloadHandled = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _resyncPelayanReminders());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resyncPelayanReminders();
+      _openLaunchNotification();
+    });
+  }
+
+  Future<void> _openLaunchNotification() async {
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (userId != null) PushService.instance.registerFor(userId);
+    if (_launchPayloadHandled) return;
+    _launchPayloadHandled = true;
+    final payload =
+        await PushService.instance.launchPayload() ?? await LocalNotificationService().launchPayload();
+    if (payload != null && mounted) await NotificationRouter.openPayload(payload);
   }
 
   @override
@@ -279,12 +303,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(24),
                     topRight: Radius.circular(24),
                   ),
-                  border: const Border(
+                  border: Border(
                     top: BorderSide(color: AppTheme.neutralBorder, width: 1),
                   ),
                   boxShadow: [
@@ -390,7 +414,7 @@ class _GradientHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: AppTheme.surface,
       child: Stack(
         children: [
           // Warm decorative blobs — soft depth without hurting text contrast
@@ -425,7 +449,7 @@ class _GradientHeader extends StatelessWidget {
                           backgroundColor: AppTheme.primary.withValues(alpha: 0.08),
                           child: Text(
                             _initials,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.primary,
                               fontWeight: FontWeight.w800,
                               fontSize: 18,
@@ -440,7 +464,7 @@ class _GradientHeader extends StatelessWidget {
                           children: [
                             Text(
                               greeting,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppTheme.primary,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -450,8 +474,8 @@ class _GradientHeader extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               name,
-                              style: const TextStyle(
-                                color: Color(0xFF1E293B),
+                              style: TextStyle(
+                                color: AppTheme.darkCharcoal,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 20,
                               ),
@@ -532,138 +556,7 @@ class _NotificationBellState extends State<_NotificationBell> {
     });
   }
 
-  void _openSheet(BuildContext context) {
-    final auth = context.read<AuthProvider>();
-    final userId = auth.currentUser?.id;
-    final provider = context.read<NotificationProvider>();
-    if (userId != null) provider.loadNotifications(userId);
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.55,
-        minChildSize: 0.3,
-        maxChildSize: 0.85,
-        expand: false,
-        builder: (ctx, scrollController) => Consumer<NotificationProvider>(
-          builder: (ctx, np, _) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text('Notifikasi',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                      ),
-                      if (np.unreadCount > 0 && userId != null)
-                        TextButton(
-                          onPressed: () async {
-                            final ok = await np.markAllAsRead(userId);
-                            if (!ok && ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(content: Text('Gagal menandai notifikasi.')),
-                              );
-                            }
-                          },
-                          child: const Text('Tandai semua dibaca'),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  if (np.isLoading)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else if (np.allNotifications.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 30),
-                      child: Center(
-                        child: Column(
-                          children: [
-                            Icon(Icons.notifications_none_rounded,
-                                size: 48, color: Colors.grey.shade300),
-                            const SizedBox(height: 10),
-                            Text('Belum ada notifikasi',
-                                style: TextStyle(color: Colors.grey.shade500)),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: ListView.separated(
-                        controller: scrollController,
-                        itemCount: np.allNotifications.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) {
-                          final n = np.allNotifications[i];
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: n.isRead ? null : () => np.markAsRead(n.id),
-                            child: Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: n.isRead
-                                  ? AppTheme.surface
-                                  : AppTheme.secondary.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  n.isRead
-                                      ? Icons.notifications_none_rounded
-                                      : Icons.notifications_active_rounded,
-                                  color: n.isRead ? Colors.grey : AppTheme.primary,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(n.title,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w700, fontSize: 14)),
-                                      const SizedBox(height: 3),
-                                      Text(n.message,
-                                          style: TextStyle(
-                                              fontSize: 13, color: Colors.grey.shade600)),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        DateFormat('dd MMM yyyy • HH:mm', 'id_ID')
-                                            .format(n.createdAt.toLocal()),
-                                        style: TextStyle(
-                                            fontSize: 11, color: Colors.grey.shade500),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
+  void _openSheet(BuildContext context) => showNotificationInbox(context);
 
   @override
   Widget build(BuildContext context) {
@@ -681,7 +574,7 @@ class _NotificationBellState extends State<_NotificationBell> {
                   shape: BoxShape.circle,
                   color: AppTheme.primary.withValues(alpha: 0.07),
                 ),
-                child: const Icon(Icons.notifications_outlined,
+                child: Icon(Icons.notifications_outlined,
                     color: AppTheme.primary, size: 21),
               ),
               if (np.unreadCount > 0)
@@ -691,7 +584,7 @@ class _NotificationBellState extends State<_NotificationBell> {
                   child: Container(
                     width: 9,
                     height: 9,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppTheme.accent,
                     ),
@@ -776,14 +669,14 @@ class _SectionTitle extends StatelessWidget {
                   children: [
                     Text(
                       actionText!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.primary,
                       ),
                     ),
                     const SizedBox(width: 2),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right_rounded,
                       size: 16,
                       color: AppTheme.primary,
@@ -816,7 +709,7 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.neutralBorder),
         boxShadow: [
@@ -854,7 +747,7 @@ class _StatCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.darkCharcoal,
@@ -864,7 +757,7 @@ class _StatCard extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   color: AppTheme.neutralMuted,
                   fontWeight: FontWeight.w600,
@@ -1319,6 +1212,22 @@ class _AdminKelolaTab extends StatelessWidget {
                   ],
                 ),
                 _AdminTileSection(
+                  title: 'Komunikasi',
+                  tiles: [
+                    if (auth.canAccess(AppModule.notifikasi))
+                    CompactFeatureTile(
+                      icon: Icons.campaign_rounded,
+                      title: 'Pengumuman & Ucapan',
+                      actionLabel: 'Kirim info →',
+                      accentColor: const Color(0xFFB45309),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const BroadcastManagementScreen()),
+                      ),
+                    ),
+                  ],
+                ),
+                _AdminTileSection(
                   title: 'Feedback & Aspirasi',
                   tiles: [
                     if (auth.canAccess(AppModule.feedback))
@@ -1599,7 +1508,7 @@ class _PelayananDutyHeroCardState extends State<_PelayananDutyHeroCard> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppTheme.neutralBorder),
           boxShadow: [
@@ -1621,10 +1530,10 @@ class _PelayananDutyHeroCardState extends State<_PelayananDutyHeroCard> {
                     color: AppTheme.primaryLight,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.shield_outlined, color: AppTheme.primary, size: 22),
+                  child: Icon(Icons.shield_outlined, color: AppTheme.primary, size: 22),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Tidak Ada Jadwal Pelayanan Hari Ini',
                     style: TextStyle(
@@ -1637,7 +1546,7 @@ class _PelayananDutyHeroCardState extends State<_PelayananDutyHeroCard> {
               ],
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               '"Layanilah seorang akan yang lain, sesuai dengan karunia yang telah diperoleh tiap-tiap orang sebagai pengurus yang baik dari kasih karunia Allah." — 1 Petrus 4:10',
               style: TextStyle(
                 fontStyle: FontStyle.italic,
@@ -1658,7 +1567,7 @@ class _PelayananDutyHeroCardState extends State<_PelayananDutyHeroCard> {
                 label: const Text('Lihat Jadwal Keseluruhan'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.primary,
-                  side: const BorderSide(color: AppTheme.primary, width: 1.2),
+                  side: BorderSide(color: AppTheme.primary, width: 1.2),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -1766,7 +1675,7 @@ class _PelayananDutyHeroCardState extends State<_PelayananDutyHeroCard> {
                     const Icon(Icons.schedule_rounded, color: Colors.white70, size: 15),
                     const SizedBox(width: 6),
                     Text(
-                      '${nextSchedule.startTime} - ${nextSchedule.endTime} WIB',
+                      '${nextSchedule.startTime} - ${nextSchedule.endTime} WITA',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 13.5,
@@ -2320,7 +2229,7 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.neutralBorder),
       ),
@@ -2330,7 +2239,7 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
           const SizedBox(height: 10),
           Text(
             message,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: AppTheme.mutedCharcoal,
               fontWeight: FontWeight.w500,
@@ -2352,7 +2261,7 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.neutralBorder),
         boxShadow: [
@@ -2392,8 +2301,8 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
                 ),
               ),
               Text(
-                '${s.startTime} - ${s.endTime} WIB',
-                style: const TextStyle(
+                '${s.startTime} - ${s.endTime} WITA',
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedCharcoal,
@@ -2404,7 +2313,7 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
           const SizedBox(height: 10),
           Text(
             s.serviceType.isNotEmpty ? s.serviceType : 'Ibadah Raya GPDI',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppTheme.darkCharcoal,
@@ -2413,12 +2322,12 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.badge_outlined, size: 14, color: AppTheme.primary),
+              Icon(Icons.badge_outlined, size: 14, color: AppTheme.primary),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   s.pelayaniPosition.isNotEmpty ? s.pelayaniPosition : 'Pelayan Jemaat',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.darkCharcoal,
@@ -2480,7 +2389,7 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.neutralBorder),
         boxShadow: [
@@ -2520,8 +2429,8 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
                 ),
               ),
               Text(
-                '${t.startTime} - ${t.endTime} WIB',
-                style: const TextStyle(
+                '${t.startTime} - ${t.endTime} WITA',
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.mutedCharcoal,
@@ -2532,7 +2441,7 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
           const SizedBox(height: 10),
           Text(
             t.nama,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppTheme.darkCharcoal,
@@ -2546,7 +2455,7 @@ class _PelayananJadwalTabState extends State<_PelayananJadwalTab> {
               Expanded(
                 child: Text(
                   t.lokasi.isNotEmpty ? t.lokasi : 'Ruang Musik GPDI',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppTheme.mutedCharcoal,
                   ),
@@ -2835,53 +2744,48 @@ class _TodayServiceHeroCard extends StatefulWidget {
   State<_TodayServiceHeroCard> createState() => _TodayServiceHeroCardState();
 }
 
+/// Next worship service from the public schedule (worship dates +
+/// legacy schedules). Shows an honest empty state instead of placeholder
+/// text when nothing is scheduled.
 class _TodayServiceHeroCardState extends State<_TodayServiceHeroCard> {
+  late Future<List<PublicServiceSlot>> _schedule;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<ServiceScheduleProvider>().loadAllSchedules();
-    });
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    _schedule = loadPublicSchedule(today, today.add(const Duration(days: 14)));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ServiceScheduleProvider>(
-      builder: (context, provider, _) {
+    return FutureBuilder<List<PublicServiceSlot>>(
+      future: _schedule,
+      builder: (context, snap) {
         final now = DateTime.now();
-        final schedules = provider.allSchedules;
+        final today = DateTime(now.year, now.month, now.day);
+        final next = (snap.data ?? const <PublicServiceSlot>[])
+            .where((s) => !s.date.isBefore(today))
+            .firstOrNull;
+        final isToday = next != null && next.date == today;
+        final loading = snap.connectionState != ConnectionState.done;
 
-        final upcoming = schedules
-            .where((s) => s.serviceDate.isAfter(now.subtract(const Duration(hours: 4))))
-            .toList()
-          ..sort((a, b) => a.serviceDate.compareTo(b.serviceDate));
-
-        final nextService = upcoming.isNotEmpty
-            ? upcoming.first
-            : (schedules.isNotEmpty ? schedules.first : null);
-
-        final isToday = nextService != null &&
-            nextService.serviceDate.year == now.year &&
-            nextService.serviceDate.month == now.month &&
-            nextService.serviceDate.day == now.day;
-
-        final serviceTitle = nextService != null && nextService.serviceType.isNotEmpty
-            ? nextService.serviceType
-            : 'Ibadah Raya GPDI';
-        final serviceTime = nextService != null && nextService.startTime.isNotEmpty
-            ? '${nextService.startTime} WIB'
-            : '09:00 WIB';
-        final preacher = nextService?.pelayaniName ?? 'Pdt. Tim Pelayanan';
+        final badge = next == null ? 'JADWAL IBADAH' : (isToday ? 'IBADAH HARI INI' : 'IBADAH BERIKUTNYA');
+        final title = loading
+            ? 'Memuat jadwal…'
+            : next?.title ?? 'Belum ada jadwal ibadah terdekat';
+        final when = next == null
+            ? null
+            : '${isToday ? '' : '${DateFormat('EEE, d MMM', 'id_ID').format(next.date)} • '}'
+                '${next.startTime}${next.endTime.isNotEmpty ? '–${next.endTime}' : ''} WITA';
 
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.only(top: 14),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                AppTheme.primary,
-                AppTheme.burgundyDark,
-              ],
+            gradient: LinearGradient(
+              colors: [AppTheme.primary, AppTheme.burgundyDark],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -2899,8 +2803,9 @@ class _TodayServiceHeroCardState extends State<_TodayServiceHeroCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -2911,15 +2816,11 @@ class _TodayServiceHeroCardState extends State<_TodayServiceHeroCard> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.church_rounded,
-                            size: 14,
-                            color: AppTheme.goldLight,
-                          ),
+                          Icon(Icons.church_rounded, size: 14, color: AppTheme.goldLight),
                           const SizedBox(width: 5),
                           Text(
-                            isToday ? 'IBADAH HARI INI' : 'IBADAH MINGGU',
-                            style: const TextStyle(
+                            badge,
+                            style: TextStyle(
                               color: AppTheme.goldLight,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -2929,72 +2830,59 @@ class _TodayServiceHeroCardState extends State<_TodayServiceHeroCard> {
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        serviceTime,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                    if (when != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          when,
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  serviceTitle,
-                  style: const TextStyle(
+                  title,
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: next == null ? 16 : 20,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_outlined, color: Colors.white70, size: 14),
-                    const SizedBox(width: 4),
-                    const Text(
-                      'Gedung Utama GPDI',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                    if (preacher.isNotEmpty) ...[
-                      const SizedBox(width: 12),
-                      const Icon(Icons.person_outline_rounded, color: Colors.white70, size: 14),
+                if (next != null && next.lokasi.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined, color: Colors.white70, size: 14),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          preacher,
+                          next.lokasi,
                           style: const TextStyle(color: Colors.white70, fontSize: 12),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
-                  ],
-                ),
+                  ),
+                ],
                 const SizedBox(height: 16),
-                // White pill button matching Mock 1: "Lihat Jadwal >"
                 Align(
                   alignment: Alignment.centerRight,
                   child: InkWell(
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const ServiceScheduleManagementScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const PublicScheduleScreen()),
                     ),
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppTheme.surface,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
@@ -3004,23 +2892,15 @@ class _TodayServiceHeroCardState extends State<_TodayServiceHeroCard> {
                           ),
                         ],
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             'Lihat Jadwal',
-                            style: TextStyle(
-                              color: AppTheme.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.w700),
                           ),
                           SizedBox(width: 4),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            size: 16,
-                            color: AppTheme.primary,
-                          ),
+                          Icon(Icons.chevron_right_rounded, size: 16, color: AppTheme.primary),
                         ],
                       ),
                     ),
@@ -3047,7 +2927,7 @@ class _TodayDevotionalPreviewCard extends StatelessWidget {
           return Container(
             height: 100,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppTheme.neutralBorder),
             ),
@@ -3068,7 +2948,7 @@ class _TodayDevotionalPreviewCard extends StatelessWidget {
         return Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppTheme.neutralBorder),
             boxShadow: [
@@ -3100,7 +2980,7 @@ class _TodayDevotionalPreviewCard extends StatelessWidget {
                             color: AppTheme.primaryLight,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.auto_stories_rounded, color: AppTheme.primary, size: 18),
+                          child: Icon(Icons.auto_stories_rounded, color: AppTheme.primary, size: 18),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -3111,7 +2991,7 @@ class _TodayDevotionalPreviewCard extends StatelessWidget {
                                 dev.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                   color: AppTheme.darkCharcoal,
@@ -3128,7 +3008,7 @@ class _TodayDevotionalPreviewCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right_rounded, color: AppTheme.neutralMedium, size: 20),
+                        Icon(Icons.chevron_right_rounded, color: AppTheme.neutralMedium, size: 20),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -3136,7 +3016,7 @@ class _TodayDevotionalPreviewCard extends StatelessWidget {
                       dev.content,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         color: AppTheme.neutralMedium,
                         height: 1.4,
@@ -3164,66 +3044,45 @@ class _BannerCarousel extends StatefulWidget {
   State<_BannerCarousel> createState() => _BannerCarouselState();
 }
 
+/// Rotating banners of the latest active announcements (Pengumuman).
+/// Hidden when there are none — no placeholder events.
 class _BannerCarouselState extends State<_BannerCarousel> {
   final _controller = PageController();
   int _current = 0;
   Timer? _timer;
 
-  static const _banners = [
-    _BannerData(
-      title: 'Retreat Tahunan 2025',
-      subtitle: '15–17 Agustus • Puncak, Jawa Barat',
-      tag: 'Event',
-      gradient: LinearGradient(
-        colors: [Color(0xFF1E3A8A), Color(0xFFE53935)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.landscape_rounded,
-    ),
-    _BannerData(
-      title: 'Kebaktian Doa & Puasa',
-      subtitle: 'Setiap Rabu • 19:00 WIB',
-      tag: 'Ibadah',
-      gradient: LinearGradient(
-        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.volunteer_activism_rounded,
-    ),
-    _BannerData(
-      title: 'Kelas Pendalaman Alkitab',
-      subtitle: 'Setiap Sabtu • 10:00 WIB',
-      tag: 'Belajar',
-      gradient: LinearGradient(
-        colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.menu_book_rounded,
-    ),
-    _BannerData(
-      title: 'Bakti Sosial Panti Asuhan',
-      subtitle: '25 Agustus • Daftar sekarang',
-      tag: 'Sosial',
-      gradient: LinearGradient(
-        colors: [Color(0xFFFBBF24), Color(0xFFFBBF24)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.favorite_rounded,
-    ),
-  ];
+  static const _gradients = {
+    NotificationCategory.ibadah: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+    NotificationCategory.pelayanan: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
+    NotificationCategory.khusus: [Color(0xFF1E3A8A), Color(0xFFE53935)],
+    NotificationCategory.umum: [Color(0xFF0F766E), Color(0xFF115E59)],
+  };
+
+  List<_BannerData> _banners(BroadcastProvider p) => [
+        for (final b in p.active.take(4))
+          _BannerData(
+            title: b.title,
+            subtitle: b.message.replaceAll('\n', ' '),
+            tag: NotificationCategory.label(b.category),
+            gradient: LinearGradient(
+              colors: _gradients[b.category] ?? _gradients[NotificationCategory.umum]!,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            icon: NotificationCategory.icon(b.category),
+            broadcast: b,
+          ),
+      ];
 
   @override
   void initState() {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted) return;
-      final next = (_current + 1) % _banners.length;
+      if (!mounted || !_controller.hasClients) return;
+      final count = _banners(context.read<BroadcastProvider>()).length;
+      if (count < 2) return;
       _controller.animateToPage(
-        next,
+        (_current + 1) % count,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
@@ -3237,37 +3096,53 @@ class _BannerCarouselState extends State<_BannerCarousel> {
     super.dispose();
   }
 
+  void _open(Broadcast b) {
+    final screen = NotificationRouter.screenFor(b.route);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => screen ??
+            NotificationDetailScreen(title: b.title, message: b.message, createdAt: b.createdAt, category: b.category),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final banners = _banners(context.watch<BroadcastProvider>());
+    if (banners.isEmpty) return const SizedBox.shrink();
     return Column(
       children: [
         SizedBox(
           height: 160,
           child: PageView.builder(
             controller: _controller,
-            itemCount: _banners.length,
+            itemCount: banners.length,
             onPageChanged: (i) => setState(() => _current = i),
-            itemBuilder: (ctx, i) => _BannerCard(data: _banners[i]),
+            itemBuilder: (ctx, i) => GestureDetector(
+              onTap: () => _open(banners[i].broadcast),
+              child: _BannerCard(data: banners[i]),
+            ),
           ),
         ),
         const SizedBox(height: 10),
-        // Dot indicator
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_banners.length, (i) {
-            final active = i == _current;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: active ? 20 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: active ? const Color(0xFF1E3A8A) : const Color(0xFFCBD5E1),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            );
-          }),
-        ),
+        if (banners.length > 1)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(banners.length, (i) {
+              final active = i == _current % banners.length;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: active ? 20 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active ? const Color(0xFF1E3A8A) : const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
       ],
     );
   }
@@ -3279,6 +3154,7 @@ class _BannerData {
   final String tag;
   final LinearGradient gradient;
   final IconData icon;
+  final Broadcast broadcast;
 
   const _BannerData({
     required this.title,
@@ -3286,6 +3162,7 @@ class _BannerData {
     required this.tag,
     required this.gradient,
     required this.icon,
+    required this.broadcast,
   });
 }
 
@@ -3410,7 +3287,7 @@ class _DailyVerseCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4), width: 1.5),
         boxShadow: [
@@ -3454,14 +3331,14 @@ class _DailyVerseCard extends StatelessWidget {
               const Spacer(),
               IconButton(
                 tooltip: 'Salin Ayat',
-                icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.neutralMedium),
+                icon: Icon(Icons.copy_rounded, size: 18, color: AppTheme.neutralMedium),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onPressed: () {
                   Clipboard.setData(const ClipboardData(text: '$_verseRef\n"$_verseText"'));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Ayat hari ini disalin ke papan klip'),
                       backgroundColor: AppTheme.primary,
                       duration: Duration(seconds: 2),
@@ -3472,7 +3349,7 @@ class _DailyVerseCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             '"$_verseText"',
             style: TextStyle(
               color: AppTheme.darkCharcoal,
@@ -3491,7 +3368,7 @@ class _DailyVerseCard extends StatelessWidget {
                 context,
                 MaterialPageRoute(builder: (_) => const BibleScreen()),
               ),
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -3562,7 +3439,7 @@ class _ServiceScheduleStripState extends State<_ServiceScheduleStrip> {
             height: 90,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFE8F0F8)),
             ),
@@ -3589,7 +3466,7 @@ class _ServiceScheduleStripState extends State<_ServiceScheduleStrip> {
               return Container(
                 width: 162,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFE8F0F8)),
                   boxShadow: [BoxShadow(color: const Color(0xFF1E3A8A).withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
@@ -3620,7 +3497,7 @@ class _ServiceScheduleStripState extends State<_ServiceScheduleStrip> {
                       ],
                     ),
                     const SizedBox(height: 9),
-                    Text(s.serviceType.isNotEmpty ? s.serviceType : 'Ibadah', style: const TextStyle(color: Color(0xFF1F2937), fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.2), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(s.serviceType.isNotEmpty ? s.serviceType : 'Ibadah', style: TextStyle(color: AppTheme.darkCharcoal, fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.2), maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 3),
                     Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ],
@@ -3638,68 +3515,103 @@ class _ServiceScheduleStripState extends State<_ServiceScheduleStrip> {
 // ANNOUNCEMENTS LIST
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _AnnouncementsList extends StatelessWidget {
+class _AnnouncementsList extends StatefulWidget {
   const _AnnouncementsList();
 
   @override
-  Widget build(BuildContext context) {
-    const items = [
-      (title: 'Retreat Tahunan Gereja 2025', desc: 'Daftarkan diri Anda untuk retreat di Puncak, 15–17 Agustus 2025.', date: '15–17 Agt', category: 'Event', color: Color(0xFFFBBF24)),
-      (title: 'Pelayanan Sosial: Bakti Panti', desc: 'Bergabung melayani di panti asuhan terdekat. Pendaftaran relawan dibuka.', date: '25 Agustus', category: 'Sosial', color: Color(0xFF2563EB)),
-      (title: 'Kelas Pendalaman Alkitab', desc: 'Kelas PA baru setiap Sabtu pukul 10:00. Terbuka untuk seluruh jemaat.', date: 'Setiap Sabtu', category: 'Belajar', color: Color(0xFF1E3A8A)),
-    ];
+  State<_AnnouncementsList> createState() => _AnnouncementsListState();
+}
 
+/// Latest active announcements (Pengumuman) from the database — no
+/// placeholder content when there are none.
+class _AnnouncementsListState extends State<_AnnouncementsList> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<BroadcastProvider>().load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.watch<BroadcastProvider>();
+    final items = p.active.take(3).toList();
+    final theme = Theme.of(context);
+    if (p.isLoading && items.isEmpty) {
+      return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+    }
+    if (items.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text('Belum ada pengumuman.', style: theme.textTheme.bodySmall),
+      );
+    }
     return Column(
-      children: items.map((a) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
+      children: [
+        for (final a in items)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Material(
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2))],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 4, height: 70,
-                    decoration: BoxDecoration(color: a.color, borderRadius: BorderRadius.circular(4)),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  final screen = NotificationRouter.screenFor(a.route);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => screen ??
+                          NotificationDetailScreen(
+                              title: a.title, message: a.message, createdAt: a.createdAt, category: a.category),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 60,
+                        decoration: BoxDecoration(color: AppTheme.goldDark, borderRadius: BorderRadius.circular(4)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: a.color.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(a.category, style: TextStyle(color: a.color, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                            Row(
+                              children: [
+                                Text(NotificationCategory.label(a.category),
+                                    style: const TextStyle(color: AppTheme.goldDark, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                                const Spacer(),
+                                Text(DateFormat('d MMM', 'id_ID').format(a.createdAt.toLocal()),
+                                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 11)),
+                              ],
                             ),
-                            const Spacer(),
-                            Text(a.date, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 5),
+                            Text(a.title,
+                                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.3),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 3),
+                            Text(a.message,
+                                style: theme.textTheme.bodySmall?.copyWith(fontSize: 12, height: 1.4),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis),
                           ],
                         ),
-                        const SizedBox(height: 5),
-                        Text(a.title, style: const TextStyle(color: Color(0xFF1F2937), fontSize: 13.5, fontWeight: FontWeight.w700, height: 1.3), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 3),
-                        Text(a.desc, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12, height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        );
-      }).toList(),
+      ],
     );
   }
 }
@@ -3992,7 +3904,7 @@ class _ProfileTab extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.badge_outlined, color: AppTheme.primary),
             SizedBox(width: 8),
@@ -4003,7 +3915,7 @@ class _ProfileTab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Peran aktif Anda saat ini menentukan tampilan menu dan akses fitur di aplikasi:',
               style: TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
             ),
@@ -4044,7 +3956,7 @@ class _ProfileTab extends StatelessWidget {
                       ),
                     ),
                     if (auth.currentDisplayRole == r)
-                      const Icon(Icons.check_circle_rounded, size: 18, color: AppTheme.primary),
+                      Icon(Icons.check_circle_rounded, size: 18, color: AppTheme.primary),
                   ],
                 ),
               ),
@@ -4066,7 +3978,7 @@ class _ProfileTab extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.lock_outline_rounded, color: AppTheme.primary),
             SizedBox(width: 8),
@@ -4077,7 +3989,7 @@ class _ProfileTab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Akun Anda terhubung dengan autentikasi aman Supabase GPDI.',
               style: TextStyle(fontSize: 13, color: AppTheme.mutedCharcoal),
             ),
@@ -4123,7 +4035,7 @@ class _ProfileTab extends StatelessWidget {
       slivers: [
         SliverToBoxAdapter(
           child: Container(
-            color: Colors.white,
+            color: AppTheme.surface,
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
             child: SafeArea(
               bottom: false,
@@ -4148,7 +4060,7 @@ class _ProfileTab extends StatelessWidget {
                       backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
                       child: Text(
                         _initials(user?.name ?? ''),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 32,
                           color: AppTheme.primary,
                           fontWeight: FontWeight.w800,
@@ -4160,7 +4072,7 @@ class _ProfileTab extends StatelessWidget {
                   // User Name
                   Text(
                     user?.name.isNotEmpty == true ? user!.name : 'Pengguna GPDI',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.darkCharcoal,
@@ -4171,7 +4083,7 @@ class _ProfileTab extends StatelessWidget {
                   // User Email
                   Text(
                     user?.email ?? '',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
                       color: AppTheme.mutedCharcoal,
                       fontWeight: FontWeight.w500,
@@ -4191,7 +4103,7 @@ class _ProfileTab extends StatelessWidget {
                     ),
                     child: Text(
                       _roleName(role),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.primary,
@@ -4211,7 +4123,7 @@ class _ProfileTab extends StatelessWidget {
                 // Grouped Clean Action Tiles Container (Mock 4)
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: AppTheme.neutralBorder),
                     boxShadow: [
@@ -4293,8 +4205,8 @@ class _ProfileTab extends StatelessWidget {
                   height: 50,
                   child: OutlinedButton.icon(
                     onPressed: () => _confirmLogout(context, auth),
-                    icon: const Icon(Icons.logout_rounded, size: 20, color: AppTheme.errorColor),
-                    label: const Text(
+                    icon: Icon(Icons.logout_rounded, size: 20, color: AppTheme.errorColor),
+                    label: Text(
                       'Keluar',
                       style: TextStyle(
                         fontSize: 15,
@@ -4303,7 +4215,7 @@ class _ProfileTab extends StatelessWidget {
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppTheme.errorColor, width: 1.5),
+                      side: BorderSide(color: AppTheme.errorColor, width: 1.5),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
@@ -4331,7 +4243,7 @@ class _ProfileTab extends StatelessWidget {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.darkCharcoal,
-                    side: const BorderSide(color: AppTheme.neutralBorder),
+                    side: BorderSide(color: AppTheme.neutralBorder),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -4409,7 +4321,7 @@ class _ProfileMenuItem extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.darkCharcoal,
@@ -4419,7 +4331,7 @@ class _ProfileMenuItem extends StatelessWidget {
               if (trailingText != null) ...[
                 Text(
                   trailingText!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.mutedCharcoal,
@@ -4427,7 +4339,7 @@ class _ProfileMenuItem extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
               ],
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
                 size: 20,
                 color: AppTheme.neutralMedium,

@@ -8,6 +8,7 @@ import '../widgets/common/app_card.dart';
 import '../widgets/common/app_empty_state.dart';
 import '../widgets/common/app_skeleton.dart';
 import '../widgets/common/app_status_badge.dart';
+import 'quest_reading_screen.dart';
 
 class QuestScreen extends StatefulWidget {
   const QuestScreen({super.key});
@@ -139,7 +140,7 @@ class _QuestScreenState extends State<QuestScreen> {
                       child: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.goldDark, size: 20),
                     ),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Pengaturan Target (Admin)',
                         style: TextStyle(
@@ -167,7 +168,7 @@ class _QuestScreenState extends State<QuestScreen> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Tentukan target jumlah pasal harian untuk rencana baca. Catatan: pengaturan '
                   'ini tersimpan dan berlaku di perangkat ini saja, belum tersinkron ke '
                   'perangkat jemaat lain.',
@@ -266,7 +267,7 @@ class _QuestScreenState extends State<QuestScreen> {
                   ),
                   Text(
                     '${percent.toStringAsFixed(1)}%',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.goldLight,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -327,7 +328,7 @@ class _QuestScreenState extends State<QuestScreen> {
         Container(
           height: 46,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppTheme.neutralBorder),
           ),
@@ -340,8 +341,8 @@ class _QuestScreenState extends State<QuestScreen> {
             },
             decoration: InputDecoration(
               hintText: 'Cari hari atau kitab (cth: 12, Yohanes)...',
-              hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
-              prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.neutralMedium, size: 20),
+              hintStyle: TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
+              prefixIcon: Icon(Icons.search_rounded, color: AppTheme.neutralMedium, size: 20),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear_rounded, size: 18),
@@ -413,6 +414,7 @@ class _QuestScreenState extends State<QuestScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
+        onTap: () => _openReading(context, quest),
         padding: const EdgeInsets.all(16),
         borderColor: quest.isCompleted ? AppTheme.emerald.withValues(alpha: 0.3) : AppTheme.neutralBorder,
         color: quest.isCompleted ? const Color(0xFFF0FDF4) : Colors.white,
@@ -445,14 +447,14 @@ class _QuestScreenState extends State<QuestScreen> {
                     status: 'completed',
                   )
                 else
-                  OutlinedButton.icon(
-                    onPressed: () => _confirmMarkCompleted(context, quest, questProvider),
-                    icon: const Icon(Icons.check_rounded, size: 16),
-                    label: const Text('Tandai Selesai'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primary,
-                      side: const BorderSide(color: AppTheme.primary, width: 1.2),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  FilledButton.icon(
+                    onPressed: () => _openReading(context, quest),
+                    icon: const Icon(Icons.menu_book_rounded, size: 16),
+                    label: const Text('Baca'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       minimumSize: const Size(0, 36),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -497,52 +499,18 @@ class _QuestScreenState extends State<QuestScreen> {
     );
   }
 
-  Future<void> _confirmMarkCompleted(
-    BuildContext context,
-    ReadingQuest quest,
-    QuestProvider questProvider,
-  ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle_outline_rounded, color: AppTheme.primary),
-            SizedBox(width: 10),
-            Text('Tandai Selesai'),
-          ],
-        ),
-        content: Text(
-          'Tandai bacaan Hari ${quest.day} (${quest.readings.map((r) => r.displayText).join(", ")}) sebagai selesai?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: AppTheme.neutralMedium)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Ya, Selesai'),
-          ),
-        ],
-      ),
+  /// Opens the day's passage. "Selesai" is only possible from the reading
+  /// screen, after the reading checks pass (see ReadingValidator).
+  Future<void> _openReading(BuildContext context, ReadingQuest quest) async {
+    final finished = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => QuestReadingScreen(quest: quest)),
     );
-
-    if (confirm == true && mounted) {
-      final saved = await questProvider.markDayCompleted(quest.day);
-      if (!context.mounted) return;
+    if (finished == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(saved
-              ? 'Puji Tuhan! Bacaan Hari ${quest.day} selesai dibaca! 🎉'
-              : 'Silakan login untuk menyimpan progres bacaan.'),
-          backgroundColor: saved ? AppTheme.emerald : AppTheme.errorColor,
+          content: Text('Puji Tuhan! Bacaan Hari ${quest.day} selesai.'),
+          backgroundColor: AppTheme.emerald,
         ),
       );
     }

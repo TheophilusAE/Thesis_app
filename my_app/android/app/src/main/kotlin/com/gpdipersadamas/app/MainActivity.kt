@@ -1,4 +1,4 @@
-package com.mycompany.my_app
+package com.gpdipersadamas.app
 
 import io.flutter.embedding.android.FlutterActivity
 

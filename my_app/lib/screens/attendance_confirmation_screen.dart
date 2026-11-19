@@ -68,7 +68,7 @@ class _AttendanceConfirmationScreenState
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -94,7 +94,7 @@ class _AttendanceConfirmationScreenState
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
+            Text(
               'Konfirmasi Kehadiran Tugas',
               style: TextStyle(
                 fontSize: 18,
@@ -103,7 +103,7 @@ class _AttendanceConfirmationScreenState
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Pastikan Anda dapat hadir tepat waktu untuk mempersiapkan pelayanan ibadah.',
               style: TextStyle(
                 fontSize: 13,
@@ -124,11 +124,11 @@ class _AttendanceConfirmationScreenState
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.church_rounded, size: 16, color: AppTheme.primary),
+                      Icon(Icons.church_rounded, size: 16, color: AppTheme.primary),
                       const SizedBox(width: 8),
                       Text(
                         schedule.serviceType,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                           color: AppTheme.darkCharcoal,
@@ -139,22 +139,22 @@ class _AttendanceConfirmationScreenState
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.neutralMedium),
+                      Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.neutralMedium),
                       const SizedBox(width: 8),
                       Text(
                         DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(schedule.serviceDate),
-                        style: const TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
+                        style: TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.schedule_rounded, size: 14, color: AppTheme.neutralMedium),
+                      Icon(Icons.schedule_rounded, size: 14, color: AppTheme.neutralMedium),
                       const SizedBox(width: 8),
                       Text(
-                        '${schedule.startTime} - ${schedule.endTime} WIB',
-                        style: const TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
+                        '${schedule.startTime} - ${schedule.endTime} WITA',
+                        style: TextStyle(fontSize: 12.5, color: AppTheme.darkCharcoal),
                       ),
                     ],
                   ),
@@ -226,7 +226,7 @@ class _AttendanceConfirmationScreenState
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Tidak', style: TextStyle(color: AppTheme.neutralMedium)),
+              child: Text('Tidak', style: TextStyle(color: AppTheme.neutralMedium)),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -325,7 +325,7 @@ class _AttendanceConfirmationScreenState
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         border: Border(bottom: BorderSide(color: AppTheme.neutralBorder)),
       ),
       child: SingleChildScrollView(
@@ -399,7 +399,7 @@ class _AttendanceConfirmationScreenState
       return AppCard(
         margin: const EdgeInsets.only(bottom: 12),
         child: ListTile(
-          leading: const Icon(Icons.event_busy_rounded, color: AppTheme.neutralMedium),
+          leading: Icon(Icons.event_busy_rounded, color: AppTheme.neutralMedium),
           title: const Text('Jadwal Tidak Ditemukan'),
           subtitle: Text('ID: ${confirmation.serviceScheduleId}'),
         ),
@@ -421,7 +421,7 @@ class _AttendanceConfirmationScreenState
               Expanded(
                 child: Text(
                   schedule.serviceType,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                     color: AppTheme.darkCharcoal,
@@ -447,11 +447,11 @@ class _AttendanceConfirmationScreenState
           // Date & Time
           Row(
             children: [
-              const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.neutralMedium),
+              Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.neutralMedium),
               const SizedBox(width: 8),
               Text(
                 DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(schedule.serviceDate),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.darkCharcoal,
@@ -462,11 +462,11 @@ class _AttendanceConfirmationScreenState
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.schedule_rounded, size: 14, color: AppTheme.neutralMedium),
+              Icon(Icons.schedule_rounded, size: 14, color: AppTheme.neutralMedium),
               const SizedBox(width: 8),
               Text(
-                '${schedule.startTime} - ${schedule.endTime} WIB',
-                style: const TextStyle(
+                '${schedule.startTime} - ${schedule.endTime} WITA',
+                style: TextStyle(
                   fontSize: 13,
                   color: AppTheme.darkCharcoal,
                 ),
@@ -509,7 +509,7 @@ class _AttendanceConfirmationScreenState
                 const Icon(Icons.check_circle_rounded, size: 14, color: AppTheme.emerald),
                 const SizedBox(width: 6),
                 Text(
-                  'Dikonfirmasi pada ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(confirmation.confirmedAt!)} WIB',
+                  'Dikonfirmasi pada ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(confirmation.confirmedAt!)} WITA',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -533,7 +533,7 @@ class _AttendanceConfirmationScreenState
               ),
               child: Text(
                 'Catatan: ${confirmation.notes}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
                   color: AppTheme.neutralMedium,
                   fontStyle: FontStyle.italic,
@@ -571,7 +571,7 @@ class _AttendanceConfirmationScreenState
                   label: const Text('Batalkan Konfirmasi'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.errorColor,
-                    side: const BorderSide(color: AppTheme.errorColor, width: 1.2),
+                    side: BorderSide(color: AppTheme.errorColor, width: 1.2),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -580,7 +580,7 @@ class _AttendanceConfirmationScreenState
             )
           else
             Row(
-              children: const [
+              children: [
                 Icon(Icons.qr_code_rounded, size: 14, color: AppTheme.neutralMedium),
                 SizedBox(width: 6),
                 Text(

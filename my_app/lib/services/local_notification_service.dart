@@ -4,8 +4,10 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../models/notification.dart';
 import '../models/service_schedule.dart';
 import '../models/training_schedule.dart';
+import 'notification_router.dart';
 
 /// One reminder fire time derived from an event date and an hours-before
 /// threshold. Kept as its own type (rather than a bare `DateTime`) so the
@@ -32,9 +34,10 @@ List<ReminderFireTime> reminderFireTimes(
 }
 
 /// OS-level scheduled notifications for upcoming pelayan duties (service +
-/// training schedules). No server-side cron / FCM involved — this app is
-/// single-region (WIB), so the timezone is hardcoded rather than pulling in
-/// a device-timezone plugin. Uses `inexactAllowWhileIdle` (a few minutes of
+/// training schedules). No server-side cron involved — the church is in
+/// Banjarmasin (WITA, Asia/Makassar), so the timezone is fixed rather than
+/// pulling in a device-timezone plugin. Tapping a reminder opens the page
+/// in its payload (see NotificationRouter). Uses `inexactAllowWhileIdle` (a few minutes of
 /// slop is fine for a 1h/3h/24h reminder) to avoid the exact-alarm
 /// permission/Play-policy friction.
 class LocalNotificationService {
@@ -47,11 +50,12 @@ class LocalNotificationService {
 
   static const _channelId = 'schedule_reminders';
   static const _channelName = 'Pengingat Jadwal';
+  static const pushChannelId = 'church_notifications';
 
   Future<void> init() async {
     if (_initialized) return;
     tz_data.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+    tz.setLocalLocation(tz.getLocation('Asia/Makassar'));
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     // iOS: without Darwin settings the plugin throws at initialize(). The
@@ -66,8 +70,55 @@ class LocalNotificationService {
       android: androidSettings,
       iOS: darwinSettings,
     );
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (response) => NotificationRouter.openPayload(response.payload),
+    );
+    // Channel for pushes and in-app announcements (also used by FCM for
+    // pushes that arrive while the app is closed; see AndroidManifest).
+    await _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(const AndroidNotificationChannel(
+          pushChannelId,
+          'Notifikasi Gereja',
+          description: 'Pengumuman, jadwal pelayanan, dan info gereja',
+          importance: Importance.high,
+        ));
     _initialized = true;
+  }
+
+  /// Payload of the notification that launched the app from a closed state
+  /// (opened once the first screen is shown).
+  Future<String?> launchPayload() async {
+    try {
+      if (!_initialized) await init();
+      final details = await _plugin.getNotificationAppLaunchDetails();
+      return details?.didNotificationLaunchApp == true ? details?.notificationResponse?.payload : null;
+    } catch (e) {
+      debugPrint('Error reading launch notification: $e');
+      return null;
+    }
+  }
+
+  /// Shows a notification right away (e.g. a push received while the app
+  /// is open). [payload] is a NotificationRouter payload.
+  Future<void> showNow({required int id, required String title, required String body, String? payload}) async {
+    if (!_initialized) await init();
+    await _plugin.show(
+      id,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          pushChannelId,
+          'Notifikasi Gereja',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+      ),
+      payload: payload,
+    );
   }
 
   /// Asks for notification permission (Android 13+ / iOS). Never throws: a
@@ -112,6 +163,7 @@ class LocalNotificationService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: NotificationRouter.encodePayload(NotificationRoute.jadwalPelayan),
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
   }

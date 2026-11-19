@@ -96,7 +96,7 @@ class QrAccessSheet extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white, // QR must stay dark-on-white to scan
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: AppTheme.neutralBorder),
               ),

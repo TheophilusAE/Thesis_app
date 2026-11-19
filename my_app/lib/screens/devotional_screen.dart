@@ -73,7 +73,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Gagal menyimpan renungan. Coba lagi.'),
           backgroundColor: AppTheme.errorColor,
         ),
@@ -97,7 +97,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.copy_rounded, color: AppTheme.primary),
+              leading: Icon(Icons.copy_rounded, color: AppTheme.primary),
               title: const Text('Salin teks renungan'),
               onTap: () async {
                 Navigator.pop(sheetCtx);
@@ -216,7 +216,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.history_rounded, color: AppTheme.primary, size: 20),
+                            Icon(Icons.history_rounded, color: AppTheme.primary, size: 20),
                             const SizedBox(width: 10),
                             const Expanded(
                               child: Text(
@@ -239,7 +239,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Ke Hari Ini',
                                 style: TextStyle(
                                   color: AppTheme.primary,
@@ -338,7 +338,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.calendar_today_rounded,
                   color: AppTheme.goldLight,
                   size: 14,
@@ -370,7 +370,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.person_outline_rounded,
                   color: AppTheme.goldLight,
                   size: 16,
@@ -397,7 +397,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.gold.withValues(alpha: 0.35), width: 1.5),
         boxShadow: [
@@ -470,7 +470,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Renungan Firman',
                 style: TextStyle(
                   fontSize: 17,
@@ -501,7 +501,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
       children: [
         Row(
           children: [
-            const Icon(Icons.history_rounded, size: 20, color: AppTheme.primary),
+            Icon(Icons.history_rounded, size: 20, color: AppTheme.primary),
             const SizedBox(width: 8),
             Text(
               'Renungan Sebelumnya',
@@ -530,7 +530,7 @@ class _DevotionalScreenState extends State<DevotionalScreen> {
 
             final history = snapshot.data ?? [];
             if (history.isEmpty) {
-              return const AppCard(
+              return AppCard(
                 padding: EdgeInsets.all(16),
                 child: Center(
                   child: Text(

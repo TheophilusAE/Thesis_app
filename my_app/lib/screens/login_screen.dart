@@ -212,7 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Image.asset(
                               'assets/images/app_logo.png',
                               fit: BoxFit.contain,
-                              errorBuilder: (_, _, _) => const Icon(
+                              errorBuilder: (_, _, _) => Icon(
                                 Icons.church,
                                 size: 52,
                                 color: AppTheme.primary,
@@ -270,7 +270,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         Row(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            const Icon(
+                                            Icon(
                                               Icons.error_outline_rounded,
                                               color: AppTheme.errorColor,
                                               size: 20,
@@ -279,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             Expanded(
                                               child: Text(
                                                 _errorMessage!,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   color: AppTheme.errorColor,
                                                   fontSize: 13.5,
                                                   fontWeight: FontWeight.w500,
@@ -293,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           const SizedBox(height: 10),
                                           InkWell(
                                             onTap: _resendConfirmation,
-                                            child: const Padding(
+                                            child: Padding(
                                               padding: EdgeInsets.symmetric(vertical: 4),
                                               child: Row(
                                                 children: [
@@ -361,7 +361,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         minimumSize: Size.zero,
                                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                       ),
-                                      child: const Text(
+                                      child: Text(
                                         'Lupa Kata Sandi?',
                                         style: TextStyle(
                                           color: AppTheme.primary,
@@ -428,7 +428,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             borderRadius: BorderRadius.circular(6),
-                            child: const Padding(
+                            child: Padding(
                               padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                               child: Text(
                                 'Daftar Sekarang',

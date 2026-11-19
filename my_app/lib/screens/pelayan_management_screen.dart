@@ -50,7 +50,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
       child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Manajemen Pelayan',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -58,7 +58,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
             fontSize: 18,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -67,7 +67,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
           // Search and filter section
           Container(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            color: Colors.white,
+            color: AppTheme.surface,
             child: Column(
               children: [
                 // Search field
@@ -79,7 +79,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
                       color: AppTheme.neutralMuted.withValues(alpha: 0.8),
                       fontSize: 13.5,
                     ),
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.search_rounded,
                       color: AppTheme.primary,
                       size: 22,
@@ -98,15 +98,15 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                      borderSide: BorderSide(color: AppTheme.neutralBorder),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                      borderSide: BorderSide(color: AppTheme.neutralBorder),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                      borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
                     ),
                   ),
                   onChanged: (value) {
@@ -131,7 +131,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
             child: Consumer<PelayaniProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
-                  return const Center(
+                  return Center(
                     child: CircularProgressIndicator(color: AppTheme.primary),
                   );
                 }
@@ -201,7 +201,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
         color: isSelected ? AppTheme.primary : AppTheme.darkCharcoal,
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       selectedColor: AppTheme.primaryLight,
       side: BorderSide(
         color: isSelected ? AppTheme.primary : AppTheme.neutralBorder,
@@ -253,7 +253,7 @@ class _PelayaniManagementScreenState extends State<PelayaniManagementScreen> {
                 );
               }
             },
-            child: const Text('Hapus', style: TextStyle(color: AppTheme.error)),
+            child: Text('Hapus', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),
@@ -288,7 +288,7 @@ class _PelayaniCard extends StatelessWidget {
                   color: AppTheme.primaryLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.person_rounded,
                   color: AppTheme.primary,
                   size: 22,
@@ -301,7 +301,7 @@ class _PelayaniCard extends StatelessWidget {
                   children: [
                     Text(
                       pelayan.nama,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.darkCharcoal,
@@ -324,7 +324,7 @@ class _PelayaniCard extends StatelessWidget {
                           ),
                           child: Text(
                             pelayan.posisi,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11.5,
                               color: AppTheme.darkCharcoal,
                               fontWeight: FontWeight.w600,
@@ -347,7 +347,7 @@ class _PelayaniCard extends StatelessWidget {
                 children: [
                   if (onEdit != null)
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
+                    icon: Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
                     onPressed: onEdit,
                     tooltip: 'Edit',
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -355,7 +355,7 @@ class _PelayaniCard extends StatelessWidget {
                   ),
                   if (onDelete != null)
                   IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
+                    icon: Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
                     onPressed: onDelete,
                     tooltip: 'Hapus',
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -367,15 +367,15 @@ class _PelayaniCard extends StatelessWidget {
           ),
           if (pelayan.noTelepon.isNotEmpty) ...[
             const SizedBox(height: 10),
-            const Divider(height: 1, color: AppTheme.neutralBorder),
+            Divider(height: 1, color: AppTheme.neutralBorder),
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.phone_rounded, size: 14, color: AppTheme.neutralMuted),
+                Icon(Icons.phone_rounded, size: 14, color: AppTheme.neutralMuted),
                 const SizedBox(width: 6),
                 Text(
                   pelayan.noTelepon,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     color: AppTheme.neutralMedium,
                     fontWeight: FontWeight.w500,

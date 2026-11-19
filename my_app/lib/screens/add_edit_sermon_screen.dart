@@ -63,7 +63,7 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
+            colorScheme: ColorScheme.light(
               primary: AppTheme.primary,
               onPrimary: Colors.white,
               onSurface: AppTheme.darkCharcoal,
@@ -122,19 +122,19 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
       hintText: hint,
       prefixIcon: prefixIcon,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppTheme.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+        borderSide: BorderSide(color: AppTheme.neutralBorder),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.neutralBorder),
+        borderSide: BorderSide(color: AppTheme.neutralBorder),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+        borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
       ),
     );
   }
@@ -147,14 +147,14 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
       appBar: AppBar(
         title: Text(
           isEditing ? 'Edit Khotbah' : 'Tambah Khotbah',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.darkCharcoal,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -169,7 +169,7 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
                 controller: _titleController,
                 decoration: _inputDecoration(
                   label: 'Judul Khotbah',
-                  prefixIcon: const Icon(Icons.title_rounded, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.title_rounded, color: AppTheme.primary),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Judul tidak boleh kosong' : null,
               ),
@@ -178,7 +178,7 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
                 controller: _speakerController,
                 decoration: _inputDecoration(
                   label: 'Pembicara / Pengkhotbah',
-                  prefixIcon: const Icon(Icons.person_outline_rounded, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -186,7 +186,7 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
                 initialValue: _mediaType,
                 decoration: _inputDecoration(
                   label: 'Jenis Media',
-                  prefixIcon: const Icon(Icons.perm_media_outlined, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.perm_media_outlined, color: AppTheme.primary),
                 ),
                 items: _mediaTypes
                     .map((t) => DropdownMenuItem(
@@ -202,7 +202,7 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
                 decoration: _inputDecoration(
                   label: 'Tautan Media',
                   hint: 'https://youtube.com/watch?v=...',
-                  prefixIcon: const Icon(Icons.link_rounded, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.link_rounded, color: AppTheme.primary),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Tautan tidak boleh kosong' : null,
               ),
@@ -212,7 +212,7 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
                 decoration: _inputDecoration(
                   label: 'Tautan Thumbnail (opsional)',
                   hint: 'Kosongkan untuk YouTube — diambil otomatis',
-                  prefixIcon: const Icon(Icons.image_outlined, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.image_outlined, color: AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -221,7 +221,7 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
                 maxLines: 3,
                 decoration: _inputDecoration(
                   label: 'Deskripsi / Ringkasan',
-                  prefixIcon: const Icon(Icons.description_outlined, color: AppTheme.primary),
+                  prefixIcon: Icon(Icons.description_outlined, color: AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -235,14 +235,14 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
                       color: AppTheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.calendar_today_rounded, color: AppTheme.primary, size: 20),
+                    child: Icon(Icons.calendar_today_rounded, color: AppTheme.primary, size: 20),
                   ),
                   title: const Text('Tanggal Khotbah', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
                   subtitle: Text(
                     DateFormat('dd MMMM yyyy', 'id_ID').format(_sermonDate),
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.darkCharcoal),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.darkCharcoal),
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.mutedCharcoal),
+                  trailing: Icon(Icons.chevron_right_rounded, color: AppTheme.mutedCharcoal),
                   onTap: _pickDate,
                 ),
               ),
@@ -252,7 +252,7 @@ class _AddEditSermonScreenState extends State<AddEditSermonScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Status Khotbah', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),

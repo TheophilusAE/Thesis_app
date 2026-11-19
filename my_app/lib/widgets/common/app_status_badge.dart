@@ -168,9 +168,9 @@ class AppStatusBadge extends StatelessWidget {
         border = AppTheme.gold.withValues(alpha: 0.35);
         break;
       case BadgeType.neutral:
-        bg = const Color(0xFFF1F5F9);
-        fg = const Color(0xFF475569);
-        border = const Color(0xFFE2E8F0);
+        bg = AppTheme.neutralLight;
+        fg = AppTheme.secondaryText;
+        border = AppTheme.neutralBorder;
         break;
     }
 

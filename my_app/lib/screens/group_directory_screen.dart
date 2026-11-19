@@ -41,7 +41,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -75,7 +75,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
                     color: AppTheme.primaryLight,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.groups_rounded, color: AppTheme.primary, size: 28),
+                  child: Icon(Icons.groups_rounded, color: AppTheme.primary, size: 28),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -84,7 +84,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
                     children: [
                       Text(
                         churchGroup.nama,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.darkCharcoal,
@@ -92,7 +92,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
                       ),
                       Text(
                         'Wilayah: ${churchGroup.wilayah}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           color: AppTheme.primary,
                           fontWeight: FontWeight.w600,
@@ -115,7 +115,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
                 ),
                 child: Text(
                   churchGroup.description,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     height: 1.5,
                     color: AppTheme.darkCharcoal,
@@ -180,12 +180,12 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(color: AppTheme.neutralMedium, fontSize: 11),
+                  style: TextStyle(color: AppTheme.neutralMedium, fontSize: 11),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                     color: AppTheme.darkCharcoal,
@@ -313,7 +313,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
               color: AppTheme.primary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.people_outline_rounded, color: AppTheme.primary, size: 24),
+            child: Icon(Icons.people_outline_rounded, color: AppTheme.primary, size: 24),
           ),
           const SizedBox(width: 14),
           const Expanded(
@@ -349,7 +349,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
     return Container(
       height: 46,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppTheme.neutralBorder),
       ),
@@ -362,8 +362,8 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
         },
         decoration: InputDecoration(
           hintText: 'Cari nama group, wilayah, atau pemimpin...',
-          hintStyle: const TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
-          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.neutralMedium, size: 20),
+          hintStyle: TextStyle(color: AppTheme.neutralMedium, fontSize: 13),
+          prefixIcon: Icon(Icons.search_rounded, color: AppTheme.neutralMedium, size: 20),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.clear_rounded, size: 18),
@@ -399,7 +399,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
                     children: [
                       Text(
                         churchGroup.nama,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.darkCharcoal,
@@ -408,7 +408,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
                       if (churchGroup.categoryId != null)
                         Text(
                           context.read<GroupProvider>().categoryLabel(churchGroup.categoryId),
-                          style: const TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w600),
                         ),
                     ],
                   ),
@@ -434,12 +434,12 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.person_outline_rounded, size: 16, color: AppTheme.neutralMedium),
+                Icon(Icons.person_outline_rounded, size: 16, color: AppTheme.neutralMedium),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Pemimpin: ${churchGroup.leaderName}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: AppTheme.darkCharcoal,
                       fontWeight: FontWeight.w500,
@@ -451,12 +451,12 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.access_time_rounded, size: 16, color: AppTheme.neutralMedium),
+                Icon(Icons.access_time_rounded, size: 16, color: AppTheme.neutralMedium),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     churchGroup.meetingSchedule,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: AppTheme.darkCharcoal,
                     ),
@@ -468,14 +468,14 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.location_on_outlined, size: 16, color: AppTheme.neutralMedium),
+                  Icon(Icons.location_on_outlined, size: 16, color: AppTheme.neutralMedium),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       churchGroup.location,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         color: AppTheme.neutralMedium,
                       ),
@@ -490,7 +490,7 @@ class _GroupDirectoryScreenState extends State<GroupDirectoryScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Ketuk untuk info selengkapnya',
                   style: TextStyle(
                     color: AppTheme.primary,

@@ -8,6 +8,7 @@ import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqflite_ffi;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'providers/broadcast_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/bible_provider.dart';
 import 'providers/quest_provider.dart';
@@ -35,6 +36,8 @@ import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/pending_approval_screen.dart';
 import 'screens/splash_screen.dart';
+import 'services/notification_router.dart';
+import 'services/push_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,6 +78,18 @@ Future<void> main() async {
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53cWdia2xheGpzaWp5empvb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMzI5NzMsImV4cCI6MjEwNDYwODk3M30.zt3r-By6ENX3nJ4PnTQy8BxybOZaMQmsLbTQqZWxMJA',
   );
   
+  // Firebase push (Android). Never blocks the app if Firebase is unavailable.
+  await PushService.instance.init();
+  // Creates the notification channels and the tap handler for every role
+  // (no permission prompt here).
+  if (!kIsWeb) {
+    try {
+      await LocalNotificationService().init();
+    } catch (e) {
+      debugPrint('LocalNotificationService.init: $e');
+    }
+  }
+
   await _initializeDatabaseFactory();
   try {
     await LocalNotificationService().init();
@@ -133,10 +148,12 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => IbadahProvider()),
         ChangeNotifierProvider(create: (_) => CheckinProvider()),
         ChangeNotifierProvider(create: (_) => KasProvider()),
+        ChangeNotifierProvider(create: (_) => BroadcastProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
+            navigatorKey: appNavigatorKey,
             title: 'Gereja App',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,

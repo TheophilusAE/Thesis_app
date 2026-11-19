@@ -40,7 +40,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.edit_note_rounded, color: AppTheme.primary),
             SizedBox(width: 8),
@@ -60,7 +60,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Batal', style: TextStyle(color: AppTheme.mutedCharcoal)),
+            child: Text('Batal', style: TextStyle(color: AppTheme.mutedCharcoal)),
           ),
         ],
       ),
@@ -100,7 +100,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppTheme.mutedCharcoal, size: 18),
+            Icon(Icons.chevron_right_rounded, color: AppTheme.mutedCharcoal, size: 18),
           ],
         ),
       ),
@@ -151,7 +151,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
       child: Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Doa Jemaat',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -160,7 +160,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -168,7 +168,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
         children: [
           // Filter Chips Row
           Container(
-            color: Colors.white,
+            color: AppTheme.surface,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Consumer<PrayerRequestProvider>(
               builder: (context, provider, _) {
@@ -194,7 +194,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
               },
             ),
           ),
-          const Divider(height: 1, color: AppTheme.neutralBorder),
+          Divider(height: 1, color: AppTheme.neutralBorder),
 
           // List Content
           Expanded(
@@ -249,7 +249,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                                     children: [
                                       Text(
                                         displayName,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
                                           color: AppTheme.darkCharcoal,
@@ -275,7 +275,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                                 if (canChangeStatus || canDelete) ...[
                                 const SizedBox(width: 4),
                                 PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert, color: AppTheme.mutedCharcoal),
+                                  icon: Icon(Icons.more_vert, color: AppTheme.mutedCharcoal),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   onSelected: (value) {
                                     if (value == 'status') _updateStatus(request);
@@ -283,7 +283,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                                   },
                                   itemBuilder: (context) => [
                                     if (canChangeStatus)
-                                    const PopupMenuItem(
+                                    PopupMenuItem(
                                       value: 'status',
                                       child: Row(
                                         children: [
@@ -294,7 +294,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                                       ),
                                     ),
                                     if (canDelete)
-                                    const PopupMenuItem(
+                                    PopupMenuItem(
                                       value: 'delete',
                                       child: Row(
                                         children: [
@@ -322,7 +322,7 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                               ),
                               child: Text(
                                 request.content,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13.5,
                                   color: AppTheme.darkCharcoal,
                                   height: 1.45,
@@ -334,11 +334,11 @@ class _PrayerRequestManagementScreenState extends State<PrayerRequestManagementS
                             // Timestamp Footer
                             Row(
                               children: [
-                                const Icon(Icons.access_time_rounded, size: 14, color: AppTheme.mutedCharcoal),
+                                Icon(Icons.access_time_rounded, size: 14, color: AppTheme.mutedCharcoal),
                                 const SizedBox(width: 5),
                                 Text(
                                   DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(request.createdAt),
-                                  style: const TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
+                                  style: TextStyle(fontSize: 12, color: AppTheme.mutedCharcoal),
                                 ),
                               ],
                             ),

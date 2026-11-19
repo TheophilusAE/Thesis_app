@@ -22,7 +22,7 @@ class MemberCardScreen extends StatelessWidget {
           final user = authProvider.currentUser;
 
           if (user == null) {
-            return const Center(
+            return Center(
               child: Text(
                 'Data user tidak ditemukan',
                 style: TextStyle(color: AppTheme.neutralMedium),
@@ -108,7 +108,7 @@ class MemberCardScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                         border: Border.all(color: AppTheme.goldLight.withValues(alpha: 0.5)),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.church_rounded,
                         color: AppTheme.goldLight,
                         size: 24,
@@ -119,7 +119,7 @@ class MemberCardScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'GEREJA PANTEKOSTA DI INDONESIA',
                             style: TextStyle(
                               color: AppTheme.goldLight,
@@ -166,7 +166,7 @@ class MemberCardScreen extends StatelessWidget {
                   ),
                   child: Text(
                     user.membershipType ?? 'Anggota Jemaat',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.goldLight,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -228,7 +228,7 @@ class MemberCardScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white, // QR must stay dark-on-white to scan
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -309,7 +309,7 @@ class MemberCardScreen extends StatelessWidget {
               color: AppTheme.primary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primary, size: 22),
+            child: Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primary, size: 22),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -332,7 +332,7 @@ class MemberCardScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Informasi Lengkap Jemaat',
           style: TextStyle(
             fontWeight: FontWeight.bold,
@@ -412,7 +412,7 @@ class MemberCardScreen extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.neutralMedium,
               fontSize: 13,
             ),
@@ -426,7 +426,7 @@ class MemberCardScreen extends StatelessWidget {
               value ?? '-',
               textAlign: TextAlign.end,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
                 color: AppTheme.darkCharcoal,

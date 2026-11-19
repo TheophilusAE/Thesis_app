@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../models/admin_permission.dart';
 import '../models/user.dart';
+import '../services/push_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/permissions.dart';
 
@@ -163,6 +164,7 @@ class AuthProvider with ChangeNotifier {
       address: p['address'] as String?,
       baptismDate: p['baptism_date'] as String?,
       groupId: p['group_id'] as String?,
+      birthDate: DateTime.tryParse((p['tanggal_lahir'] ?? '') as String),
     );
   }
 
@@ -438,6 +440,9 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Before signing out (the token row is deleted as this user): this phone
+    // must not keep receiving the previous account's push notifications.
+    await PushService.instance.unregister(service: _supabaseService);
     try {
       await _supabaseService.signOut();
     } catch (e) {
@@ -446,6 +451,10 @@ class AuthProvider with ChangeNotifier {
     _clearSession();
     notifyListeners();
   }
+
+  static bool _sameDay(DateTime? a, DateTime? b) =>
+      (a == null && b == null) ||
+      (a != null && b != null && a.year == b.year && a.month == b.month && a.day == b.day);
 
   Future<bool> updateProfile(User updatedUser) async {
     try {
@@ -461,6 +470,14 @@ class AuthProvider with ChangeNotifier {
           // The Group picker replaces the old free-text family_group, which
           // is left untouched in the database. Only sent when it changed.
           if (updatedUser.groupId != _currentUser?.groupId) 'group_id': updatedUser.groupId,
+          // users.tanggal_lahir (migration_notifications_v2.sql); only sent
+          // when it changed, so profiles still save before that migration.
+          if (!_sameDay(updatedUser.birthDate, _currentUser?.birthDate))
+            'tanggal_lahir': updatedUser.birthDate == null
+                ? null
+                : '${updatedUser.birthDate!.year.toString().padLeft(4, '0')}-'
+                    '${updatedUser.birthDate!.month.toString().padLeft(2, '0')}-'
+                    '${updatedUser.birthDate!.day.toString().padLeft(2, '0')}',
         },
       );
       _currentUser = updatedUser;

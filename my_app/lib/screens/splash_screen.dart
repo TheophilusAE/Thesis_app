@@ -131,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
                       'assets/images/app_logo.png',
                       height: 96,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const Icon(
+                      errorBuilder: (_, _, _) => Icon(
                         Icons.church,
                         size: 96,
                         color: AppTheme.primary,

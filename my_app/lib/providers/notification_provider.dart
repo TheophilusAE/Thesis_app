@@ -105,21 +105,35 @@ class NotificationProvider extends ChangeNotifier {
     required String message,
     required String type,
     String? relatedScheduleId,
+    String? category,
+    String? route,
+    Map<String, dynamic>? routeParams,
   }) async {
     final targets = userIds.where((id) => id.isNotEmpty).toSet();
     if (targets.isEmpty) return true;
+    List<Map<String, dynamic>> rows({required bool v2}) => [
+          for (final id in targets)
+            {
+              'user_id': id,
+              'title': title,
+              'message': message,
+              'type': type,
+              'related_schedule_id': relatedScheduleId,
+              'is_read': false,
+              if (v2) 'category': category ?? app_notification.NotificationCategory.fromType(type),
+              if (v2) 'route': route ?? app_notification.NotificationRoute.fromType(type),
+              if (v2 && routeParams != null) 'route_params': routeParams,
+            },
+        ];
     try {
-      await _service.addNotifications([
-        for (final id in targets)
-          {
-            'user_id': id,
-            'title': title,
-            'message': message,
-            'type': type,
-            'related_schedule_id': relatedScheduleId,
-            'is_read': false,
-          },
-      ]);
+      try {
+        await _service.addNotifications(rows(v2: true));
+      } on PostgrestException catch (e) {
+        // Before migration_notifications_v2.sql the new columns don't exist:
+        // still deliver the notification (category/route are derived on read).
+        if (e.code != 'PGRST204' && e.code != '42703') rethrow;
+        await _service.addNotifications(rows(v2: false));
+      }
       return true;
     } catch (e) {
       _error = e.toString();

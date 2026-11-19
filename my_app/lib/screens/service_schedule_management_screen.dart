@@ -56,7 +56,7 @@ class _ServiceScheduleManagementScreenState
     return Scaffold(
       backgroundColor: AppTheme.warmIvory,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Jadwal Pelayanan',
           style: TextStyle(
             color: AppTheme.darkCharcoal,
@@ -64,7 +64,7 @@ class _ServiceScheduleManagementScreenState
             fontSize: 18,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.darkCharcoal,
         elevation: 0,
       ),
@@ -73,7 +73,7 @@ class _ServiceScheduleManagementScreenState
           // Search & Filter Header
           Container(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            color: Colors.white,
+            color: AppTheme.surface,
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -82,7 +82,7 @@ class _ServiceScheduleManagementScreenState
                   color: AppTheme.neutralMuted.withValues(alpha: 0.8),
                   fontSize: 13.5,
                 ),
-                prefixIcon: const Icon(
+                prefixIcon: Icon(
                   Icons.search_rounded,
                   color: AppTheme.primary,
                   size: 22,
@@ -98,15 +98,15 @@ class _ServiceScheduleManagementScreenState
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                  borderSide: BorderSide(color: AppTheme.neutralBorder),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.neutralBorder),
+                  borderSide: BorderSide(color: AppTheme.neutralBorder),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                  borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
                 ),
               ),
             ),
@@ -117,7 +117,7 @@ class _ServiceScheduleManagementScreenState
             child: Consumer<ServiceScheduleProvider>(
               builder: (context, provider, _) {
                 if (provider.isLoading) {
-                  return const Center(
+                  return Center(
                     child: CircularProgressIndicator(color: AppTheme.primary),
                   );
                 }
@@ -243,7 +243,7 @@ class _ServiceScheduleManagementScreenState
                 );
               }
             },
-            child: const Text('Hapus', style: TextStyle(color: AppTheme.error)),
+            child: Text('Hapus', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),
@@ -281,7 +281,7 @@ class _ServiceScheduleCard extends StatelessWidget {
                   color: AppTheme.primaryLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.church_rounded,
                   color: AppTheme.primary,
                   size: 22,
@@ -294,7 +294,7 @@ class _ServiceScheduleCard extends StatelessWidget {
                   children: [
                     Text(
                       schedule.pelayaniName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.darkCharcoal,
@@ -303,7 +303,7 @@ class _ServiceScheduleCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       schedule.serviceType,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.neutralMuted,
@@ -318,14 +318,14 @@ class _ServiceScheduleCard extends StatelessWidget {
                 children: [
                   ...[
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
+                      icon: Icon(Icons.edit_outlined, size: 20, color: AppTheme.primary),
                       onPressed: onEdit,
                       tooltip: 'Edit',
                       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                       padding: EdgeInsets.zero,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
+                      icon: Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.error),
                       onPressed: onDelete,
                       tooltip: 'Hapus',
                       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -338,18 +338,18 @@ class _ServiceScheduleCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 12),
-          const Divider(height: 1, color: AppTheme.neutralBorder),
+          Divider(height: 1, color: AppTheme.neutralBorder),
           const SizedBox(height: 12),
 
           // Detail rows
           Row(
             children: [
-              const Icon(Icons.calendar_today_rounded, size: 15, color: AppTheme.neutralMuted),
+              Icon(Icons.calendar_today_rounded, size: 15, color: AppTheme.neutralMuted),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   dateStr,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppTheme.darkCharcoal,
                     fontWeight: FontWeight.w500,
@@ -361,11 +361,11 @@ class _ServiceScheduleCard extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.access_time_rounded, size: 15, color: AppTheme.neutralMuted),
+              Icon(Icons.access_time_rounded, size: 15, color: AppTheme.neutralMuted),
               const SizedBox(width: 8),
               Text(
                 '${schedule.startTime} - ${schedule.endTime}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   color: AppTheme.darkCharcoal,
                   fontWeight: FontWeight.w500,
@@ -376,12 +376,12 @@ class _ServiceScheduleCard extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.assignment_ind_outlined, size: 15, color: AppTheme.neutralMuted),
+              Icon(Icons.assignment_ind_outlined, size: 15, color: AppTheme.neutralMuted),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   schedule.pelayaniPosition,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppTheme.darkCharcoal,
                     fontWeight: FontWeight.w600,
